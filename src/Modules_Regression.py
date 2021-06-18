@@ -356,7 +356,7 @@ def get_r2(x_learn, x_valid, y_learn, y_valid, regressor='pls'):
         regressor_ = GridSearchCV(PLSRegression(), param_grid=params, iid=False, cv=5)  # iid in future
                                                                                         # versions redundant
     elif regressor == 'rf':
-        params = {                # similar parameter grid as Xu et al., https://doi.org/10.1021/acs.jcim.0c00073
+        params = {                 # similar parameter grid as Xu et al., https://doi.org/10.1021/acs.jcim.0c00073
             'random_state': [42],  # state determined
             'n_estimators': [100, 250, 500, 1000],  # number of individual decision trees in the forest
             'max_features': ['auto', 'sqrt', 'log2']  # “auto” -> max_features=n_features,
@@ -367,7 +367,7 @@ def get_r2(x_learn, x_valid, y_learn, y_valid, regressor='pls'):
     elif regressor == 'svr':
         params = {                      # similar parameter grid as Xu et al.
             'C': [2 ** 0, 2 ** 2, 2 ** 4, 2 ** 6, 2 ** 8, 2 ** 10, 2 ** 12],  # Regularization parameter
-            'gamma': [0.1, 0.01, 0.001, 0.0001, 0.00001]  # often 1 / n_features or 1 / (n_featrues * X.var())
+            'gamma': [0.1, 0.01, 0.001, 0.0001, 0.00001]  # often 1 / n_features or 1 / (n_features * X.var())
         }
         regressor_ = GridSearchCV(SVR(), param_grid=params, iid=False, cv=5)
 
@@ -753,7 +753,7 @@ def plot(path, fasta_file, model, label, color, y_wt, no_fft=False):
                 y_pred_ = mod.predict(x_raw)
         except ValueError:
             raise ValueError("You likely tried to plot a validation set with (or without) FFT featurization ('--nofft')"
-                             " while the model was the model was trained without (or with) FFT featurization. Check the"
+                             " while the model was trained without (or with) FFT featurization. Check the"
                              " Model_Results.txt line 1, if the models were trained using FFT.")
 
         for y_p in y_pred_:
