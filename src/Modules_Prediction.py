@@ -14,6 +14,25 @@
 # *Corresponding author
 # §Equal contribution
 
+"""
+Modules for making prediction files
+from input CSV file (with value separators sep=',' or sep=';')
+having the CSV-format
+
+HEADER_VARIANTS;HEADER_VARIANTS_FITNESS
+VARIANT_1;FITNESS_VALUE_1
+VARIANT_2;FITNESS_VALUE_2
+...
+
+according to the self devised prediction set convention
+> VARIANT_NAME_1
+VARIANT_SEQUENCE_1
+> VARIANT_NAME_2
+VARIANT_SEQUENCE_2
+...
+"""
+
+
 import os
 import numpy as np
 from tqdm import tqdm
@@ -25,19 +44,19 @@ def make_fasta_ps(filename, wt, substitution):
     """
     myfile = open(filename, 'w')
     count = 0
-    for i in substitution:
+    for i, var in enumerate(substitution):
         temporary = list(wt)
         name = ''
-        b = 0
-        for j in i:
-            position_index = int(str(j)[1:-1]) - 1
-            new_amino_acid = str(j)[-1]
+        separation = 0
+        for single_var in var:
+            position_index = int(str(single_var)[1:-1]) - 1
+            new_amino_acid = str(single_var)[-1]
             temporary[position_index] = new_amino_acid
-            if b == 0:
-                name += j
+            if separation == 0:
+                name += single_var
             else:
-                name += '/' + j
-            b += 1
+                name += '/' + single_var
+            separation += 1
         print('>', name, file=myfile)
         print(''.join(temporary), file=myfile)
         count += 1

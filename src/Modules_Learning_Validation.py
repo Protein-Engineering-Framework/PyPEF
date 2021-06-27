@@ -14,6 +14,26 @@
 # *Corresponding author
 # §Equal contribution
 
+"""
+Modules for creating learning and validation sets
+from input CSV file (with value separators sep=',' or sep=';')
+having the CSV-format
+
+HEADER_VARIANTS;HEADER_VARIANTS_FITNESS
+VARIANT_1;FITNESS_VALUE_1
+VARIANT_2;FITNESS_VALUE_2
+...
+
+according to the self devised learning and validation set convention
+> VARIANT_NAME_1
+; FITNESS_1
+VARIANT_SEQUENCE_1
+> VARIANT_NAME_2
+; FITNESS_2
+VARIANT_SEQUENCE_2
+...
+"""
+
 import numpy as np
 import random
 import pandas as pd
@@ -173,9 +193,17 @@ def get_variants(df, amino_acids, wild_type_sequence):
                         if i not in index_higher:
                             index_higher.append(i)
         else:
+            if variant.upper() == 'WT' or variant.upper() == 'WILD_TYPE':
+                single_variants.append(['WT'])
+                single_values.append(y[i])
+                continue
             single += 1
             if variant[0].isdigit() or variant[0] in amino_acids and variant[-1] in amino_acids:
-                num = int(re.findall(r'\d+', variant)[0])
+                try:
+                    num = int(re.findall(r'\d+', variant)[0])
+                except IndexError:
+                    raise IndexError('Wrong input format. Please check if the input CSV corresponds to the '
+                                     'required input style (while the wild-type protein must be designated as \'WT\').')
                 if variant[0] in amino_acids:
                     if variant[0] != wild_type_sequence[num - 1]:
                         raise NameError('Position of amino acids in given sequence does not match the given '
@@ -263,8 +291,8 @@ def make_sub_ls_vs_randomly(single_variants, single_values, higher_variants, hig
         if j not in ls:
             vs.append(j)
 
-    combined = single_variants + higher_variants  # Substitutions
-    combined2 = single_values + higher_values  # Values
+    combined = single_variants + higher_variants  # substitutions
+    combined2 = single_values + higher_values  # values
 
     sub_ls = []
     val_ls = []
@@ -295,27 +323,29 @@ def make_sub_ls_vs_randomly(single_variants, single_values, higher_variants, hig
     return tot_sub_ls[0], tot_val_ls[0], tot_sub_vs[0], tot_val_vs[0]
 
 
-def make_fasta_ls_vs(filename, wt, sub, val):   # Sub = Substitution, Val = Value
+def make_fasta_ls_vs(filename, wt, sub, val):  # sub = substitution, val = value
     """
     Creates learning and validation sets (.fasta style files)
     """
     myfile = open(filename, 'w')
-    count = 0
-    for i in sub:
+    for i, var in enumerate(sub):  # var are lists of (single or multiple) substitutions
         temp = list(wt)
         name = ''
-        b = 0
-        for j in i:
-            position_index = int(str(j)[1:-1]) - 1
-            new_amino_acid = str(j)[-1]
-            temp[position_index] = new_amino_acid
-            if b == 0:
-                name += j
-            else:
-                name += '/' + j
-            b += 1
+        separation = 0
+        if var == ['WT']:
+            name = 'WT'
+        else:
+            for single_var in var:  # single entries of substitution list
+                position_index = int(str(single_var)[1:-1]) - 1
+                new_amino_acid = str(single_var)[-1]
+                temp[position_index] = new_amino_acid
+                # checking if multiple entries are inside list
+                if separation == 0:
+                    name += single_var
+                else:
+                    name += '/' + single_var
+                separation += 1
         print('>', name, file=myfile)
-        print(';', val[count], file=myfile)
+        print(';', val[i], file=myfile)
         print(''.join(temp), file=myfile)
-        count += 1
     myfile.close()
