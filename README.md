@@ -2,6 +2,7 @@ This repository contains supplementary information to
 
 Niklas E. Siedhoff<sup>*1,§*</sup>, Alexander-Maurice Illig<sup>*1,§*</sup>, Ulrich Schwaneberg<sup>*1,2*</sup>, Mehdi D. Davari<sup>*1,\**</sup>, <br>
 PyPEF – an Integrated Framework for Data-driven Protein Engineering, *Journal of Chemical Information and Modeling* (2021) <br>
+https://doi.org/10.1021/acs.jcim.1c00099 <br>
 <sup>*1*</sup><sub>Institute of Biotechnology, RWTH Aachen University, Worringer Weg 3, 52074 Aachen, Germany</sub> <br>
 <sup>*2*</sup><sub>DWI-Leibniz Institute for Interactive Materials, Forckenbeckstraße 50, 52074 Aachen, Germany</sub> <br>
 <sup>*\**</sup><sub>Corresponding author</sub> <br>
