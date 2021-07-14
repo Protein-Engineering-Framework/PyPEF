@@ -522,7 +522,7 @@ def cross_validation(x, y, regressor_, n_samples=5):
             regressor_.fit(x_train, y_train)  # Fitting on a random subset for Final_Model
             # (and on a subset subset for Learning_Model)
             # Predictions for samples in the test_set during that iteration
-            y_pred_test = regressor_.predict(x[test_index])
+            y_pred_test = regressor_.predict(x_test)
 
             for values in y_pred_test:
                 y_predicted_total.append(float(values))
