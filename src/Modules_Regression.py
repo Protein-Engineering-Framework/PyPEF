@@ -14,6 +14,11 @@
 # *Corresponding author
 # §Equal contribution
 
+"""
+Main modules for regression/ML including featurization,
+validation, tuning, prediction, and plotting routines.
+"""
+
 import os
 import sys
 import matplotlib

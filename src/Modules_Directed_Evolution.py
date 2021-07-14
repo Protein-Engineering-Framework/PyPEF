@@ -14,6 +14,11 @@
 # *Corresponding author
 # §Equal contribution
 
+"""
+Modules for performing random evolution walks
+similar as presented by Biswas et al.
+"""
+
 import os
 import random
 import matplotlib.pyplot as plt

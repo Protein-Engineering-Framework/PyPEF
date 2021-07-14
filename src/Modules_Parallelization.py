@@ -14,6 +14,11 @@
 # *Corresponding author
 # §Equal contribution
 
+"""
+Validation modules from Modules_Regression.py
+modified for parallelization with Ray.
+"""
+
 import matplotlib
 matplotlib.use('Agg')
 import numpy as np

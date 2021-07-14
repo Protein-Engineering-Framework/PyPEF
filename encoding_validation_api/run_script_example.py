@@ -65,13 +65,18 @@ model = eval(best_model[-2])
 # Get fft-ed or raw-encoded sequences for fitting and prediction, use raw_encoded_num_seq_to_learn if no fft was used.
 fft_encoded_num_seq_to_learn, raw_encoded_num_seq_to_learn = AAIndexEncoding(use_aaindex, learn_sequences).get_x_and_y()
 fft_encoded_num_seq_to_pred, raw_encoded_num_seq_to_pred = AAIndexEncoding(use_aaindex, seq_to_predict).get_x_and_y()
-# fft_encoded_num_seq_to_valid, raw_encoded_num_seq_to_valid = SequenceToNum(use_aaindex, valid_sequences).get_x_and_y()
+fft_encoded_num_seq_to_valid, raw_encoded_num_seq_to_valid = AAIndexEncoding(use_aaindex, valid_sequences).get_x_and_y()
 
 # Refitting model reconstructed from string in performance list on learning data.
 model.fit(fft_encoded_num_seq_to_learn, y_learn)
 
-# Predict (list of) (unknown) sequence(s) to estimate the fitness.
-print('Predicted fitness of sequence with reconstructed model: {}\n'.format(model.predict(fft_encoded_num_seq_to_pred)))
+y_pred = model.predict(fft_encoded_num_seq_to_valid)
+print('Observed vs. [Predicted] entries of the validation set:')
+for i, x in enumerate(y_pred):
+    print(y_valid[i], y_pred[i])
+
+# Predict (list of unknown/any) sequence(s) to estimate the fitness.
+print('\nPredicted fitness of sequence with reconstructed model: {}\n'.format(model.predict(fft_encoded_num_seq_to_pred)))
 
 
 ######## EXAMPLE 2: Reload saved top model stored in folder Models/ (if not get_performance(save_model=0) ########

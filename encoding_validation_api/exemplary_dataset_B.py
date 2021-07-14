@@ -1,3 +1,22 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+# Created on 05 October 2020
+# @author: Niklas Siedhoff, Alexander-Maurice Illig
+# <n.siedhoff@biotec.rwth-aachen.de>, <a.illig@biotec.rwth-aachen.de>
+# PyPEF - Pythonic Protein Engineering Framework
+# Released under Creative Commons Attribution-NonCommercial 4.0 International Public License (CC BY-NC 4.0)
+# For more information about the license see https://creativecommons.org/licenses/by-nc/4.0/legalcode
+
+# PyPEF – an Integrated Framework for Data-driven Protein Engineering
+# Niklas E. Siedhoff1,§, Alexander-Maurice Illig1,§, Ulrich Schwaneberg1,2, Mehdi D. Davari1,*
+# 1Institute of Biotechnology, RWTH Aachen University, Worringer Weg 3, 52074 Aachen, Germany
+# 2DWI-Leibniz Institute for Interactive Materials, Forckenbeckstraße 50, 52074 Aachen, Germany
+# *Corresponding author
+# §Equal contribution
+
+# All sequences and labels as used for Dataset B (Aspergillus niger epoxide hydrolase, ANEH (Q9UR30))
+# Gumulya, Sanchis, and Reetz, ChemBioChem (2012), doi: https://doi.org/10.1002/cbic.201100784
+
 all_sequences = [
     'MSAPFAKFPSSASISPNPFTVSIPDEQLDDLKTLVRLSKIAPPTYESLQADGRFGITSEWLTTMREKWLSEFDWRPFEARLNSFPQFTTEIEGLTIHFAALFSEREDAVPIALL'
     'HGWPGSFVEFYPILQLFREEYTPETLPFHLVVPSLPGYTFSSGPPLDKDFGLMDNARVVDQLMKDLGFGSGYIIQGGDIGSFVGRLLGVGFDACKAVHLNFCAMRAPPEGPSIE'

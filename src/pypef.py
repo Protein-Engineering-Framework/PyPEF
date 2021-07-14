@@ -18,14 +18,14 @@
 """
 PyPEF - Pythonic Protein Engineering Framework.
 
-Creation of Learning and Validation sets: To split .CSV data in Learning and Validation sets run
+Creation of learning and validation sets: to split .CSV data in Learning and Validation sets run
     pypef.py mklsvs [...]
-Creation of Prediction sets: To create Prediction sets from .CSV data single point mutational variants run
+Creation of prediction sets: To create prediction sets from CSV data single point mutational variants run
     pypef.py mkps [...]
 Running:
  1. To train and validate models run
         pypef.py run -l Learning_Set.fasta -v Validation_Set.fasta [-s 5] [--parallel] [-c 4]
-    ! Attention using ray for parallel computing ('--parallel') in Windows: ray is not yet fully supported for Windows !
+    ! Attention using ray for parallel computing ('--parallel') in Windows: Ray is not yet fully supported for Windows !
  2. To plot the validation creating a figure (.png) run
         pypef.py run -m MODEL12345 -f Validation_Set.fasta
  3. To predict variants run
@@ -129,7 +129,7 @@ def run():
     running them dependent on user-passed input arguments using docopt
     for argument parsing.
     """
-    arguments = docopt(__doc__, version='PyPEF 0.1 (February 2021)')
+    arguments = docopt(__doc__, version='PyPEF 0.1 (June 2021)')
     # print(arguments)  # uncomment for printing parsed docopt arguments
     amino_acids = ['A', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'K', 'L', 'M', 'N', 'P', 'Q', 'R', 'S', 'T', 'V', 'W', 'Y']
 
@@ -186,11 +186,18 @@ def run():
         wt_sequence = get_wt_sequence(arguments['--wtseq'])
         csv_file = csv_input(arguments['--input'])
         t_drop = float(arguments['--drop'])
-
         df = drop_rows(csv_file, amino_acids, t_drop)
+        drop_wt = []
+        for i in range(len(df)):
+            if df.iloc[i, 0] == 'WT':
+                print('Dropping wild-type (WT) from DataFrame as it cannot be used for (re-)combination.')
+                drop_wt.append(i)
+        df = df.drop(drop_wt).reset_index(drop=True)
+
         print('Length of provided sequence: {} amino acids.'.format(len(wt_sequence)))
         single_variants, _, higher_variants, _ = get_variants(df, amino_acids, wt_sequence)
-        print('Number of single variants: {}.'.format(len(single_variants)))
+        print('Using single substitution variants for (re-)combination. '
+              'Number of single variants: {}.'.format(len(single_variants)))
         no_done = False
         if len(single_variants) == 0:
             print('Found NO single substitution variants for possible recombination! '
@@ -210,7 +217,8 @@ def run():
                 create_split_files(triple_mutants, single_variants, wt_sequence, 'Recomb_Triple', no)
 
         if arguments['--qrecomb']:
-            print('Creating Recomb_Quadruple_Split...')
+            print('Beware that this step might require much disk space as PyPEF is '
+                  'creating prediction files in TXT format. Creating Recomb_Quadruple_Split...')
             for no, files in enumerate(make_combinations_quadruple(single_variants)):
                 quadruple_mutants = np.array(files)
                 create_split_files(quadruple_mutants, single_variants, wt_sequence, 'Recomb_Quadruple', no)
@@ -222,13 +230,15 @@ def run():
                 create_split_files(doubles, single_variants, wt_sequence, 'Diverse_Double', no + 1)
 
         if arguments['--tdiverse']:
-            print('Creating Diverse_Triple_Split...')
+            print('Beware that this step might require much disk space as PyPEF is '
+                  'creating prediction files in TXT format. Creating Diverse_Triple_Split... ')
             for no, files in enumerate(make_combinations_triple_all_diverse(single_variants, amino_acids)):
                 triples = np.array(files)
                 create_split_files(triples, single_variants, wt_sequence, 'Diverse_Triple', no + 1)
 
         if arguments['--qdiverse']:
-            print('Creating Diverse_Quadruple_Split...')
+            print('Beware that this step might require much disk space as PyPEF is '
+                  'creating prediction files in TXT format. Creating Diverse_Quadruple_Split...')
             for no, files in enumerate(make_combinations_quadruple_all_diverse(single_variants, amino_acids)):
                 quadruples = np.array(files)
                 create_split_files(quadruples, single_variants, wt_sequence, 'Diverse_Quadruple', no + 1)
@@ -375,6 +385,13 @@ def run():
 
                 print('Length of provided sequence: {} amino acids.'.format(len(s_wt)))
                 df = drop_rows(csv_file, amino_acids, t_drop)
+                drop_wt = []
+                for i in range(len(df)):
+                    if df.iloc[i, 0] == 'WT':
+                        print('Using fitness value (y_WT) for wild-type (WT) as specified in CSV.')
+                        drop_wt.append(i)
+                        y_wt = df.iloc[i, 1]
+                df = df.drop(drop_wt).reset_index(drop=True)
 
                 single_variants, single_values, higher_variants, higher_values = get_variants(df, amino_acids, s_wt)
                 print('Number of single variants: {}.'.format(len(single_variants)))
