@@ -136,7 +136,8 @@ def drop_rows(csv_file, amino_acids, threshold_drop):
             raise TypeError('You might consider checking the input .csv for empty first two columns,'
                             ' e.g. in the last row.')
 
-    print('No. of dropped rows: {}.'.format(len(dropping_rows)), 'Total given variants: {}'.format(len(df_raw)))
+    print('No. of dropped rows: {}.'.format(len(dropping_rows)), 'Total given variants '
+                                                                 '(if provided plus WT): {}'.format(len(df_raw)))
 
     df = df_raw.drop(dropping_rows)
     df.dropna(inplace=True)
@@ -153,6 +154,7 @@ def get_variants(df, amino_acids, wild_type_sequence):
     """
     x = df.iloc[:, 0]
     y = df.iloc[:, 1]
+    wt_position = False
     single_variants, higher_variants, index_higher, index_lower, higher_values, single_values = [], [], [], [], [], []
     single, double, triple, quadruple, quintuple, sextuple, septuple,\
     octuple, nonuple, decuple, higher = 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
@@ -195,12 +197,13 @@ def get_variants(df, amino_acids, wild_type_sequence):
                         if i not in index_higher:
                             index_higher.append(i)
         else:
-            if variant.upper() == 'WT' or variant.upper() == 'WILD_TYPE':
-                single_variants.append(['WT'])
-                single_values.append(y[i])
-                continue
             single += 1
-            if variant[0].isdigit() or variant[0] in amino_acids and variant[-1] in amino_acids:
+            if variant.upper() == 'WT' or variant.upper() == 'WILD_TYPE':
+                wt_position = i
+
+                continue
+
+            elif variant[0].isdigit() or variant[0] in amino_acids and variant[-1] in amino_acids:
                 try:
                     num = int(re.findall(r'\d+', variant)[0])
                 except IndexError:
@@ -219,7 +222,7 @@ def get_variants(df, amino_acids, wild_type_sequence):
                 single_variants.append([full_variant])
                 if i not in index_lower:
                     index_lower.append(i)
-    print('Single: {}.'.format(single), 'Double: {}.'.format(double), 'Triple: {}.'.format(triple),
+    print('Single (for mklsvs if provided plus WT): {}.'.format(single), 'Double: {}.'.format(double), 'Triple: {}.'.format(triple),
           'Quadruple: {}.'.format(quadruple), 'Quintuple: {}.'.format(quintuple), 'Sextuple: {}.'.format(sextuple),
           'Septuple: {}.'.format(septuple), 'Octuple: {}.'.format(octuple), 'Nonuple: {}.'.format(nonuple),
           'Decuple: {}.'.format(decuple), 'Higher: {}.'.format(higher))
@@ -227,6 +230,9 @@ def get_variants(df, amino_acids, wild_type_sequence):
         higher_values.append(vals)
     for vals in y[index_lower]:
         single_values.append(vals)
+    if wt_position:
+        single_variants.append(['WT'])
+        single_values.append(y[wt_position])
 
     single_variants, single_values = tuple(single_variants), tuple(single_values)
     higher_variants, higher_values = tuple(higher_variants), tuple(higher_values)
@@ -239,14 +245,14 @@ def make_sub_ls_vs(single_variants, single_values, higher_variants, higher_value
     Creates learning and validation sets, fills learning set with single substituted variants and splits
     rest (higher substituted) for learning and validation sets: 3/4 to LS and 1/4 to VS
     """
-    print('No. of single subst. variants: {}.'.format(len(single_variants)),
+    print('No. of single substituted variants (if provided plus WT): {}.'.format(len(single_variants)),
           'No. of values: {}'.format(len(single_values)))
-    print('No. of higher subst. variants: {}.'.format(len(higher_variants)),
+    print('No. of higher substituted variants: {}.'.format(len(higher_variants)),
           'No. of values: {}'.format(len(higher_values)))
 
     if len(single_values) != len(single_variants):
         print('Error due to different lengths for given variants and label!'
-              ' No. of single subst. variants: {}.'.format(len(single_variants)),
+              ' No. of single substituted variants: {}.'.format(len(single_variants)),
               ' Number of given values: {}.'.format(len(single_values)))
 
     if len(higher_values) != len(higher_variants):
