@@ -210,10 +210,14 @@ def get_variants(df, amino_acids, wild_type_sequence):
                     raise IndexError('Wrong input format. Please check if the input CSV corresponds to the '
                                      'required input style (while the wild-type protein must be designated as \'WT\').')
                 if variant[0] in amino_acids:
-                    if variant[0] != wild_type_sequence[num - 1]:
-                        raise NameError('Position of amino acids in given sequence does not match the given '
-                                        'positions in the input data! E.g. see position {} and position {} being {} '
-                                        'in the given sequence.'.format(variant, num, wild_type_sequence[num - 1]))
+                    try:
+                        if variant[0] != wild_type_sequence[num - 1]:
+                            raise NameError('Position of amino acids in given sequence does not match the given '
+                                            'positions in the input data! E.g. see position {} and position {} being {}'
+                                            ' in the given sequence.'.format(variant, num, wild_type_sequence[num - 1]))
+                    except IndexError:
+                        raise IndexError("Found variant sequence position {} in data which "
+                                         "is out of range of wild-type sequence length.".format(str(num)))
                 try:
                     full_variant = wild_type_sequence[num - 1] + str(num) + str(variant[-1])
                 except IndexError:
