@@ -363,6 +363,7 @@ def run():
     # see https://github.com/ivanjayapurna/low-n-protein-engineering/tree/master/directed-evo
     elif arguments['directevo']:
         if arguments['--model'] is not None:
+            print('Not counting WT as variant in directed evolution as it cannot be used for (re-)combination.')
             path = os.getcwd()
             try:
                 # "temperature" parameter: determines sensitivity of Metropolis-Hastings acceptance criteria
