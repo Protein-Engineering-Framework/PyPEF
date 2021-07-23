@@ -154,7 +154,7 @@ def get_variants(df, amino_acids, wild_type_sequence):
     """
     x = df.iloc[:, 0]
     y = df.iloc[:, 1]
-    wt_position = False
+    wt_position = None
     single_variants, higher_variants, index_higher, index_lower, higher_values, single_values = [], [], [], [], [], []
     single, double, triple, quadruple, quintuple, sextuple, septuple,\
     octuple, nonuple, decuple, higher = 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
@@ -234,7 +234,7 @@ def get_variants(df, amino_acids, wild_type_sequence):
         higher_values.append(vals)
     for vals in y[index_lower]:
         single_values.append(vals)
-    if wt_position:
+    if wt_position is not None:
         single_variants.append(['WT'])
         single_values.append(y[wt_position])
 
