@@ -129,9 +129,10 @@ def drop_rows(csv_file, amino_acids, threshold_drop):
             else:
                 if variant[0].isdigit() and variant[-1] in amino_acids:
                     continue
-                elif variant[0] not in amino_acids or variant[-1] not in amino_acids:
-                    dropping_rows.append(i)
-                    # print('Does not know this definition of amino acid substitution: Variant:', variant)
+                elif variant not in ['wt', 'wild_type']:
+                    if variant[0] not in amino_acids or variant[-1] not in amino_acids:
+                        dropping_rows.append(i)
+                        # print('Does not know this definition of amino acid substitution: Variant:', variant)
         except TypeError:
             raise TypeError('You might consider checking the input .csv for empty first two columns,'
                             ' e.g. in the last row.')
