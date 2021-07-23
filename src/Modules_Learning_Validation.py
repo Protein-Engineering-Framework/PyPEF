@@ -226,10 +226,10 @@ def get_variants(df, amino_acids, wild_type_sequence):
                 single_variants.append([full_variant])
                 if i not in index_lower:
                     index_lower.append(i)
-    print('Single (for mklsvs if provided plus WT): {}.'.format(single), 'Double: {}.'.format(double), 'Triple: {}.'.format(triple),
-          'Quadruple: {}.'.format(quadruple), 'Quintuple: {}.'.format(quintuple), 'Sextuple: {}.'.format(sextuple),
-          'Septuple: {}.'.format(septuple), 'Octuple: {}.'.format(octuple), 'Nonuple: {}.'.format(nonuple),
-          'Decuple: {}.'.format(decuple), 'Higher: {}.'.format(higher))
+    print('Single (for mklsvs if provided plus WT): {}.'.format(single), 'Double: {}.'.format(double),
+          'Triple: {}.'.format(triple), 'Quadruple: {}.'.format(quadruple), 'Quintuple: {}.'.format(quintuple),
+          'Sextuple: {}.'.format(sextuple), 'Septuple: {}.'.format(septuple), 'Octuple: {}.'.format(octuple),
+          'Nonuple: {}.'.format(nonuple), 'Decuple: {}.'.format(decuple), 'Higher: {}.'.format(higher))
     for vals in y[index_higher]:
         higher_values.append(vals)
     for vals in y[index_lower]:
