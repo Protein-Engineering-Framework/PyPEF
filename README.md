@@ -1,7 +1,7 @@
 This repository contains supplementary information to
 
 Niklas E. Siedhoff<sup>*1,§*</sup>, Alexander-Maurice Illig<sup>*1,§*</sup>, Ulrich Schwaneberg<sup>*1,2*</sup>, Mehdi D. Davari<sup>*1,\**</sup>, <br>
-PyPEF – an Integrated Framework for Data-driven Protein Engineering, *Journal of Chemical Information and Modeling* (2021) <br>
+PyPEF – An Integrated Framework for Data-Driven Protein Engineering, *J. Chem. Inf. Model.* 2021, 61, 3463-3476 <br>
 https://doi.org/10.1021/acs.jcim.1c00099 <br>
 <sup>*1*</sup><sub>Institute of Biotechnology, RWTH Aachen University, Worringer Weg 3, 52074 Aachen, Germany</sub> <br>
 <sup>*2*</sup><sub>DWI-Leibniz Institute for Interactive Materials, Forckenbeckstraße 50, 52074 Aachen, Germany</sub> <br>
@@ -13,14 +13,12 @@ https://doi.org/10.1021/acs.jcim.1c00099 <br>
 a framework written in Python 3 for performing sequence-based machine learning-assisted protein engineering.
 <img src="workflow/test_dataset/exemplary_validation_color_plot.png" alt="drawing" width="800"/>
 
-Protein engineering by rational or random approaches generates data that can aid the construction of self-learned sequence-function landscapes to predict beneficial variants by using probabilistic methods that can screen the unexplored sequence space with uncertainty *in silico*. Such predictive methods can be applied for increasing the success/effectivity of an engineering campaign while partly offering the prospect to reveal (higher-order) epistatic effects. Here we present an engineering framework termed PyPEF for assisting the tuning and validation of models for combination of identified substitutions using machine learning algorithms (partial least squares (PLS), support vector machines (SVR), random forest (RF), and multilayer perceptron (MLP)-based regression) from the [scikit-learn](https://github.com/scikit-learn/scikit-learn) package. As training input, the developed software tool requires the sequence and the corresponding screening results (fitness labels) of the identified variants as .csv (or .fasta datasets following a self-defined convention). Using PLS, SVR, RF, or MLP regression, PyPEF trains on the given learning data while optimizing model hyperparameters and validates model performances on left-out data. Finally, the selected or best model for validation can be used to perform directed evolution walks *in silico* (see [Church-lab implementation](https://github.com/churchlab/UniRep) or the [reimplementation](https://github.com/ivanjayapurna/low-n-protein-engineering)) or to predict natural diverse or recombinant sequences that subsequently are to be designed and validated in the wet-lab.
+Protein engineering by rational or random approaches generates data that can aid the construction of self-learned sequence-function landscapes to predict beneficial variants by using probabilistic methods that can screen the unexplored sequence space with uncertainty *in silico*. Such predictive methods can be applied for increasing the success/effectivity of an engineering campaign while partly offering the prospect to reveal (higher-order) epistatic effects. Here we present an engineering framework termed PyPEF for assisting the tuning and validation of models for combination of identified substitutions using machine learning algorithms (partial least squares (PLS), support vector machines (SVR), random forest (RF), and multilayer perceptron (MLP)-based regression) from the [scikit-learn](https://github.com/scikit-learn/scikit-learn) package. As training input, the developed software tool requires the sequence and the corresponding screening results (fitness labels) of the identified variants as CSV (or FASTA-like datasets following a self-defined convention). Using PLS, SVR, RF, or MLP regression, PyPEF trains on the given learning data while optimizing model hyperparameters and validates model performances on left-out data. Finally, the selected or best model for validation can be used to perform directed evolution walks *in silico* (see [Church-lab implementation](https://github.com/churchlab/UniRep) or the [reimplementation](https://github.com/ivanjayapurna/low-n-protein-engineering)) or to predict natural diverse or recombinant sequences that subsequently are to be designed and validated in the wet-lab.
 
-Detailed information is given in the following publication, 
+For detailed information, please refer to the above-mentioned publication and related Supporting Information.
 
-PyPEF - an Integrated Framework for Data-driven Protein Engineering,
-
-and the workflow procedure is explained in the [Jupyter notebook](/workflow/Workflow_PyPEF.ipynb) (.ipynb) protocol (see
-./workflow directory).  
+The workflow procedure is explained in the [Jupyter notebook](/workflow/Workflow_PyPEF.ipynb) (.ipynb) protocol (see
+Tutorial section below and the ./workflow directory).  
 
 ## Running example
 PyPEF was developed to be run using a command-line interface:  
