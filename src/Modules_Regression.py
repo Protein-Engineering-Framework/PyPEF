@@ -8,7 +8,7 @@
 # For more information about the license see https://creativecommons.org/licenses/by-nc/4.0/legalcode
 
 # PyPEF – An Integrated Framework for Data-Driven Protein Engineering
-# Journal of Chemical Information and Modeling, 2021
+# Journal of Chemical Information and Modeling, 2021, 61, 3463-3476
 # https://doi.org/10.1021/acs.jcim.1c00099
 # Niklas E. Siedhoff1,§, Alexander-Maurice Illig1,§, Ulrich Schwaneberg1,2, Mehdi D. Davari1,*
 # 1Institute of Biotechnology, RWTH Aachen University, Worringer Weg 3, 52074 Aachen, Germany
