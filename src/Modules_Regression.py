@@ -401,8 +401,11 @@ def get_r2(x_learn, x_valid, y_learn, y_valid, regressor='pls'):
         best_params = regressor_.best_params_
 
     y_pred = []
-    for y_p in regressor_.predict(x_valid):  # predict validation entries with fitted model
-        y_pred.append(float(y_p))
+    try:
+        for y_p in regressor_.predict(x_valid):  # predict validation entries with fitted model
+            y_pred.append(float(y_p))
+    except ValueError:
+        raise ValueError("Above error message exception indicates that your validation set may be empty.")
 
     r2 = r2_score(y_valid, y_pred)
     rmse = np.sqrt(mean_squared_error(y_valid, y_pred))
