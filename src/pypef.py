@@ -115,11 +115,15 @@ import multiprocessing
 # importing own modules
 from Modules_Regression import read_models, formatted_output, r2_list, save_model, predict, predictions_out, plot
 from Modules_Directed_Evolution import run_de_trajectories
-from Modules_Learning_Validation import (get_wt_sequence, csv_input, drop_rows, get_variants, make_sub_ls_vs,
-                                         make_sub_ls_vs_randomly, make_fasta_ls_vs)
-from Modules_Prediction import (make_combinations_double, make_combinations_triple, make_combinations_quadruple,
-                                create_split_files, make_combinations_double_all_diverse,
-                                make_combinations_triple_all_diverse, make_combinations_quadruple_all_diverse)
+from Modules_Learning_Validation import (
+    get_wt_sequence, csv_input, drop_rows, get_variants, make_sub_ls_vs,
+    make_sub_ls_vs_randomly, make_fasta_ls_vs
+)
+from Modules_Prediction import (
+    make_combinations_double, make_combinations_triple, make_combinations_quadruple,
+    create_split_files, make_combinations_double_all_diverse,
+    make_combinations_triple_all_diverse, make_combinations_quadruple_all_diverse
+)
 # import Modules_Parallelization.r2_list_parallel locally to avoid error
 # when not running in parallel, thus commented out:
 # from Modules_Parallelization import r2_list_parallel
@@ -131,7 +135,7 @@ def run():
     running them dependent on user-passed input arguments using docopt
     for argument parsing.
     """
-    arguments = docopt(__doc__, version='PyPEF 0.1 (June 2021)')
+    arguments = docopt(__doc__, version='PyPEF 0.1 (August 2021)')
     # print(arguments)  # uncomment for printing parsed docopt arguments
     amino_acids = ['A', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'K', 'L', 'M', 'N', 'P', 'Q', 'R', 'S', 'T', 'V', 'W', 'Y']
 
@@ -278,30 +282,35 @@ def run():
                         except NotImplementedError:
                             cores = 4
                     print('Using {} cores for parallel computing. Running...'.format(cores))
-                    aaindex_r2_list = r2_list_parallel(arguments['--ls'], arguments['--vs'], cores,
-                                                       arguments['--regressor'], arguments['--nofft'],
-                                                       arguments['--sort']
-                                                       )
+                    aaindex_r2_list = r2_list_parallel(
+                        arguments['--ls'], arguments['--vs'], cores,
+                        arguments['--regressor'], arguments['--nofft'],
+                        arguments['--sort']
+                    )
                     formatted_output(aaindex_r2_list, arguments['--nofft'])
-                    save_model(path, aaindex_r2_list, arguments['--ls'], arguments['--vs'], t_save,
-                               arguments['--regressor'], arguments['--nofft'], arguments['--all']
-                               )
+                    save_model(
+                        path, aaindex_r2_list, arguments['--ls'], arguments['--vs'], t_save,
+                        arguments['--regressor'], arguments['--nofft'], arguments['--all']
+                    )
 
                 else:
-                    aaindex_r2_list = r2_list(arguments['--ls'], arguments['--vs'], arguments['--regressor'],
-                                              arguments['--nofft'], arguments['--sort']
-                                              )
+                    aaindex_r2_list = r2_list(
+                        arguments['--ls'], arguments['--vs'], arguments['--regressor'],
+                        arguments['--nofft'], arguments['--sort']
+                    )
                     formatted_output(aaindex_r2_list, arguments['--nofft'])
-                    save_model(path, aaindex_r2_list, arguments['--ls'], arguments['--vs'], t_save,
-                               arguments['--regressor'], arguments['--nofft'], arguments['--all']
-                               )
+                    save_model(
+                        path, aaindex_r2_list, arguments['--ls'], arguments['--vs'], t_save,
+                        arguments['--regressor'], arguments['--nofft'], arguments['--all']
+                    )
                 print('\nDone!\n')
 
         elif arguments['--figure'] is not None and arguments['--model'] is not None:
             path = os.getcwd()
-            plot(path, arguments['--figure'], arguments['--model'], arguments['--label'], arguments['--color'],
-                 arguments['--ywt'], arguments['--nofft']
-                 )
+            plot(
+                path, arguments['--figure'], arguments['--model'], arguments['--label'],
+                arguments['--color'], arguments['--ywt'], arguments['--nofft']
+            )
             print('\nCreated plot!\n')
 
         # Prediction of single .fasta file
@@ -373,7 +382,7 @@ def run():
                 # how many separate evolution trajectories to run
                 num_trajectories = int(arguments['--numtraj'])
             except ValueError:
-                raise ValueError("Define 'numiter' and 'numtraj' as integer and 'temp' as float.")
+                raise ValueError("Define flags 'numiter' and 'numtraj' as integer and 'temp' as float.")
 
             args_model = arguments['--model']
             s_wt = get_wt_sequence(arguments['--wtseq'])
@@ -416,11 +425,12 @@ def run():
 
             print('Running evolution trajectories and plotting...')
 
-            run_de_trajectories(s_wt, args_model, y_wt, num_iterations, num_trajectories,
-                                traj_records_folder, amino_acids, temp, path, sub_ls, arguments['--nofft'],
-                                negative=negative, save=True, usecsv=usecsv, csvaa=csvaa,
-                                print_matrix=arguments['--print']
-                                )
+            run_de_trajectories(
+                s_wt, args_model, y_wt, num_iterations, num_trajectories,
+                traj_records_folder, amino_acids, temp, path, sub_ls, arguments['--nofft'],
+                negative=negative, save=True, usecsv=usecsv, csvaa=csvaa,
+                print_matrix=arguments['--print']
+            )
             print('\nDone!')
 
 
