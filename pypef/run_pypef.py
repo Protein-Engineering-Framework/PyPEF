@@ -21,36 +21,36 @@
 PyPEF - Pythonic Protein Engineering Framework.
 
 Creation of learning and validation sets: to split .CSV data in Learning and Validation sets run
-    pypef.py mklsvs [...]
+    run_pypef.py mklsvs [...]
 Creation of prediction sets: To create prediction sets from CSV data single point mutational variants run
-    pypef.py mkps [...]
+    run_pypef.py mkps [...]
 Running:
  1. To train and validate models run
-        pypef.py run -l Learning_Set.fasta -v Validation_Set.fasta [-s 5] [--parallel] [-c 4]
+        run_pypef.py run -l Learning_Set.fasta -v Validation_Set.fasta [-s 5] [--parallel] [-c 4]
     ! Attention using ray for parallel computing ('--parallel') in Windows: Ray is not yet fully supported for Windows !
  2. To plot the validation creating a figure (.png) run
-        pypef.py run -m MODEL12345 -f Validation_Set.fasta
+        run_pypef.py run -m MODEL12345 -f Validation_Set.fasta
  3. To predict variants run
-        pypef.py run -m MODEL12345 -p Prediction_Set.fasta
+        run_pypef.py run -m MODEL12345 -p Prediction_Set.fasta
     or for predicting variants in created prediction set folders exemplary run
-        pypef.py run -m MODEL12345 --pmult [--drecomb] [...] [--qdiverse]
+        run_pypef.py run -m MODEL12345 --pmult [--drecomb] [...] [--qdiverse]
     or for performing in silico directed evolution run:
-        pypef.py directevo -m MODEL12345 [...]
+        run_pypef.py directevo -m MODEL12345 [...]
 
 
 Usage:
-    pypef.py mklsvs [--wtseq WT_SEQ] [--input CSV_FILE] [--drop THRESHOLD] [--nornd NUMBER]
-    pypef.py mkps [--wtseq WT_SEQ] [--input CSV_FILE] [--drop THRESHOLD]
+    run_pypef.py mklsvs [--wtseq WT_SEQ] [--input CSV_FILE] [--drop THRESHOLD] [--nornd NUMBER]
+    run_pypef.py mkps [--wtseq WT_SEQ] [--input CSV_FILE] [--drop THRESHOLD]
                                  [--drecomb] [--trecomb] [--qrecomb]
                                  [--ddiverse] [--tdiverse] [--qdiverse]
-    pypef.py run --ls LEARNING_SET --vs VALIDATION_SET [--save NUMBER] [--regressor TYPE] [--nofft] [--all]
+    run_pypef.py run --ls LEARNING_SET --vs VALIDATION_SET [--save NUMBER] [--regressor TYPE] [--nofft] [--all]
                                                        [--sort METRIC] [--parallel] [--cores NUMCORES]
-    pypef.py --show [MODELS]
-    pypef.py run --model MODEL12345 --figure VS_FOR_PLOTTING  [--label] [--color] [--ywt WT_FITNESS] [--nofft]
-    pypef.py run --model MODEL12345 --ps PREDICTION_SET [--nofft] [--negative] [--print]
-    pypef.py run --model MODEL12345 --pmult [--drecomb] [--trecomb] [--qrecomb]
+    run_pypef.py --show [MODELS]
+    run_pypef.py run --model MODEL12345 --figure VS_FOR_PLOTTING  [--label] [--color] [--ywt WT_FITNESS] [--nofft]
+    run_pypef.py run --model MODEL12345 --ps PREDICTION_SET [--nofft] [--negative] [--print]
+    run_pypef.py run --model MODEL12345 --pmult [--drecomb] [--trecomb] [--qrecomb]
                                           [--ddiverse] [--tdiverse] [--qdiverse] [--nofft] [--negative]
-    pypef.py directevo --model MODEL12345 [--ywt WT_FITNESS] [--wtseq WT_SEQ]
+    run_pypef.py directevo --model MODEL12345 [--ywt WT_FITNESS] [--wtseq WT_SEQ]
                                         [--numiter NUM_ITER] [--numtraj NUM_TRAJ]
                                         [--temp TEMPERATURE] [--nofft] [--negative] [--print]
                                         [--usecsv] [--csvaa] [--input CSV_FILE] [--drop THRESHOLD]
@@ -61,7 +61,7 @@ Options:
   --version                    Show version.
   --show                       Show saved models in Model_Results.txt.
   MODELS                       Number of saved models to show [default: 5].
-  -w --wtseq WT_SEQ            Input file (in .fa format) for Wild-Type sequence [default: None].
+  -w --wtseq WT_SEQ            Input file (in .fa format) for wild-type sequence [default: None].
   -i --input CSV_FILE          Input data file in .csv format [default: None].
   -d --drop THRESHOLD          Below threshold variants will be discarded from the data [default: -9E09].
   -n --nornd NUMBER            Number of randomly created Learning and Validation datasets [default: 0].
@@ -74,11 +74,11 @@ Options:
   --ddiverse                   Create/predict double natural diverse variants [default: False].
   --tdiverse                   Create/predict triple natural diverse variants [default: False].
   --qdiverse                   Create quadruple natural diverse variants [default: False].
-  -u --pmult                   Predict for all Prediction files in folder for recomb
+  -u --pmult                   Predict for all prediction files in folder for recomb
                                or diverse variants [default: False].
   --negative                   Set if more negative values define better variants [default: False].
-  -l --ls LEARNING_SET         Input Learning set in .fasta format.
-  -v --vs VALIDATION_SET       Input Validation set in .fasta format.
+  -l --ls LEARNING_SET         Input learning set in .fasta format.
+  -v --vs VALIDATION_SET       Input validation set in .fasta format.
   --regressor TYPE             Type of regression (R.) to use, options: PLS R.: pls, PLS CV R.: pls_cv,
                                Random Forest R.: rf, SVM R.: svr, MLP R.: mlp [default: pls].
   --nofft                      Raw sequence input, i.e. no FFT for establishing protein spectra
@@ -86,8 +86,8 @@ Options:
   --all                        Finally training on all data [default: False]
   --sort METRIC                Rank models based on metric {1: R^2, 2: RMSE, 3: NRMSE, 4: Pearson's r,
                                5: Spearman's rank} [default: 1].
-  -m --model MODEL12345        Model (pickle file) for plotting of Validation or for performing predictions.
-  -f --figure VS_FOR_PLOTTING  Validation set for plotting using a trained Model.
+  -m --model MODEL12345        Model (pickle file) for plotting of validation or for performing predictions.
+  -f --figure VS_FOR_PLOTTING  Validation set for plotting using a trained model.
   --label                      Label the plot instances [default: False].
   --color                      Color the plot for "true" and "false" predictions quarters [default: False].
   -p --ps PREDICTION_SET       Prediction set for performing predictions using a trained Model.
@@ -113,20 +113,23 @@ import multiprocessing
 # import ray
 
 # importing own modules
-from Modules_Regression import read_models, formatted_output, r2_list, save_model, predict, predictions_out, plot
-from Modules_Directed_Evolution import run_de_trajectories
-from Modules_Learning_Validation import (
+from pypef.Modules_Regression import (
+    read_models, formatted_output, r2_list, save_model, predict,
+    predictions_out, plot
+)
+from pypef.Modules_Directed_Evolution import run_de_trajectories
+from pypef.Modules_Learning_Validation import (
     get_wt_sequence, csv_input, drop_rows, get_variants, make_sub_ls_vs,
     make_sub_ls_vs_randomly, make_fasta_ls_vs
 )
-from Modules_Prediction import (
+from pypef.Modules_Prediction import (
     make_combinations_double, make_combinations_triple, make_combinations_quadruple,
     create_split_files, make_combinations_double_all_diverse,
     make_combinations_triple_all_diverse, make_combinations_quadruple_all_diverse
 )
 # import Modules_Parallelization.r2_list_parallel locally to avoid error
 # when not running in parallel, thus commented out:
-# from Modules_Parallelization import r2_list_parallel
+# from pypef.Modules_Parallelization import r2_list_parallel
 
 
 def run():
@@ -135,7 +138,7 @@ def run():
     running them dependent on user-passed input arguments using docopt
     for argument parsing.
     """
-    arguments = docopt(__doc__, version='PyPEF 0.1 (August 2021)')
+    arguments = docopt(__doc__, version='PyPEF ver. 0.1.1 (August 2021)')
     # print(arguments)  # uncomment for printing parsed docopt arguments
     amino_acids = ['A', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'K', 'L', 'M', 'N', 'P', 'Q', 'R', 'S', 'T', 'V', 'W', 'Y']
 
@@ -180,9 +183,10 @@ def run():
             no_rnd = int(no_rnd)
             while random_set_counter <= no_rnd:
                 print('Creating random LV and VS No. {}...'.format(random_set_counter), end='\r')
-                sub_ls, val_ls, sub_vs, val_vs = make_sub_ls_vs_randomly(single_variants, single_values,
-                                                                         higher_variants, higher_values
-                                                                         )
+                sub_ls, val_ls, sub_vs, val_vs = make_sub_ls_vs_randomly(
+                    single_variants, single_values,
+                    higher_variants, higher_values
+                )
                 make_fasta_ls_vs('LS_random_' + str(random_set_counter) + '.fasta', wt_sequence, sub_ls, val_ls)
                 make_fasta_ls_vs('VS_random_' + str(random_set_counter) + '.fasta', wt_sequence, sub_vs, val_vs)
                 random_set_counter += 1
@@ -253,7 +257,7 @@ def run():
                 and arguments['--qrecomb'] is False and arguments['--ddiverse'] is False \
                 and arguments['--tdiverse'] is False and arguments['--qdiverse'] is False:
             print('\nInput Error:\nAt least one specification needed: Specify recombinations for mkps ; '
-                  'e.g. try: "pypef.py mkps --drecomb" for performing double recombinant Prediction set.\n')
+                  'e.g. try: "run_pypef.py mkps --drecomb" for performing double recombinant Prediction set.\n')
             no_done = True
 
         if no_done is False:
@@ -272,7 +276,7 @@ def run():
                     # import parallel modules here as ray is yet not supported for Windows
                     import ray
                     ray.init()
-                    from Modules_Parallelization import r2_list_parallel
+                    from pypef.Modules_Parallelization import r2_list_parallel
                     cores = arguments['--cores']
                     try:
                         cores = int(cores)
@@ -409,9 +413,10 @@ def run():
                 print('Number of single variants: {}.'.format(len(single_variants)))
                 if len(single_variants) == 0:
                     print('Found NO single substitution variants for possible recombination!')
-                sub_ls, val_ls, _, _ = make_sub_ls_vs(single_variants, single_values, higher_variants,
-                                                      higher_values, directed_evolution=True
-                                                      )
+                sub_ls, val_ls, _, _ = make_sub_ls_vs(
+                    single_variants, single_values, higher_variants,
+                    higher_values, directed_evolution=True
+                )
                 print('Creating single variant dataset...')
 
                 make_fasta_ls_vs('Single_variants.fasta', s_wt, sub_ls, val_ls)

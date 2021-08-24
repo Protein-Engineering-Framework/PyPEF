@@ -27,7 +27,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import warnings
 
-from Modules_Regression import predict
+from pypef.Modules_Regression import predict
 
 # ignoring warnings of scikit-learn regression
 warnings.filterwarnings(action='ignore', category=RuntimeWarning, module='sklearn')

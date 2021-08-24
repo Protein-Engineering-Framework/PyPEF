@@ -860,6 +860,6 @@ def plot(path, fasta_file, model, label, color, y_wt, no_fft=False):
         plt.savefig(str(model) + '_' + str(fasta_file[:-6]) + '.png', dpi=500)
     except FileNotFoundError:
         raise FileNotFoundError("Did not find specified model: {}. You can define the threshold of models to be saved;"
-                                " e.g. with pypef.py run -l LS.fasta -v VS.fasta -t 10.".format(str(model)))
+                                " e.g. with run_pypef.py run -l LS.fasta -v VS.fasta -t 10.".format(str(model)))
 
     return ()
