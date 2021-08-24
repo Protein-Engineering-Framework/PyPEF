@@ -13401,7 +13401,7 @@ If we plot $\Delta y_\mathrm{pred}$ against $exp(\frac{\Delta y_\mathrm{pred}}{T
 <div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
 </div><div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<h3 id="pypef.py:-Argument-parsing-and-import-of-Modules">pypef.py: Argument parsing and import of Modules<a class="anchor-link" href="#pypef.py:-Argument-parsing-and-import-of-Modules">&#182;</a></h3><p>The docstring of the program is used for argument parsing and thus necessary for running the commands.</p>
+<h3 id="run_pypef.py:-Argument-parsing-and-import-of-Modules">run_pypef.py: Argument parsing and import of Modules<a class="anchor-link" href="#run_pypef.py:-Argument-parsing-and-import-of-Modules">&#182;</a></h3><p>The docstring of the program is used for argument parsing and thus necessary for running the commands.</p>
 
 </div>
 </div>
@@ -13416,36 +13416,36 @@ If we plot $\Delta y_\mathrm{pred}$ against $exp(\frac{\Delta y_\mathrm{pred}}{T
 <span class="sd">PyPEF - Pythonic Protein Engineering Framework.</span>
 
 <span class="sd">Creation of Learning and Validation sets: To split .CSV data in Learning and Validation sets run</span>
-<span class="sd">    pypef.py mklsvs [...]</span>
+<span class="sd">    run_pypef.py mklsvs [...]</span>
 <span class="sd">Creation of Prediction sets: To create Prediction sets from .CSV data single point mutational variants run</span>
-<span class="sd">    pypef.py mkps [...]</span>
+<span class="sd">    run_pypef.py mkps [...]</span>
 <span class="sd">Running:</span>
 <span class="sd"> 1. To train and validate models run</span>
-<span class="sd">        pypef.py run -l Learning_Set.fasta -v Validation_Set.fasta [-s 5] [--parallel] [-c 4]</span>
+<span class="sd">        run_pypef.py run -l Learning_Set.fasta -v Validation_Set.fasta [-s 5] [--parallel] [-c 4]</span>
 <span class="sd">    ! Attention using ray for parallel computing (&#39;--parallel&#39;) in Windows: ray is not yet fully supported for Windows !</span>
 <span class="sd"> 2. To plot the validation creating a figure (.png) run</span>
-<span class="sd">        pypef.py run -m MODEL12345 -f Validation_Set.fasta</span>
+<span class="sd">        run_pypef.py run -m MODEL12345 -f Validation_Set.fasta</span>
 <span class="sd"> 3. To predict variants run</span>
-<span class="sd">        pypef.py run -m MODEL12345 -p Prediction_Set.fasta</span>
+<span class="sd">        run_pypef.py run -m MODEL12345 -p Prediction_Set.fasta</span>
 <span class="sd">    or for predicting variants in created prediction set folders exemplary run</span>
-<span class="sd">        pypef.py run -m MODEL12345 --pmult [--drecomb] [...] [--qdiverse]</span>
+<span class="sd">        run_pypef.py run -m MODEL12345 --pmult [--drecomb] [...] [--qdiverse]</span>
 <span class="sd">    or for performing in silico directed evolution run:</span>
-<span class="sd">        pypef.py directevo -m MODEL12345 [...]</span>
+<span class="sd">        run_pypef.py directevo -m MODEL12345 [...]</span>
 
 
 <span class="sd">Usage:</span>
-<span class="sd">    pypef.py mklsvs [--wtseq WT_SEQ] [--input CSV_FILE] [--drop THRESHOLD] [--nornd NUMBER]</span>
-<span class="sd">    pypef.py mkps [--wtseq WT_SEQ] [--input CSV_FILE] [--drop THRESHOLD]</span>
+<span class="sd">    run_pypef.py mklsvs [--wtseq WT_SEQ] [--input CSV_FILE] [--drop THRESHOLD] [--nornd NUMBER]</span>
+<span class="sd">    run_pypef.py mkps [--wtseq WT_SEQ] [--input CSV_FILE] [--drop THRESHOLD]</span>
 <span class="sd">                                 [--drecomb] [--trecomb] [--qrecomb]</span>
 <span class="sd">                                 [--ddiverse] [--tdiverse] [--qdiverse]</span>
-<span class="sd">    pypef.py run --ls LEARNING_SET --vs VALIDATION_SET [--save NUMBER] [--regressor TYPE] [--nofft] [--sort METRIC]</span>
+<span class="sd">    run_pypef.py run --ls LEARNING_SET --vs VALIDATION_SET [--save NUMBER] [--regressor TYPE] [--nofft] [--sort METRIC]</span>
 <span class="sd">                                                       [--parallel] [--cores NUMCORES]</span>
-<span class="sd">    pypef.py --show [MODELS]</span>
-<span class="sd">    pypef.py run --model MODEL12345 --figure VS_FOR_PLOTTING  [--label] [--color] [--ywt WT_FITNESS] [--nofft]</span>
-<span class="sd">    pypef.py run --model MODEL12345 --ps PREDICTION_SET [--nofft] [--negative] [--print]</span>
-<span class="sd">    pypef.py run --model MODEL12345 --pmult [--drecomb] [--trecomb] [--qrecomb]</span>
+<span class="sd">    run_pypef.py --show [MODELS]</span>
+<span class="sd">    run_pypef.py run --model MODEL12345 --figure VS_FOR_PLOTTING  [--label] [--color] [--ywt WT_FITNESS] [--nofft]</span>
+<span class="sd">    run_pypef.py run --model MODEL12345 --ps PREDICTION_SET [--nofft] [--negative] [--print]</span>
+<span class="sd">    run_pypef.py run --model MODEL12345 --pmult [--drecomb] [--trecomb] [--qrecomb]</span>
 <span class="sd">                                          [--ddiverse] [--tdiverse] [--qdiverse] [--nofft] [--negative]</span>
-<span class="sd">    pypef.py directevo --model MODEL12345 [--ywt WT_FITNESS] [--wtseq WT_SEQ]</span>
+<span class="sd">    run_pypef.py directevo --model MODEL12345 [--ywt WT_FITNESS] [--wtseq WT_SEQ]</span>
 <span class="sd">                                        [--numiter NUM_ITER] [--numtraj NUM_TRAJ]</span>
 <span class="sd">                                        [--temp TEMPERATURE] [--nofft] [--negative] [--print]</span>
 <span class="sd">                                        [--usecsv] [--csvaa] [--input CSV_FILE] [--drop THRESHOLD]</span>
@@ -13601,7 +13601,7 @@ For parallel running:
 </div><div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
 <p>Parallel running follows the run command, e.g. to use 4 cores you can define:
-<br><code>python3 pypef.py run -l LS.fasta -v VS.fasta -s 5 --parallel -c 4</code>
+<br><code>python3 run_pypef.py run -l LS.fasta -v VS.fasta -s 5 --parallel -c 4</code>
 <br>In the following, mainly the non-parallelized version of this tool is described.</p>
 
 </div>
@@ -14689,7 +14689,7 @@ For parallel running:
         <span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">model</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;_&#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">fasta_file</span><span class="p">[:</span><span class="o">-</span><span class="mi">6</span><span class="p">])</span> <span class="o">+</span> <span class="s1">&#39;.png&#39;</span><span class="p">,</span> <span class="n">dpi</span><span class="o">=</span><span class="mi">500</span><span class="p">)</span>
     <span class="k">except</span> <span class="ne">FileNotFoundError</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="s2">&quot;Did not find specified model: </span><span class="si">{}</span><span class="s2">. You can define the threshold of models to be saved;&quot;</span>
-                                <span class="s2">&quot; e.g. with pypef.py run -l LS.fasta -v VS.fasta -t 10.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">model</span><span class="p">)))</span>
+                                <span class="s2">&quot; e.g. with run_pypef.py run -l LS.fasta -v VS.fasta -t 10.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">model</span><span class="p">)))</span>
 
     <span class="k">return</span> <span class="p">()</span>
 </pre></div>
@@ -14741,7 +14741,7 @@ For parallel running:
 </div><div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
 <p><code>docopts</code> is used for creating parser objects which can be filled with user commands. Only four major commands exist:
-<code>python3 pypef.py mklsvs</code>, <code>mkps</code>, <code>run</code>, and <code>directevo</code>.</p>
+<code>python3 run_pypef.py mklsvs</code>, <code>mkps</code>, <code>run</code>, and <code>directevo</code>.</p>
 <ul>
 <li>For creation of Learning  (LS) and Validation Sets (VS) you can use the <code>mklsvs</code> command which uses the .csv file as variant and label data input</li>
 <li>For creation of Prediction Set(s) (PS) you can use the <code>mkps</code>command which creates recombinant (or natural diverse (<code>--ddiverse</code>, <code>--tdiverse</code>, or <code>--qdiverse</code>)) prediction sequence sets form the input .csv file.</li>
@@ -14798,9 +14798,9 @@ For this exemplary protocol we run our workflow on the ANEH set reported by <a h
 the tool is run following a typical machine learning approach and comprises three steps:</p>
 <hr>
 <ol>
-<li>Learning and model validation: <code>python3 path/to/pypef.py run -l Learning_Set.fasta -v Validation_Set.fasta -s 10</code></li>
-<li>Visualization: <code>python3 path/to/pypef.py run -m MODEL12345 -f Validation_Set.fasta</code></li>
-<li>Prediction: <code>python3 path/to/pypef.py run -m MODEL12345 -p Prediction_Set.fasta</code></li>
+<li>Learning and model validation: <code>python3 path/to/run_pypef.py run -l Learning_Set.fasta -v Validation_Set.fasta -s 10</code></li>
+<li>Visualization: <code>python3 path/to/run_pypef.py run -m MODEL12345 -f Validation_Set.fasta</code></li>
+<li>Prediction: <code>python3 path/to/run_pypef.py run -m MODEL12345 -p Prediction_Set.fasta</code></li>
 </ol>
 <hr>
 
@@ -14878,7 +14878,7 @@ To install parallel modules (Ray, setproctitle) on Windows, Visual C++ 14.0 is r
 <div class="prompt input_prompt">In&nbsp;[&nbsp;]:</div>
 <div class="inner_cell">
     <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="o">%</span><span class="k">run</span> ../src/pypef.py -h
+<div class=" highlight hl-ipython3"><pre><span></span><span class="o">%</span><span class="k">run</span> ../pypef/run_pypef.py -h
 </pre></div>
 
     </div>
@@ -14912,7 +14912,7 @@ To install parallel modules (Ray, setproctitle) on Windows, Visual C++ 14.0 is r
 <div class="prompt input_prompt">In&nbsp;[&nbsp;]:</div>
 <div class="inner_cell">
     <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="o">%</span><span class="k">run</span> ../../src/pypef.py mklsvs -i 37_ANEH_variants.csv -w Sequence_WT_ANEH.fa
+<div class=" highlight hl-ipython3"><pre><span></span><span class="o">%</span><span class="k">run</span> ../../pypef/run_pypef.py mklsvs -i 37_ANEH_variants.csv -w Sequence_WT_ANEH.fa
 </pre></div>
 
     </div>
@@ -14935,10 +14935,10 @@ run model training and validation and saving 10 best models (using single CPU):<
 <div class="prompt input_prompt">In&nbsp;[&nbsp;]:</div>
 <div class="inner_cell">
     <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="o">%</span><span class="k">run</span> ../../src/pypef.py run -l LS.fasta -v VS.fasta -s 10
-<span class="c1"># same as %run ../../src/pypef.py run -l LS.fasta -v VS.fasta -s 10 --regressor pls</span>
+<div class=" highlight hl-ipython3"><pre><span></span><span class="o">%</span><span class="k">run</span> ../../pypef/run_pypef.py run -l LS.fasta -v VS.fasta -s 10
+<span class="c1"># same as %run ../../pypef/run_pypef.py run -l LS.fasta -v VS.fasta -s 10 --regressor pls</span>
 <span class="c1"># finally training the model on all data would be defined by: </span>
-<span class="c1"># %run ../../src/pypef.py run -l LS.fasta -v VS.fasta -s 10 --regressor pls --all</span>
+<span class="c1"># %run ../../pypef/run_pypef.py run -l LS.fasta -v VS.fasta -s 10 --regressor pls --all</span>
 </pre></div>
 
     </div>
@@ -14989,7 +14989,7 @@ run model training and validation and saving 10 best models (using single CPU):<
     <div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># To avoid potential system instabilities, just run parallel in Unix System</span>
 <span class="c1"># using 4 cores for running (-c 4)</span>
-<span class="o">%</span><span class="k">run</span> ../../src/pypef.py run -l LS.fasta -v VS.fasta -s 10 --parallel -c 4
+<span class="o">%</span><span class="k">run</span> ../../pypef/run_pypef.py run -l LS.fasta -v VS.fasta -s 10 --parallel -c 4
 </pre></div>
 
     </div>
@@ -15018,7 +15018,7 @@ The best models are reported in the <em>Model_Results.txt</em> file; we can also
 <div class="prompt input_prompt">In&nbsp;[&nbsp;]:</div>
 <div class="inner_cell">
     <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="o">%</span><span class="k">run</span> ../../src/pypef.py --show
+<div class=" highlight hl-ipython3"><pre><span></span><span class="o">%</span><span class="k">run</span> ../../pypef/run_pypef.py --show
 </pre></div>
 
     </div>
@@ -15039,7 +15039,7 @@ The best models are reported in the <em>Model_Results.txt</em> file; we can also
 <div class="prompt input_prompt">In&nbsp;[&nbsp;]:</div>
 <div class="inner_cell">
     <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="o">%</span><span class="k">run</span> ../../src/pypef.py run -m FAUJ880104 -f VS.fasta
+<div class=" highlight hl-ipython3"><pre><span></span><span class="o">%</span><span class="k">run</span> ../../pypef/run_pypef.py run -m FAUJ880104 -f VS.fasta
 </pre></div>
 
     </div>
@@ -15060,7 +15060,7 @@ The best models are reported in the <em>Model_Results.txt</em> file; we can also
 <div class="prompt input_prompt">In&nbsp;[&nbsp;]:</div>
 <div class="inner_cell">
     <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="o">%</span><span class="k">run</span> ../../src/pypef.py run -m FAUJ880104 -f VS.fasta --label
+<div class=" highlight hl-ipython3"><pre><span></span><span class="o">%</span><span class="k">run</span> ../../pypef/run_pypef.py run -m FAUJ880104 -f VS.fasta --label
 </pre></div>
 
     </div>
@@ -15097,7 +15097,7 @@ The best models are reported in the <em>Model_Results.txt</em> file; we can also
 <div class="prompt input_prompt">In&nbsp;[&nbsp;]:</div>
 <div class="inner_cell">
     <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="o">%</span><span class="k">run</span> ../../src/pypef.py run -m FAUJ880104 -f VS.fasta --color --ywt -1.5
+<div class=" highlight hl-ipython3"><pre><span></span><span class="o">%</span><span class="k">run</span> ../../pypef/run_pypef.py run -m FAUJ880104 -f VS.fasta --color --ywt -1.5
 </pre></div>
 
     </div>
@@ -15126,7 +15126,7 @@ The best models are reported in the <em>Model_Results.txt</em> file; we can also
 <div class="prompt input_prompt">In&nbsp;[&nbsp;]:</div>
 <div class="inner_cell">
     <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="o">%</span><span class="k">run</span> ../../src/pypef.py mkps -i 37_ANEH_variants.csv -w Sequence_WT_ANEH.fa
+<div class=" highlight hl-ipython3"><pre><span></span><span class="o">%</span><span class="k">run</span> ../../pypef/run_pypef.py mkps -i 37_ANEH_variants.csv -w Sequence_WT_ANEH.fa
 </pre></div>
 
     </div>
@@ -15147,7 +15147,7 @@ The best models are reported in the <em>Model_Results.txt</em> file; we can also
 <div class="prompt input_prompt">In&nbsp;[&nbsp;]:</div>
 <div class="inner_cell">
     <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="o">%</span><span class="k">run</span> ../../src/pypef.py mkps -i 37_ANEH_variants.csv -w Sequence_WT_ANEH.fa --drecomb --trecomb --tdiverse
+<div class=" highlight hl-ipython3"><pre><span></span><span class="o">%</span><span class="k">run</span> ../../pypef/run_pypef.py mkps -i 37_ANEH_variants.csv -w Sequence_WT_ANEH.fa --drecomb --trecomb --tdiverse
 </pre></div>
 
     </div>
@@ -15168,7 +15168,7 @@ The best models are reported in the <em>Model_Results.txt</em> file; we can also
 <div class="prompt input_prompt">In&nbsp;[&nbsp;]:</div>
 <div class="inner_cell">
     <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="o">%</span><span class="k">run</span> ../../src/pypef.py run -m FAUJ880104 --pmult --drecomb --trecomb --tdiverse --negative
+<div class=" highlight hl-ipython3"><pre><span></span><span class="o">%</span><span class="k">run</span> ../../pypef/run_pypef.py run -m FAUJ880104 --pmult --drecomb --trecomb --tdiverse --negative
 </pre></div>
 
     </div>
@@ -15197,7 +15197,7 @@ The best models are reported in the <em>Model_Results.txt</em> file; we can also
 <div class="prompt input_prompt">In&nbsp;[&nbsp;]:</div>
 <div class="inner_cell">
     <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="o">%</span><span class="k">run</span> ../../src/pypef.py directevo -m FAUJ880104 -w Sequence_WT_ANEH.fa -y -1.5 --negative
+<div class=" highlight hl-ipython3"><pre><span></span><span class="o">%</span><span class="k">run</span> ../../pypef/run_pypef.py directevo -m FAUJ880104 -w Sequence_WT_ANEH.fa -y -1.5 --negative
 </pre></div>
 
     </div>
@@ -15234,7 +15234,7 @@ The best models are reported in the <em>Model_Results.txt</em> file; we can also
 <div class="prompt input_prompt">In&nbsp;[&nbsp;]:</div>
 <div class="inner_cell">
     <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="o">%</span><span class="k">run</span> ../../src/pypef.py directevo -m FAUJ880104 -w Sequence_WT_ANEH.fa -y -1.5 --numiter 10 --numtraj 8 --negative
+<div class=" highlight hl-ipython3"><pre><span></span><span class="o">%</span><span class="k">run</span> ../../pypef/run_pypef.py directevo -m FAUJ880104 -w Sequence_WT_ANEH.fa -y -1.5 --numiter 10 --numtraj 8 --negative
 </pre></div>
 
     </div>
@@ -15255,7 +15255,7 @@ The best models are reported in the <em>Model_Results.txt</em> file; we can also
 <div class="prompt input_prompt">In&nbsp;[&nbsp;]:</div>
 <div class="inner_cell">
     <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="o">%</span><span class="k">run</span> ../../src/pypef.py directevo -m FAUJ880104 -i 37_ANEH_variants.csv -w Sequence_WT_ANEH.fa -y -1.5 --usecsv --csvaa --negative
+<div class=" highlight hl-ipython3"><pre><span></span><span class="o">%</span><span class="k">run</span> ../../pypef/run_pypef.py directevo -m FAUJ880104 -i 37_ANEH_variants.csv -w Sequence_WT_ANEH.fa -y -1.5 --usecsv --csvaa --negative
 </pre></div>
 
     </div>
@@ -15276,9 +15276,9 @@ The best models are reported in the <em>Model_Results.txt</em> file; we can also
 <div class="prompt input_prompt">In&nbsp;[&nbsp;]:</div>
 <div class="inner_cell">
     <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="o">%</span><span class="k">run</span> ../../src/pypef.py run -l LS.fasta -v VS.fasta --nofft
-<span class="o">%</span><span class="k">run</span> ../../src/pypef.py --show
-<span class="o">%</span><span class="k">run</span> ../../src/pypef.py directevo -m WEBA780101 -w Sequence_WT_ANEH.fa -y -1.5 --negative --nofft
+<div class=" highlight hl-ipython3"><pre><span></span><span class="o">%</span><span class="k">run</span> ../../pypef/run_pypef.py run -l LS.fasta -v VS.fasta --nofft
+<span class="o">%</span><span class="k">run</span> ../../pypef/run_pypef.py --show
+<span class="o">%</span><span class="k">run</span> ../../pypef/run_pypef.py directevo -m WEBA780101 -w Sequence_WT_ANEH.fa -y -1.5 --negative --nofft
 </pre></div>
 
     </div>
