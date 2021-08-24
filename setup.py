@@ -15,7 +15,7 @@ setup(
                 'machine learning models from sequence variant-fitness data (e.g., provided as CSV data).',
     long_description=long_description,
     long_description_content_type='text/markdown',
-    url='https://github.com/niklases/PyPEF',
+    url='https://github.com/Protein-Engineering-Framework/PyPEF',
     py_modules=['pypef'],
     packages=find_packages(),
     include_package_data=True,
