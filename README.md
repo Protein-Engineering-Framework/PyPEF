@@ -8,6 +8,7 @@ https://doi.org/10.1021/acs.jcim.1c00099 <br>
 <sup>*\**</sup><sub>Corresponding author</sub> <br>
 <sup>*§*</sup><sub>Equal contribution</sub> <br>
 
+
 # PyPEF: Pythonic Protein Engineering Framework
 
 a framework written in Python 3 for performing sequence-based machine learning-assisted protein engineering.
@@ -23,18 +24,27 @@ Tutorial section below and the ./workflow directory).
 ## Running example
 PyPEF was developed to be run using a command-line interface:  
 ```
-python3 pypef.py --help
-python3 pypef.py mklsvs -w WT_SEQUENCE.FASTA -i VARIANT-FITNESS_DATA.CSV 
-python3 pypef.py run -l LEARNING_SET.FASTA -v VALIDATION_SET.FASTA --regressor TYPE 
-python3 pypef.py --show
-python3 pypef.py run -m MODEL12345 -f VALIDATION_SET.FASTA
-python3 pypef.py run -m MODEL12345 -p PREDICTION_SET.FASTA
-python3 pypef.py mkps -w WT_SEQUENCE.FASTA -i VARIANT-FITNESS_DATA.CSV --drecomb
-python3 pypef.py run -m MODEL12345 --pmult --drecomb
-python3 pypef.py directevo -m MODEL12345 --ywt WT_FITNESS -w WT_SEQUENCE.FASTA --usecsv -i VARIANT-FITNESS_DATA.CSV
+python3 run_pypef.py --help
+python3 run_pypef.py mklsvs -w WT_SEQUENCE.FASTA -i VARIANT-FITNESS_DATA.CSV 
+python3 run_pypef.py run -l LEARNING_SET.FASTA -v VALIDATION_SET.FASTA --regressor TYPE 
+python3 run_pypef.py --show
+python3 run_pypef.py run -m MODEL12345 -f VALIDATION_SET.FASTA
+python3 run_pypef.py run -m MODEL12345 -p PREDICTION_SET.FASTA
+python3 run_pypef.py mkps -w WT_SEQUENCE.FASTA -i VARIANT-FITNESS_DATA.CSV --drecomb
+python3 run_pypef.py run -m MODEL12345 --pmult --drecomb
+python3 run_pypef.py directevo -m MODEL12345 --ywt WT_FITNESS -w WT_SEQUENCE.FASTA --usecsv -i VARIANT-FITNESS_DATA.CSV
 ```
 PyPEF's package dependencies are linked [here](https://github.com/Protein-Engineering-Framework/PyPEF/network/dependencies). A small API for sequence encoding and model validation is provided in the [encoding_validation_api](/encoding_validation_api) directory.
-Further, for designing your own API based on the PyPEF workflow, modules can be adapted from the source code provided in the [src](/src) directory.
+Further, for designing your own API based on the PyPEF workflow, modules can be adapted from the source code provided in the [pypef source](/pypef) directory.
+A quick installation of the PyPEF command line framework using PyPI (only for Linux OS) can be performed with:
+```
+pip install pypef
+```
+After successful installation, PyPEF should work by calling `pypef` in the shell, e.g.:
+```
+pypef --help
+```
+The detailed routine for setting up a new virtual environment using Anaconda, installing required Python packages for that environment, and running the Jupyter Notebook tutorial is given below.
 
 ## Tutorial
 
