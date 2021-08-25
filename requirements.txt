@@ -1,5 +1,5 @@
 # to install packages: python3 -m pip install -r requirements.txt
-numpy==1.19.5
+numpy==1.19.1
 pandas==0.25.2
 scikit-learn==0.24.2
 docopt==0.6.2
