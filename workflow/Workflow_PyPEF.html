@@ -14878,6 +14878,21 @@ To install parallel modules (Ray, setproctitle) on Windows, Visual C++ 14.0 is r
 <div class="prompt input_prompt">In&nbsp;[&nbsp;]:</div>
 <div class="inner_cell">
     <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># adding the path to /pypef source modules</span>
+<span class="kn">import</span> <span class="nn">sys</span> 
+<span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">workbookDir</span><span class="p">[:</span><span class="o">-</span><span class="mi">9</span><span class="p">])</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[&nbsp;]:</div>
+<div class="inner_cell">
+    <div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="o">%</span><span class="k">run</span> ../pypef/run_pypef.py -h
 </pre></div>
 
@@ -14957,7 +14972,7 @@ run model training and validation and saving 10 best models (using single CPU):<
 <div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
 </div><div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<h5 id="This-'parallel-running'-section-may-not-work-when-running-on-Windows"><font color="red">This 'parallel running' section may not work when running on Windows</font><a class="anchor-link" href="#This-'parallel-running'-section-may-not-work-when-running-on-Windows">&#182;</a></h5>
+<h5 id="This-'parallel-running'-section-may-not-work-when-running-on-Windows-and-inside-this-notebook"><font color="red">This 'parallel running' section may not work when running on Windows and inside this notebook</font><a class="anchor-link" href="#This-'parallel-running'-section-may-not-work-when-running-on-Windows-and-inside-this-notebook">&#182;</a></h5>
 </div>
 </div>
 </div>
@@ -14974,7 +14989,7 @@ run model training and validation and saving 10 best models (using single CPU):<
 <div class="prompt input_prompt">In&nbsp;[&nbsp;]:</div>
 <div class="inner_cell">
     <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="o">%</span><span class="k">run</span> -m pip install --user -r ../../requirements_parallelization.txt
+<div class=" highlight hl-ipython3"><pre><span></span><span class="c1">#%run -m pip install --user -r ../../requirements_parallelization.txt</span>
 </pre></div>
 
     </div>
@@ -14987,9 +15002,10 @@ run model training and validation and saving 10 best models (using single CPU):<
 <div class="prompt input_prompt">In&nbsp;[&nbsp;]:</div>
 <div class="inner_cell">
     <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># To avoid potential system instabilities, just run parallel in Unix System</span>
+<div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># Will not work inside the Jupyter Notebook as the sys path is not known (would require relative imports of pypef modules)</span>
+<span class="c1"># To avoid potential system instabilities, just run parallel in Unix System</span>
 <span class="c1"># using 4 cores for running (-c 4)</span>
-<span class="o">%</span><span class="k">run</span> ../../pypef/run_pypef.py run -l LS.fasta -v VS.fasta -s 10 --parallel -c 4
+<span class="c1">#%run ../../pypef/run_pypef.py run -l LS.fasta -v VS.fasta -s 10 --parallel -c 4</span>
 </pre></div>
 
     </div>
