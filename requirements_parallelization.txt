@@ -1,5 +1,5 @@
 # Parallelization libraries below (not yet, April 2021, fully supported on Windows)
-ray==1.2.0
+ray==1.6.0
 setproctitle==1.1.10
 psutil==5.7.2
 aioredis==1.3.1

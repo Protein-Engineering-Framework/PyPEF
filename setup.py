@@ -7,7 +7,7 @@ with open("requirements.txt", "r", encoding="utf-8") as fh_single_core:
 
 setup(
     name='pypef',
-    version='0.1.2',
+    version='0.1.4',
     author='Niklas Siedhoff & Alexander-Maurice Illig',
     author_email='n.siedhoff@biotec.rwth-aachen.de',
     license='CC BY-NC-SA 4.0',
@@ -20,9 +20,12 @@ setup(
     packages=find_packages(),
     include_package_data=True,
     install_requires=[requirements],
-    python_requires='>=3.7',
+    python_requires='==3.7, ==3.8',
     classifiers=[
+        'Development Status :: 3 - Alpha',
         "Programming Language :: Python :: 3",
+        'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python :: 3.8',
         "Operating System :: POSIX :: Linux",
         "Topic :: Scientific/Engineering :: Bio-Informatics"
     ],
