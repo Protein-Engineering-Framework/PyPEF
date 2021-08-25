@@ -7,7 +7,7 @@ with open("requirements.txt", "r", encoding="utf-8") as fh_single_core:
 
 setup(
     name='pypef',
-    version='0.1.1',
+    version='0.1.2',
     author='Niklas Siedhoff & Alexander-Maurice Illig',
     author_email='n.siedhoff@biotec.rwth-aachen.de',
     license='CC BY-NC-SA 4.0',
