@@ -36,7 +36,7 @@ python3 run_pypef.py directevo -m MODEL12345 --ywt WT_FITNESS -w WT_SEQUENCE.FAS
 ```
 PyPEF's package dependencies are linked [here](https://github.com/Protein-Engineering-Framework/PyPEF/network/dependencies). A small API for sequence encoding and model validation is provided in the [encoding_validation_api](/encoding_validation_api) directory.
 Further, for designing your own API based on the PyPEF workflow, modules can be adapted from the source code provided in the [pypef source](/pypef) directory.
-A quick installation of the PyPEF command line framework using PyPI (only for Linux OS) can be performed with:
+A quick installation of the PyPEF command line framework using PyPI (only tested for Linux OS and Python 3.7/3.8) can be performed with:
 ```
 pip install pypef
 ```
