@@ -16,8 +16,8 @@
 
 import pickle
 from exemplary_dataset_B import all_sequences, all_labels
-from pypef_api import AAIndexEncoding, get_performance
-from pypef_api import pls_cv_regressor, svr_cv_regressor, rf_cv_regressor, mlp_cv_regressor
+from pypef.encoding_api import AAIndexEncoding, get_performance
+from pypef.encoding_api import pls_cv_regressor, svr_cv_regressor, rf_cv_regressor, mlp_cv_regressor
 # Or just use a sklearn BaseEstimator, e.g. PLSRegression():
 from sklearn.cross_decomposition import PLSRegression  # Needed for model=eval(best_model[-2]), import also for other
                                                        # regression options if required.
@@ -47,20 +47,20 @@ seq_to_predict = [
 # Printing top 10 models: used indices for aa encoding, achieved performance values, and model parameters.
 print('Top ten models (ranked by R2):')
 for i, p in enumerate(performances[:10]):
-    print(i+1, p)
+    print(i+1, p[:7])
 
 # The best model regarding R2 (if get_performance(sort='1')) is performances[0].
 best_model = performances[0]
-print('\nBest model according to R2 on validation set: {}\n'.format(best_model))
+print('\nBest model according to R2 on validation set: {}\n'.format(best_model[:7]))
 
-# The best model was encoded by amino acid index stored in the last entry of the list: best_model[-1].
-use_aaindex = best_model[-1]
+# The best model was encoded by amino acid index stored in the eighths entry of the list: best_model[8].
+use_aaindex = best_model[8]
 
 
 ######## EXAMPLE 1: Reconstruct best model from performance list ########
 
-# Reconstruct model parameters in list entry best_model[-2].
-model = eval(best_model[-2])
+# Reconstruct model parameters in list entry best_model[7].
+model = eval(best_model[7])
 
 # Get fft-ed or raw-encoded sequences for fitting and prediction, use raw_encoded_num_seq_to_learn if no fft was used.
 fft_encoded_num_seq_to_learn, raw_encoded_num_seq_to_learn = AAIndexEncoding(use_aaindex, learn_sequences).get_x_and_y()
