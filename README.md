@@ -22,21 +22,21 @@ The workflow procedure is explained in the [Jupyter notebook](/workflow/Workflow
 Tutorial section below and the ./workflow directory).  
 
 ## Running example
-PyPEF was developed to be run using a command-line interface:  
+PyPEF was developed to be run from a command-line interface while `python3 ./pypef/run_pypef.py` (when using the downloaded version of this repository) should be equal to `pypef` when installed with pip.   
 ```
-python3 run_pypef.py --help
-python3 run_pypef.py mklsvs -w WT_SEQUENCE.FASTA -i VARIANT-FITNESS_DATA.CSV 
-python3 run_pypef.py run -l LEARNING_SET.FASTA -v VALIDATION_SET.FASTA --regressor TYPE 
-python3 run_pypef.py --show
-python3 run_pypef.py run -m MODEL12345 -f VALIDATION_SET.FASTA
-python3 run_pypef.py run -m MODEL12345 -p PREDICTION_SET.FASTA
-python3 run_pypef.py mkps -w WT_SEQUENCE.FASTA -i VARIANT-FITNESS_DATA.CSV --drecomb
-python3 run_pypef.py run -m MODEL12345 --pmult --drecomb
-python3 run_pypef.py directevo -m MODEL12345 --ywt WT_FITNESS -w WT_SEQUENCE.FASTA --usecsv -i VARIANT-FITNESS_DATA.CSV
+pypef --help
+pypef mklsvs -w WT_SEQUENCE.FASTA -i VARIANT-FITNESS_DATA.CSV 
+pypef run -l LEARNING_SET.FASTA -v VALIDATION_SET.FASTA --regressor TYPE 
+pypef --show
+pypef run -m MODEL12345 -f VALIDATION_SET.FASTA
+pypef run -m MODEL12345 -p PREDICTION_SET.FASTA
+pypef mkps -w WT_SEQUENCE.FASTA -i VARIANT-FITNESS_DATA.CSV --drecomb
+pypef run -m MODEL12345 --pmult --drecomb
+pypef directevo -m MODEL12345 --ywt WT_FITNESS -w WT_SEQUENCE.FASTA --usecsv -i VARIANT-FITNESS_DATA.CSV
 ```
-PyPEF's package dependencies are linked [here](https://github.com/Protein-Engineering-Framework/PyPEF/network/dependencies). A small API for sequence encoding and model validation is provided in the [encoding_validation_api](/encoding_validation_api) directory.
+PyPEF's package dependencies are linked [here](https://github.com/Protein-Engineering-Framework/PyPEF/network/dependencies). A small example of using the encoding API for sequence encoding and model validation is provided in the [encoding_validation_api](/encoding_validation_api) directory.
 Further, for designing your own API based on the PyPEF workflow, modules can be adapted from the source code provided in the [pypef source](/pypef) directory.
-A quick installation of the PyPEF command line framework using PyPI (only tested for Linux OS and Python 3.7/3.8) can be performed with:
+A quick installation of the PyPEF command line framework using PyPI (tested for Linux OS and Python 3.7–3.9) can be performed with:
 ```
 pip install pypef
 ```
@@ -81,15 +81,11 @@ After activating the environment you can install required packages after changin
 python3 -m pip install -r requirements.txt
 ```
 
-and optionally:
-
-```
-python3 -m pip install -r requirements_parallelization.txt
-```
+Note that Ray does not yet fully support running on Windows and does not need to be used to run the program on a single core (no `--parallel`flag).
 
 Now, after installing required packages, you should be able to directly run pypef in your preferred command-line interface (see running example).
 
-To run the tutorial after installing required packages either from the YAML environment file or the TEXT file(s), you have to open a Jupyter Notebook. If you have installed Anaconda, Jupyter Notebook and other commonly used packages for scientific computing and data science should be already installed in Python. If not, you can also install Jupyter via `conda install ipython jupyter`. To use the pypef environment as kernel inside the Jupyter Notebook, you need to install the ipykernel:
+To run the tutorial after installing required packages either from the conda YAML environment file, the TEXT requirement file, or after installing packages using the pip version of PyPEF, you have to open a Jupyter Notebook. If you have installed Anaconda, Jupyter Notebook and other commonly used packages for scientific computing and data science should be already installed in Python. If not, you can also install Jupyter via `conda install ipython jupyter`. To use the pypef environment as kernel inside the Jupyter Notebook, you need to install the ipykernel:
 
 ```
 conda install -c anaconda ipykernel
@@ -99,7 +95,7 @@ python3 -m ipykernel install --user --name=pypef
 Now change the directory to ./workflow (`cd workflow`) and run the .ipynb file:
 
 ```
-jupyter notebook
+jupyter-notebook
 ```
 
 Copy the notebook URL in your internet browser and select the Workflow_PyPEF.ipynb file to open it. Now you can select the pypef Python environment at the top Notebook menu: Kernel > Change kernel > pypef (otherwise you would use your default Python version as environment, i.e. you would have to install the required packages for this interpreter as well; for this case the installation of the prerequisite packages can also be done within the notebook in provided code fields). 
