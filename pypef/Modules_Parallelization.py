@@ -114,7 +114,8 @@ def parallel(d, core, aa_indices, learning_set, validation_set, regressor='pls',
             r2, rmse, nrmse, pearson_r, spearman_rho, regressor, best_params = get_r2(
                 x_learn, x_test, y_learn, y_test, regressor
             )
-            aaindex_r2_list.append([aaindex, r2, rmse, nrmse, pearson_r, spearman_rho, regressor, best_params])
+            if r2 is not None:  # get_r2() returns None for metrics if MSE can't be calculated
+                aaindex_r2_list.append([aaindex, r2, rmse, nrmse, pearson_r, spearman_rho, regressor, best_params])
 
     return aaindex_r2_list
 

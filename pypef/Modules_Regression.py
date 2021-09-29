@@ -27,6 +27,7 @@ import matplotlib
 matplotlib.use('Agg')  # no plt.show(), just save plot
 import matplotlib.pyplot as plt
 import numpy as np
+from scipy import stats
 import pickle
 from tqdm import tqdm  # progress bars
 # import adjust_text  # only locally imported for labeled validation plots and in silico directed evolution
@@ -45,6 +46,8 @@ import warnings
 # ignoring warnings of PLS regression using n_components
 warnings.filterwarnings(action='ignore', category=RuntimeWarning, module='sklearn')
 warnings.filterwarnings(action='ignore', category=UserWarning, module='sklearn')
+warnings.filterwarnings(action='ignore', category=DeprecationWarning, module='sklearn')
+warnings.filterwarnings(action='ignore', category=RuntimeWarning, module='numpy')
 
 
 def read_models(number):
@@ -322,35 +325,41 @@ def get_r2(x_learn, x_valid, y_learn, y_valid, regressor='pls'):
         # https://doi.org/10.1186/s12859-018-2407-8
         # https://doi.org/10.1038/s41598-018-35033-y
         # Hyperparameter (N component) tuning of PLS regressor
+
         for n_comp in range(1, 10):  # n_comp = 1, 2,..., 9
-            pls = PLSRegression(n_components=n_comp)
-            loo = LeaveOneOut()
+            try:
+                pls = PLSRegression(n_components=n_comp)
+                loo = LeaveOneOut()
 
-            y_pred_loo = []
-            y_test_loo = []
+                y_pred_loo = []
+                y_test_loo = []
 
-            for train, test in loo.split(x_learn):
-                x_learn_loo = []
-                y_learn_loo = []
-                x_test_loo = []
+                for train, test in loo.split(x_learn):
+                    x_learn_loo = []
+                    y_learn_loo = []
+                    x_test_loo = []
 
-                for j in train:
-                    x_learn_loo.append(x_learn[j])
-                    y_learn_loo.append(y_learn[j])
+                    for j in train:
+                        x_learn_loo.append(x_learn[j])
+                        y_learn_loo.append(y_learn[j])
 
-                for k in test:
-                    x_test_loo.append(x_learn[k])
-                    y_test_loo.append(y_learn[k])
+                    for k in test:
+                        x_test_loo.append(x_learn[k])
+                        y_test_loo.append(y_learn[k])
 
-                pls.fit(x_learn_loo, y_learn_loo)
-                y_pred_loo.append(pls.predict(x_test_loo)[0][0])
+                    pls.fit(x_learn_loo, y_learn_loo)
+                    y_pred_loo.append(pls.predict(x_test_loo)[0][0])
+            except np.linalg.LinAlgError:  # numpy.linalg.LinAlgError: SVD did not converge
+                continue
 
-            mse = mean_squared_error(y_test_loo, y_pred_loo)
+            try:
+                mse = mean_squared_error(y_test_loo, y_pred_loo)
+                mean_squared_error_list.append(mse)
+            except ValueError:  # MSE could not be calculated (No values due to numpy.linalg.LinAlgErrors)
+                return [None, None, None, None, None, regressor, None]
 
-            mean_squared_error_list.append(mse)
 
         mean_squared_error_list = np.array(mean_squared_error_list)
-        # idx = np.where(...) finds best number of components
         idx = np.where(mean_squared_error_list == np.min(mean_squared_error_list))[0][0] + 1
 
         # Model is fitted with best n_components (lowest MSE)
@@ -360,8 +369,8 @@ def get_r2(x_learn, x_valid, y_learn, y_valid, regressor='pls'):
     # other regression options (CV tuning)
     elif regressor == 'pls_cv':
         params = {'n_components': list(np.arange(1, 10))}  # n_comp = 1, 2,..., 9
-        regressor_ = GridSearchCV(PLSRegression(), param_grid=params, iid=False, cv=5)  # iid in future
-                                                                                        # versions redundant
+        regressor_ = GridSearchCV(PLSRegression(), param_grid=params, cv=5)  # iid in future versions redundant
+
     elif regressor == 'rf':
         params = {                 # similar parameter grid as Xu et al., https://doi.org/10.1021/acs.jcim.0c00073
             'random_state': [42],  # state determined
@@ -369,14 +378,14 @@ def get_r2(x_learn, x_valid, y_learn, y_valid, regressor='pls'):
             'max_features': ['auto', 'sqrt', 'log2']  # “auto” -> max_features=n_features,
             # “sqrt” -> max_features=sqrt(n_features) “log2” -> max_features=log2(n_features)
         }
-        regressor_ = GridSearchCV(RandomForestRegressor(), param_grid=params, iid=False, cv=5)
+        regressor_ = GridSearchCV(RandomForestRegressor(), param_grid=params, cv=5)
 
     elif regressor == 'svr':
         params = {                      # similar parameter grid as Xu et al.
             'C': [2 ** 0, 2 ** 2, 2 ** 4, 2 ** 6, 2 ** 8, 2 ** 10, 2 ** 12],  # Regularization parameter
             'gamma': [0.1, 0.01, 0.001, 0.0001, 0.00001]  # often 1 / n_features or 1 / (n_features * X.var())
         }
-        regressor_ = GridSearchCV(SVR(), param_grid=params, iid=False, cv=5)
+        regressor_ = GridSearchCV(SVR(), param_grid=params, cv=5)
 
     elif regressor == 'mlp':
         params = {
@@ -389,7 +398,7 @@ def get_r2(x_learn, x_valid, y_learn, y_valid, regressor='pls'):
             'max_iter': [1000, 200],  # for stochastic solvers (‘sgd’, ‘adam’) determines epochs
             'random_state': [42]
         }
-        regressor_ = GridSearchCV(MLPRegressor(), param_grid=params, iid=False, cv=5)
+        regressor_ = GridSearchCV(MLPRegressor(), param_grid=params, cv=5)
 
     else:
         raise SystemError("Did not find specified regression model as valid option. See '--help' for valid "
@@ -410,13 +419,10 @@ def get_r2(x_learn, x_valid, y_learn, y_valid, regressor='pls'):
     r2 = r2_score(y_valid, y_pred)
     rmse = np.sqrt(mean_squared_error(y_valid, y_pred))
     nrmse = rmse / np.std(y_valid, ddof=1)
-    # ranks for Spearman's rank correlation
-    y_val_rank = np.array(y_valid).argsort().argsort()
-    y_pred_rank = np.array(y_pred).argsort().argsort()
     with warnings.catch_warnings():  # catching RunTime warning when there's no variance in an array, e.g. [2, 2, 2, 2]
         warnings.simplefilter("ignore")  # which would mean divide by zero
         pearson_r = np.corrcoef(y_valid, y_pred)[0][1]
-        spearman_rho = np.corrcoef(y_val_rank, y_pred_rank)[0][1]
+        spearman_rho = stats.spearmanr(y_valid, y_pred)[0]
 
     return r2, rmse, nrmse, pearson_r, spearman_rho, regressor, best_params
 
@@ -446,7 +452,8 @@ def r2_list(learning_set, validation_set, regressor='pls', no_fft=False, sort='1
                 _, y_test, x_test = xy_test.get_x_and_y()
             r2, rmse, nrmse, pearson_r, spearman_rho, regression_model, params = get_r2(x_learn, x_test, y_learn,
                                                                                         y_test, regressor)
-            aaindex_r2_list.append([aaindex, r2, rmse, nrmse, pearson_r, spearman_rho, regression_model, params])
+            if r2 is not None:  # get_r2() returns None for metrics if MSE can't be calculated
+                aaindex_r2_list.append([aaindex, r2, rmse, nrmse, pearson_r, spearman_rho, regression_model, params])
 
     try:
         sort = int(sort)
@@ -623,10 +630,7 @@ def save_model(path, aaindex_r2_list, learning_set, validation_set, threshold=5,
             stddev = np.std(y_test_total, ddof=1)
             nrmse = rmse / stddev
             pearson_r = np.corrcoef(y_test_total, y_predicted_total)[0][1]
-            # ranks for Spearman correlation
-            y_test_total_rank = np.array(y_test_total).argsort().argsort()
-            y_predicted_total_rank = np.array(y_predicted_total).argsort().argsort()
-            spearman_rho = np.corrcoef(y_test_total_rank, y_predicted_total_rank)[0][1]
+            spearman_rho = stats.spearmanr(y_test_total, y_predicted_total)[0]
 
             with open('CV_performance/_CV_Results.txt', 'a') as f:
                 f.write('Regression type: {}; Parameter: {}; Encoding index: {}\n'.format(
@@ -776,10 +780,7 @@ def plot(path, fasta_file, model, label, color, y_wt, no_fft=False):
         stddev = np.std(y_true, ddof=1)
         nrmse = rmse / stddev
         pearson_r = np.corrcoef(y_true, y_pred)[0][1]
-        # ranks for Spearman
-        y_true_total_rank = np.array(y_true).argsort().argsort()
-        y_pred_total_rank = np.array(y_pred).argsort().argsort()
-        spearman_rho = np.corrcoef(y_true_total_rank, y_pred_total_rank)[0][1]
+        spearman_rho = stats.spearmanr(y_true, y_pred)[0]
         legend = '$R^2$ = {}\nRMSE = {}\nNRMSE = {}\nPearson\'s $r$ = {}\nSpearman\'s '.format(
             round(r_squared, 3), round(rmse, 3), round(nrmse, 3), round(pearson_r, 3)) \
             + r'$\rho$ = {}'.format(round(spearman_rho, 3))
