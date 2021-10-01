@@ -18,7 +18,7 @@ Protein engineering by rational or random approaches generates data that can aid
 
 For detailed information, please refer to the above-mentioned publication and related Supporting Information.
 
-The workflow procedure is explained in the [Jupyter notebook](/workflow/Workflow_PyPEF.ipynb) (.ipynb) protocol (see
+The workflow procedure is explained in the [Jupyter Notebook](/workflow/Workflow_PyPEF.ipynb) (.ipynb) protocol (see
 Tutorial section below and the ./workflow directory).  
 
 ## Running example
@@ -34,7 +34,7 @@ pypef mkps -w WT_SEQUENCE.FASTA -i VARIANT-FITNESS_DATA.CSV --drecomb
 pypef run -m MODEL12345 --pmult --drecomb
 pypef directevo -m MODEL12345 --ywt WT_FITNESS -w WT_SEQUENCE.FASTA --usecsv -i VARIANT-FITNESS_DATA.CSV
 ```
-PyPEF's package dependencies are linked [here](https://github.com/Protein-Engineering-Framework/PyPEF/network/dependencies). A small example of using the encoding API for sequence encoding and model validation is provided in the [encoding_validation_api](/encoding_validation_api) directory.
+Sample files for testing PyPEF routines are provided in the [workflow/test_dataset](/workflow/test_dataset) directory, which is also used when running the Notebook tutorial. PyPEF's package dependencies are linked [here](https://github.com/Protein-Engineering-Framework/PyPEF/network/dependencies). A small example of using the encoding API for sequence encoding and model validation is provided in the [encoding_validation_api](/encoding_validation_api) directory.
 Further, for designing your own API based on the PyPEF workflow, modules can be adapted from the source code provided in the [pypef source](/pypef) directory.
 A quick installation of the PyPEF command line framework using PyPI (tested for Linux OS and Python 3.7–3.9) can be performed with:
 ```
@@ -98,6 +98,6 @@ Now change the directory to ./workflow (`cd workflow`) and run the .ipynb file:
 jupyter-notebook
 ```
 
-Copy the notebook URL in your internet browser and select the Workflow_PyPEF.ipynb file to open it. Now you can select the pypef Python environment at the top Notebook menu: Kernel > Change kernel > pypef (otherwise you would use your default Python version as environment, i.e. you would have to install the required packages for this interpreter as well; for this case the installation of the prerequisite packages can also be done within the notebook in provided code fields). 
+Copy the Notebook URL in your internet browser and select the Workflow_PyPEF.ipynb file to open it. Now you can select the pypef Python environment at the top Notebook menu: Kernel > Change kernel > pypef (otherwise you would use your default Python version as environment, i.e. you would have to install the required packages for this interpreter as well; for this case the installation of the prerequisite packages can also be done within the Notebook in provided code fields). 
 
 Good luck and have fun!
