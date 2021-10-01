@@ -88,7 +88,7 @@ Now, after installing required packages, you should be able to directly run pype
 To run the tutorial after installing required packages either from the conda YAML environment file, the TEXT requirement file, or after installing packages using the pip version of PyPEF, you have to open a Jupyter Notebook. If you have installed Anaconda, Jupyter Notebook and other commonly used packages for scientific computing and data science should be already installed in Python. If not, you can also install Jupyter via `conda install ipython jupyter`. To use the pypef environment as kernel inside the Jupyter Notebook, you need to install the ipykernel:
 
 ```
-conda install -c anaconda ipykernel
+conda install -c anaconda ipykernel ipython_genutils
 python3 -m ipykernel install --user --name=pypef
 ```
 
