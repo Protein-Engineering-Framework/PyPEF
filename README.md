@@ -81,7 +81,7 @@ After activating the environment you can install required packages after changin
 python3 -m pip install -r requirements.txt
 ```
 
-Note that Ray does not yet fully support running on Windows and does not need to be used to run the program on a single core (no `--parallel`flag).
+Note that the package [Ray](https://github.com/ray-project/ray) that we use for parallelization of the model validation routine does not yet fully support [running on Windows](https://docs.ray.io/en/latest/installation.html#windows-support) and does not need to be used when running on a single core (no `--parallel`flag).
 
 Now, after installing required packages, you should be able to directly run pypef in your preferred command-line interface (see running example).
 
