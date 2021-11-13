@@ -41,13 +41,18 @@ from sklearn.cross_decomposition import PLSRegression
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.svm import SVR
 from sklearn.neural_network import MLPRegressor
+from sklearn.linear_model import Ridge, LassoLars
 
 import warnings
+warnings.filterwarnings(action='ignore', category=RuntimeWarning, module='numpy')
 # ignoring warnings of PLS regression using n_components
 warnings.filterwarnings(action='ignore', category=RuntimeWarning, module='sklearn')
 warnings.filterwarnings(action='ignore', category=UserWarning, module='sklearn')
 warnings.filterwarnings(action='ignore', category=DeprecationWarning, module='sklearn')
-warnings.filterwarnings(action='ignore', category=RuntimeWarning, module='numpy')
+# FutureWarning: The default of 'normalize' will be set to False in version 1.2 and deprecated in version 1.4.
+# If you wish to scale the data, use Pipeline with a StandardScaler in a preprocessing stage.
+# sklearn msg: The default value of 'normalize' should be changed to False in linear models where now normalize=True
+warnings.filterwarnings(action='ignore', category=FutureWarning, module='sklearn')
 
 
 def read_models(number):
@@ -75,14 +80,14 @@ def full_path(filename):
     e.g. path/to/AAindex/FAUJ880109.txt.
     """
     modules_path = os.path.dirname(os.path.abspath(__file__))
-    return os.path.join(modules_path, 'AAindex/' + filename)
+    return os.path.join(modules_path, '../AAindex/' + filename)
 
 
 def path_aaindex_dir():
     """
     returns the path to the /AAindex folder, e.g. path/to/AAindex/.
     """
-    return os.path.join(os.path.dirname(os.path.abspath(__file__)), 'AAindex')
+    return os.path.join(os.path.dirname(os.path.abspath(__file__)), '../AAindex')
 
 
 class AAIndex:
@@ -347,7 +352,10 @@ def get_r2(x_learn, x_valid, y_learn, y_valid, regressor='pls'):
                         x_test_loo.append(x_learn[k])
                         y_test_loo.append(y_learn[k])
 
-                    pls.fit(x_learn_loo, y_learn_loo)
+                    try:
+                        pls.fit(x_learn_loo, y_learn_loo)
+                    except ValueError:  # scipy/linalg/decomp_svd.py ValueError:
+                        continue        # illegal value in %dth argument of internal gesdd
                     y_pred_loo.append(pls.predict(x_test_loo)[0][0])
             except np.linalg.LinAlgError:  # numpy.linalg.LinAlgError: SVD did not converge
                 continue
@@ -399,6 +407,28 @@ def get_r2(x_learn, x_valid, y_learn, y_valid, regressor='pls'):
             'random_state': [42]
         }
         regressor_ = GridSearchCV(MLPRegressor(), param_grid=params, cv=5)
+
+    elif regressor == 'ridge':
+        # Performs L2 regularization, i.e., adds penalty equivalent to square of the magnitude of coefficients
+        # Majorly used to prevent overfitting, since it includes all the features
+        # in case of exorbitantly high features, it will pose computational challenges.
+        params = {
+            # alpha = 0 is equivalent to an ordinary least square Regression
+            # higher values of alpha reduce overfitting, significantly high values can
+            # cause underfitting as well (e.g., alpha = 5)
+            'alpha': [1e-15, 1e-10, 1e-8, 1e-5, 0.001, 0.1, 0.3, 0.5, 1.0, 10.0]
+        }
+        regressor_ = GridSearchCV(Ridge(), param_grid=params, cv=5)
+
+    elif regressor == 'lassolars':
+        # Lasso model fit with Least Angle Regression a.k.a. Lars.
+        # Performs L1 regularization, i.e., adds penalty equivalent to absolute value of the magnitude of coefficients
+        # Provides sparse solutions: computationally efficient as features with zero coefficients can be ignored
+        params = {
+            # alpha = 0 is equivalent to an ordinary least square Regression
+            'alpha': [1e-15, 1e-10, 1e-8, 1e-5, 0.001, 0.1, 0.3, 0.5, 1.0, 10.0]
+        }
+        regressor_ = GridSearchCV(LassoLars(), param_grid=params, cv=5)
 
     else:
         raise SystemError("Did not find specified regression model as valid option. See '--help' for valid "
@@ -615,6 +645,16 @@ def save_model(path, aaindex_r2_list, learning_set, validation_set, threshold=5,
                     learning_rate_init=parameter.get('learning_rate_init'),
                     max_iter=parameter.get('max_iter'),
                     random_state=parameter.get('random_state')
+                )
+
+            elif regressor == 'ridge':
+                regressor_ = Ridge(
+                    alpha=parameter.get('alpha')
+                )
+
+            elif regressor == 'lassolars':
+                regressor_ = LassoLars(
+                    alpha=parameter.get('alpha')
                 )
 
             else:
@@ -861,6 +901,6 @@ def plot(path, fasta_file, model, label, color, y_wt, no_fft=False):
         plt.savefig(str(model) + '_' + str(fasta_file[:-6]) + '.png', dpi=500)
     except FileNotFoundError:
         raise FileNotFoundError("Did not find specified model: {}. You can define the threshold of models to be saved;"
-                                " e.g. with run_pypef.py run -l LS.fasta -v VS.fasta -t 10.".format(str(model)))
+                                " e.g. with pypef run -l LS.fasta -v VS.fasta -s 10.".format(str(model)))
 
     return ()

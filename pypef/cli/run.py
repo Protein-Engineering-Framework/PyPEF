@@ -20,37 +20,37 @@
 """
 PyPEF - Pythonic Protein Engineering Framework.
 
-Creation of learning and validation sets: to split .CSV data in Learning and Validation sets run
-    run_pypef.py mklsvs [...]
+Creation of learning and validation sets: to split .CSV data in learning and validation sets run
+    pypef mklsvs [...]
 Creation of prediction sets: To create prediction sets from CSV data single point mutational variants run
-    run_pypef.py mkps [...]
+    pypef mkps [...]
 Running:
  1. To train and validate models run
-        run_pypef.py run -l Learning_Set.fasta -v Validation_Set.fasta [-s 5] [--parallel] [-c 4]
+        pypef run -l Learning_Set.fasta -v Validation_Set.fasta [-s 5] [--parallel] [-c 4]
     ! Attention using ray for parallel computing ('--parallel') in Windows: Ray is not yet fully supported for Windows !
  2. To plot the validation creating a figure (.png) run
-        run_pypef.py run -m MODEL12345 -f Validation_Set.fasta
+        pypef run -m MODEL12345 -f Validation_Set.fasta
  3. To predict variants run
-        run_pypef.py run -m MODEL12345 -p Prediction_Set.fasta
+        pypef run -m MODEL12345 -p Prediction_Set.fasta
     or for predicting variants in created prediction set folders exemplary run
-        run_pypef.py run -m MODEL12345 --pmult [--drecomb] [...] [--qdiverse]
+        pypef run -m MODEL12345 --pmult [--drecomb] [...] [--qdiverse]
     or for performing in silico directed evolution run:
-        run_pypef.py directevo -m MODEL12345 [...]
+        pypef directevo -m MODEL12345 [...]
 
 
 Usage:
-    run_pypef.py mklsvs [--wtseq WT_SEQ] [--input CSV_FILE] [--drop THRESHOLD] [--nornd NUMBER]
-    run_pypef.py mkps [--wtseq WT_SEQ] [--input CSV_FILE] [--drop THRESHOLD]
+    pypef mklsvs [--wtseq WT_SEQ] [--input CSV_FILE] [--drop THRESHOLD] [--nornd NUMBER]
+    pypef mkps [--wtseq WT_SEQ] [--input CSV_FILE] [--drop THRESHOLD]
                                  [--drecomb] [--trecomb] [--qrecomb]
                                  [--ddiverse] [--tdiverse] [--qdiverse]
-    run_pypef.py run --ls LEARNING_SET --vs VALIDATION_SET [--save NUMBER] [--regressor TYPE] [--nofft] [--all]
+    pypef run --ls LEARNING_SET --vs VALIDATION_SET [--save NUMBER] [--regressor TYPE] [--nofft] [--all]
                                                        [--sort METRIC] [--parallel] [--cores NUMCORES]
-    run_pypef.py --show [MODELS]
-    run_pypef.py run --model MODEL12345 --figure VS_FOR_PLOTTING  [--label] [--color] [--ywt WT_FITNESS] [--nofft]
-    run_pypef.py run --model MODEL12345 --ps PREDICTION_SET [--nofft] [--negative] [--print]
-    run_pypef.py run --model MODEL12345 --pmult [--drecomb] [--trecomb] [--qrecomb]
+    pypef --show [MODELS]
+    pypef run --model MODEL12345 --figure VS_FOR_PLOTTING  [--label] [--color] [--ywt WT_FITNESS] [--nofft]
+    pypef run --model MODEL12345 --ps PREDICTION_SET [--nofft] [--negative] [--print]
+    pypef run --model MODEL12345 --pmult [--drecomb] [--trecomb] [--qrecomb]
                                           [--ddiverse] [--tdiverse] [--qdiverse] [--nofft] [--negative]
-    run_pypef.py directevo --model MODEL12345 [--ywt WT_FITNESS] [--wtseq WT_SEQ]
+    pypef directevo --model MODEL12345 [--ywt WT_FITNESS] [--wtseq WT_SEQ]
                                         [--numiter NUM_ITER] [--numtraj NUM_TRAJ]
                                         [--temp TEMPERATURE] [--nofft] [--negative] [--print]
                                         [--usecsv] [--csvaa] [--input CSV_FILE] [--drop THRESHOLD]
@@ -59,13 +59,13 @@ Usage:
 Options:
   -h --help                    Show this screen.
   --version                    Show version.
-  --show                       Show saved models in Model_Results.txt.
+  --show                       Show achieved model performances from Model_Results.txt.
   MODELS                       Number of saved models to show [default: 5].
   -w --wtseq WT_SEQ            Input file (in .fa format) for wild-type sequence [default: None].
   -i --input CSV_FILE          Input data file in .csv format [default: None].
   -d --drop THRESHOLD          Below threshold variants will be discarded from the data [default: -9E09].
   -n --nornd NUMBER            Number of randomly created Learning and Validation datasets [default: 0].
-  -s --save NUMBER             Number of Models to be saved as pickle files [default: 5].
+  -s --save NUMBER             Number of models to be saved as pickle files [default: 5].
   --parallel                   Parallel computing of training and validation of models [default: False].
   -c --cores NUMCORES          Number of cores used in parallel computing.
   --drecomb                    Create/predict double recombinants [default: False].
@@ -74,18 +74,19 @@ Options:
   --ddiverse                   Create/predict double natural diverse variants [default: False].
   --tdiverse                   Create/predict triple natural diverse variants [default: False].
   --qdiverse                   Create quadruple natural diverse variants [default: False].
-  -u --pmult                   Predict for all prediction files in folder for recomb
-                               or diverse variants [default: False].
+  -u --pmult                   Predict for all prediction files in folder for recombinants
+                               or for diverse variants [default: False].
   --negative                   Set if more negative values define better variants [default: False].
   -l --ls LEARNING_SET         Input learning set in .fasta format.
   -v --vs VALIDATION_SET       Input validation set in .fasta format.
-  --regressor TYPE             Type of regression (R.) to use, options: PLS R.: pls, PLS CV R.: pls_cv,
-                               Random Forest R.: rf, SVM R.: svr, MLP R.: mlp [default: pls].
-  --nofft                      Raw sequence input, i.e. no FFT for establishing protein spectra
+  --regressor TYPE             Type of regression (R.) to use, options: PLS CV R.: pls_cv, PLS LOOCV R.: pls,
+                               Random Forest CV R.: rf, SVM CV R.: svr, MLP CV R.: mlp, Ridge CV R.: ridge,
+                               LassoLars CV R.: lassolars [default: pls_cv].
+  --nofft                      Raw sequence input, i.e., no FFT for establishing protein spectra
                                as vector inputs [default: False].
   --all                        Finally training on all data [default: False]
   --sort METRIC                Rank models based on metric {1: R^2, 2: RMSE, 3: NRMSE, 4: Pearson's r,
-                               5: Spearman's rank} [default: 1].
+                               5: Spearman's rho} [default: 1].
   -m --model MODEL12345        Model (pickle file) for plotting of validation or for performing predictions.
   -f --figure VS_FOR_PLOTTING  Validation set for plotting using a trained model.
   --label                      Label the plot instances [default: False].
@@ -94,7 +95,7 @@ Options:
   --print                      Print raw encoded and FFT-ed sequence matrices and predictions in Shell [default: False].
   -y --ywt WT_FITNESS          Fitness value (y) of wild-type.
   --numiter NUM_ITER           Number of mutation iterations per evolution trajectory [default: 5].
-  --numtraj NUM_TRAJ           Number of trajectories, i.e. evolution pathways [default: 5].
+  --numtraj NUM_TRAJ           Number of trajectories, i.e., evolution pathways [default: 5].
   --temp TEMPERATURE           "Temperature" of Metropolis-Hastings criterion [default: 0.01]
   --usecsv                     Perform directed evolution on single variant csv position data [default: False].
   --csvaa                      Directed evolution csv amino acid substitutions,
@@ -113,32 +114,32 @@ import multiprocessing
 # import ray
 
 # importing own modules
-from pypef.Modules_Regression import (
+from pypef.cli.regression import (
     read_models, formatted_output, r2_list, save_model, predict,
     predictions_out, plot
 )
-from pypef.Modules_Directed_Evolution import run_de_trajectories
-from pypef.Modules_Learning_Validation import (
+from pypef.cli.learning_validation_sets import (
     get_wt_sequence, csv_input, drop_rows, get_variants, make_sub_ls_vs,
     make_sub_ls_vs_randomly, make_fasta_ls_vs
 )
-from pypef.Modules_Prediction import (
+from pypef.cli.prediction import (
     make_combinations_double, make_combinations_triple, make_combinations_quadruple,
     create_split_files, make_combinations_double_all_diverse,
     make_combinations_triple_all_diverse, make_combinations_quadruple_all_diverse
 )
+from pypef.cli.directed_evolution import run_de_trajectories
 # import Modules_Parallelization.r2_list_parallel locally to avoid error
 # when not running in parallel, thus commented out:
-# from pypef.Modules_Parallelization import r2_list_parallel
+# from pypef.cli.parallelization import r2_list_parallel
 
 
-def run():
+def run_pypef():
     """
     Running the program, importing all required self-made modules and
     running them dependent on user-passed input arguments using docopt
     for argument parsing.
     """
-    arguments = docopt(__doc__, version='PyPEF 0.1.6 (September 2021)')
+    arguments = docopt(__doc__, version='PyPEF 0.1.7 (November 2021)')
     # print(arguments)  # uncomment for printing parsed docopt arguments
     amino_acids = ['A', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'K', 'L', 'M', 'N', 'P', 'Q', 'R', 'S', 'T', 'V', 'W', 'Y']
 
@@ -257,7 +258,7 @@ def run():
                 and arguments['--qrecomb'] is False and arguments['--ddiverse'] is False \
                 and arguments['--tdiverse'] is False and arguments['--qdiverse'] is False:
             print('\nInput Error:\nAt least one specification needed: Specify recombinations for mkps ; '
-                  'e.g. try: "run_pypef.py mkps --drecomb" for performing double recombinant Prediction set.\n')
+                  'e.g. try: "pypef mkps --drecomb" for performing double recombinant Prediction set.\n')
             no_done = True
 
         if no_done is False:
@@ -276,7 +277,7 @@ def run():
                     # import parallel modules here as ray is yet not supported for Windows
                     import ray
                     ray.init()
-                    from pypef.Modules_Parallelization import r2_list_parallel
+                    from pypef.cli.parallelization import r2_list_parallel
                     cores = arguments['--cores']
                     try:
                         cores = int(cores)
@@ -440,4 +441,4 @@ def run():
 
 
 if __name__ == "__main__":
-    run()
+    run_pypef()

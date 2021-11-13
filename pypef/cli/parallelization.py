@@ -28,7 +28,7 @@ import os
 import ray
 import warnings
 
-from pypef.Modules_Regression import full_path, path_aaindex_dir, XY, get_r2
+from pypef.cli.regression import full_path, path_aaindex_dir, XY, get_r2
 
 # to handle UserWarning for PLS n_components as error and general regression module warnings
 warnings.filterwarnings(action='ignore', category=RuntimeWarning, module='sklearn')
