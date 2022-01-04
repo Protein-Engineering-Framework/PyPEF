@@ -39,7 +39,7 @@ def aa_index_list():
     return [full_path(file) for file in os.listdir(path_aaindex_dir()) if file.endswith('.txt')]
 
 
-def get_variant_seqs(wt, sub):  # sub = list of single/higher substitution strings
+def get_variant_seqs(wild_type_sequence, sub):  # sub = list of single/higher substitution strings
     """
     Requires WT sequence, and substitution names.
     Returns variant sequences as list.
@@ -63,7 +63,7 @@ def get_variant_seqs(wt, sub):  # sub = list of single/higher substitution strin
                                             'being {} in the given sequence'.format(
                                 variant, new, wild_type_sequence[new - 1])
                             )
-                    higher_var = wt[new - 1] + str(new) + str(splits[-1])
+                    higher_var = wild_type_sequence[new - 1] + str(new) + str(splits[-1])
                     m[a] = higher_var
                     if a == len(m) - 1:
                         subs_list.append(m)
@@ -78,7 +78,7 @@ def get_variant_seqs(wt, sub):  # sub = list of single/higher substitution strin
                                      'required input style (while the wild-type protein must be designated as \'WT\').')
                 if variant[0] in amino_acids:
                     try:
-                        if variant[0] != wt[num - 1]:
+                        if variant[0] != wild_type_sequence[num - 1]:
                             raise NameError('Position of amino acids in given sequence does not match the given '
                                             'positions in the input data! E.g. see position {} and position {} being {}'
                                             ' in the given sequence.'.format(variant, num, wt[num - 1]))
@@ -86,14 +86,14 @@ def get_variant_seqs(wt, sub):  # sub = list of single/higher substitution strin
                         raise IndexError("Found variant sequence position {} in data which "
                                          "is out of range of wild-type sequence length.".format(str(num)))
                 try:
-                    full_variant = wt[num - 1] + str(num) + str(variant[-1])
+                    full_variant = wild_type_sequence[num - 1] + str(num) + str(variant[-1])
                 except IndexError:
                     raise IndexError("Found variant sequence position {} in data which "
                                      "is out of range of wild-type sequence length.".format(str(num)))
                 subs_list.append([full_variant])
 
     for i, var in enumerate(subs_list):
-        temp = list(wt)
+        temp = list(wild_type_sequence)
         name = ''
         separation = 0
 

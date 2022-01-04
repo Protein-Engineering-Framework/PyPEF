@@ -20,8 +20,7 @@ from exemplary_dataset_B import (
     all_substitutions, wt_seq,
     ls_b_sequences, ls_b_labels, vs_b_sequences, vs_b_labels
 )
-import sys
-sys.path.append('/mnt/d/sciebo/PyPEF_test')
+
 from pypef.api.encoding import AAIndexEncoding, get_variant_seqs
 from pypef.api.validation import get_performance
 from pypef.api.cv_regression_options import (
