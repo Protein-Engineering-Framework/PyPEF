@@ -106,3 +106,15 @@ jupyter-notebook
 Copy the Notebook URL in your internet browser and select the Workflow_PyPEF.ipynb file to open it. Now you can select the pypef Python environment at the top Notebook menu: Kernel > Change kernel > pypef (otherwise you would use your default Python version as environment, i.e. you would have to install the required packages for this interpreter as well; for this case the installation of the prerequisite packages can also be done within the Notebook in provided code fields). 
 
 Good luck and have fun!
+
+## Model hyperparmeters
+
+The following model hyperparameter ranges are tested during (*k*-fold) cross-validation for improved model generalization:
+|Regression model|Hyperparameter grid|
+|:--------------:|:-----------------:|
+| PLS | N_components= {1, 2, 3, ..., 9} |
+| RF | N_trees = {100, 250, 500, 1000}, max. features = {all features, all features, log2(all features)} |
+| SVR | regularization param. = {2^0, 2^2, 2^4, 2^6, 2^8, 2^10, 2^12}, kernel coefficient = {1E−1, 1E−2, 1E−3, 1E−4, 1E−5} |
+| MLP | single hidden layer size = {1, 2, ..., 12}, solver = {ADAM, L-BFGS}, initial learning rate = {0.001, 0.01, 0.1} |
+| LassoLars | regularization param. = {1.0E-6, 1.322E-6, 1.748E-6, ..., 1E6} *(numpy.logspace(6, -6, 100)*), *to be implemented*|
+| Ridge | regularization param. = {1.0E-6, 1.322E-6, 1.748E-6, ..., 1E6} *(numpy.logspace(6, -6, 100)*), *to be implemented* |
