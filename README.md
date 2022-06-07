@@ -109,7 +109,7 @@ Copy the Notebook URL in your internet browser and select the Workflow_PyPEF.ipy
 Good luck and have fun!
 
 ## Encoding technique options
-- Sequence encoding based on AAindex descriptor sets (e.g. sequence 'ACDEFG' -> [0.61, 1.07, 0.46, 0.47, 2.02, 0.07], using AAindex https://www.genome.jp/entry/aaindex:ARGP820101 for encoding and no FFT)
+- Sequence encoding based on AAindex descriptor sets (e.g. sequence 'ACDEFGACDEFG' --> [0.61, 1.07, 0.46, 0.47, 2.02, 0.07, 0.61, 1.07, 0.46, 0.47, 2.02, 0.07], using AAindex https://www.genome.jp/entry/aaindex:ARGP820101 for encoding and no FFT)
 - *to be implemented*
 - *to be implemented*
 
