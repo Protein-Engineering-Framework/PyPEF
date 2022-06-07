@@ -109,7 +109,8 @@ Copy the Notebook URL in your internet browser and select the Workflow_PyPEF.ipy
 Good luck and have fun!
 
 ## Encoding technique options
-- Sequence encoding based on AAindex descriptor sets (e.g. sequence 'ACDEFGACDEFG' --> [0.61, 1.07, 0.46, 0.47, 2.02, 0.07, 0.61, 1.07, 0.46, 0.47, 2.02, 0.07], using AAindex https://www.genome.jp/entry/aaindex:ARGP820101 for encoding and no FFT)
+
+- Sequence encoding based on AAindex descriptor sets; e.g., sequence 'ACDEFGACDEFG' --> [0.61, 1.07, 0.46, 0.47, 2.02, 0.07, 0.61, 1.07, 0.46, 0.47, 2.02, 0.07] using AAindex https://www.genome.jp/entry/aaindex:ARGP820101 for encoding and without FFT (and 'ACDEFGACDEFG' -->  [1.253E-32, 1.076E-03, 3.281E-02, 1.507E-01, 7.837E-34, 1.000E00, 7.787E-01, 1.521E-01] with FFT)
 - *to be implemented*
 - *to be implemented*
 
@@ -120,7 +121,8 @@ The following model hyperparameter ranges are tested during (*k*-fold) cross-val
 |:--------------:|:-----------------:|
 | PLS | N_components= {1, 2, 3, ..., 9} |
 | RF | N_trees = {100, 250, 500, 1000}, max. features = {all features, all features, log2(all features)} |
-| SVR | regularization param. = {2^0, 2^2, 2^4, 2^6, 2^8, 2^10, 2^12}, kernel coefficient = {1E−1, 1E−2, 1E−3, 1E−4, 1E−5} |
+| SVR | regularization param. = {2^0, 2^2, 2^4, 2^6, 2^8, 2^10, 2^12}, kernel coefficient = {1E−01, 1E−02, 1E−03, 1E−04, 1E−05} |
 | MLP | single hidden layer size = {1, 2, ..., 12}, solver = {ADAM, L-BFGS}, initial learning rate = {0.001, 0.01, 0.1} |
-| LassoLars | regularization param. = {1.000E-6, 1.322E-6, 1.748E-6, ..., 1.000E6} *(numpy.logspace(-6, 6, 100))*, *to be implemented*|
-| Ridge | regularization param. = {1.000E-6, 1.322E-6, 1.748E-6, ..., 1.000E6} *(numpy.logspace(-6, 6, 100))*, *to be implemented* |
+| LassoLars | regularization param. = {1.000E-06, 1.322E-06, 1.748E-06, ..., 1.000E06} *(numpy.logspace(-6, 6, 100))*, *to be implemented*|
+| Ridge | regularization param. = {1.000E-06, 1.322E-06, 1.748E-06, ..., 1.000E06} *(numpy.logspace(-6, 6, 100))*, *to be implemented* |
+
