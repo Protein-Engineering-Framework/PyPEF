@@ -113,14 +113,14 @@ Good luck and have fun!
 - *to be implemented*
 - *to be implemented*
 
-## Model hyperparmeters
+## Model hyperparameters
 
-The following model hyperparameter ranges are tested during (*k*-fold) cross-validation for improved model generalization:
+The following model hyperparameter ranges are tested during (*k*-fold) cross-validation for optimized model generalization:
 |Regression model|Hyperparameter grid|
 |:--------------:|:-----------------:|
 | PLS | N_components= {1, 2, 3, ..., 9} |
 | RF | N_trees = {100, 250, 500, 1000}, max. features = {all features, all features, log2(all features)} |
 | SVR | regularization param. = {2^0, 2^2, 2^4, 2^6, 2^8, 2^10, 2^12}, kernel coefficient = {1E−1, 1E−2, 1E−3, 1E−4, 1E−5} |
 | MLP | single hidden layer size = {1, 2, ..., 12}, solver = {ADAM, L-BFGS}, initial learning rate = {0.001, 0.01, 0.1} |
-| LassoLars | regularization param. = {1.000E-6, 1.322E-6, 1.748E-6, ..., 1.000E6} (*numpy.logspace(-6, 6, 100)*), *to be implemented*|
-| Ridge | regularization param. = {1.000E-6, 1.322E-6, 1.748E-6, ..., 1.000E6} (*numpy.logspace(-6, 6, 100)*), *to be implemented* |
+| LassoLars | regularization param. = {1.000E-6, 1.322E-6, 1.748E-6, ..., 1.000E6} *(numpy.logspace(-6, 6, 100))*, *to be implemented*|
+| Ridge | regularization param. = {1.000E-6, 1.322E-6, 1.748E-6, ..., 1.000E6} *(numpy.logspace(-6, 6, 100))*, *to be implemented* |
