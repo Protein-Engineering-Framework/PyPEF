@@ -22,7 +22,7 @@ For detailed information, please refer to the above-mentioned publication and re
 The workflow procedure is explained in the [Jupyter Notebook](/workflow/Workflow_PyPEF.ipynb) (.ipynb) protocol (see
 Tutorial section below and the ./workflow directory).
 
-<img src="workflow/Splitting_Workflow.png" alt="drawing"/>
+<img src="workflow/Splitting_Workflow.png" alt="drawing" width="1000"/>
 
 ## Running example
 PyPEF was developed to be run from a command-line interface while `python3 ./pypef/cli/run.py` (when using the downloaded version of this repository) should be equal to `pypef` when installed with pip.   
