@@ -15,13 +15,14 @@ a framework written in Python 3 for performing sequence-based machine learning-a
 
 <img src="workflow/test_dataset/exemplary_validation_color_plot.png" alt="drawing" width="800"/>
 
-
 Protein engineering by rational or random approaches generates data that can aid the construction of self-learned sequence-function landscapes to predict beneficial variants by using probabilistic methods that can screen the unexplored sequence space with uncertainty *in silico*. Such predictive methods can be applied for increasing the success/effectivity of an engineering campaign while partly offering the prospect to reveal (higher-order) epistatic effects. Here we present an engineering framework termed PyPEF for assisting the supervised training and testing of regression models for predicting beneficial combinations of (identified) amino acid substitutions using machine learning algorithms from the [scikit-learn](https://github.com/scikit-learn/scikit-learn) package. As training input, the developed framework requires the variant sequences and the corresponding screening results (fitness labels) of the identified variants as CSV (or FASTA-like datasets following a self-defined convention). Using linear or nonlinear regression methods (partial least squares (PLS), support vector machines (SVR), random forest (RF), Ridge, LassoLars, and multilayer perceptron (MLP)-based regression), PyPEF trains on the given learning data while optimizing model hyperparameters (default: five-fold cross-validation) and can compute model performances on left-out test data. As sequences are encoded using the [AAindex database](https://www.genome.jp/aaindex/), finding the best index-dependent encoding for a specific test set can be seen as a hyperparameter search on the test set. *Additional sequence- and system-specific encoding techniques will be added in future*. Finally, the selected or best identified model can be used to perform directed evolution walks *in silico* (see [Church-lab implementation](https://github.com/churchlab/UniRep) or the [reimplementation](https://github.com/ivanjayapurna/low-n-protein-engineering)) or to predict natural diverse or recombinant sequences that subsequently are to be designed and validated in the wet-lab.
 
 For detailed information, please refer to the above-mentioned publication and related Supporting Information.
 
 The workflow procedure is explained in the [Jupyter Notebook](/workflow/Workflow_PyPEF.ipynb) (.ipynb) protocol (see
-Tutorial section below and the ./workflow directory).  
+Tutorial section below and the ./workflow directory).
+
+<img src="workflow/Splitting_Workflow.png" alt="drawing" width="800"/>
 
 ## Running example
 PyPEF was developed to be run from a command-line interface while `python3 ./pypef/cli/run.py` (when using the downloaded version of this repository) should be equal to `pypef` when installed with pip.   
@@ -49,8 +50,6 @@ pypef --help
 The detailed routine for setting up a new virtual environment using Anaconda, installing required Python packages for that environment, and running the Jupyter Notebook tutorial is given below.
 
 As standard input files, PyPEF requires the target protein wild-type sequence in [FASTA](https://en.wikipedia.org/wiki/FASTA) format and variant-fitness data in [CSV](https://en.wikipedia.org/wiki/Comma-separated_values) format to create learning and validation split files that resemble the aligned FASTA format and additionally contain lines indicating the fitness of each corresponding variant (see [sample files](workflow/test_dataset)).
-
-<img src="workflow/Splitting_Workflow.png" alt="drawing" width="800"/>
 
 ## Tutorial
 
