@@ -40,7 +40,11 @@ import numpy as np
 from tqdm import tqdm
 
 
-def make_fasta_ps(filename, wt, substitution):
+def make_fasta_ps(
+        filename,
+        wt,
+        substitution
+):
     """
     Creates prediction sets (.fasta style files)
     """
@@ -65,9 +69,24 @@ def make_fasta_ps(filename, wt, substitution):
     myfile.close()
 
 
-def make_combinations_double(arr):
+def make_recombinations_double(arr: tuple) -> list:
     """
-    Make double recombination variants
+    Description
+    -----------
+    Make double recombinant variants.
+
+    Parameters
+    ----------
+    arr : tuple
+        Lists if single substitutions in tuple, e.g.,
+        (['L215F'], ['A217N'], ['R219S'], ['L249Y'])
+
+    Returns
+    -------
+    doubles : list
+        List of double substitution lists, e.g.,
+        [['L215F', 'A217N'], ['L215F', 'R219S'], ['L215F', 'L249Y'],
+        ['A217N', 'R219S'], ['A217N', 'L249Y'], ['R219S', 'L249Y']]
     """
     doubles = []
     for i in tqdm(range(len(arr))):
@@ -81,9 +100,24 @@ def make_combinations_double(arr):
     yield doubles
 
 
-def make_combinations_triple(arr):
+def make_recombinations_triple(arr: list):
     """
-    Make triple recombination variants
+    Description
+    -----------
+    Make triple recombinant variants.
+
+    Parameters
+    ----------
+    arr: list
+        List of single substitutions in tuple, e.g.,
+        (['L215F'], ['A217N'], ['R219S'], ['L249Y'])
+
+    Returns
+    -------
+    triples: list
+        List of triple substitution lists, e.g.,
+        [['L215F', 'A217N', 'R219S'], ['L215F', 'A217N', 'L249Y'],
+        ['L215F', 'R219S', 'L249Y'], ['A217N', 'R219S', 'L249Y']]
     """
     length = len(arr)
     triples = []
@@ -99,9 +133,23 @@ def make_combinations_triple(arr):
     yield triples
 
 
-def make_combinations_quadruple(arr):
+def make_recombinations_quadruple(arr):
     """
-    Make quadruple recombination variants
+    Description
+    -----------
+    Make quadruple recombination variants.
+
+    Parameters
+    ----------
+    arr: list
+        List of single substitutions in tuple, e.g.,
+        (['L215F'], ['A217N'], ['R219S'], ['L249Y'])
+
+    Returns
+    -------
+    quadruples: list
+        List of quadruple substitution lists, e.g.,
+        [['L215F', 'A217N', 'R219S', 'L249Y']]
     """
     length = len(arr)
     quadruples = []
@@ -116,6 +164,36 @@ def make_combinations_quadruple(arr):
                                 yield quadruples
                                 quadruples = []
     yield quadruples
+
+
+def make_recombinations_quintuple(arr):
+    """
+    Make quintuple recombination variants.
+
+    :parameter arr: List of single substitutions in tuple, e.g.,
+    (['L215F'], ['A217N'], ['R219S'], ['L249Y'], ['P252I])
+
+    :returns quintuples: List of quintuple substitution lists, e.g.,
+    [['L215F', 'A217N', 'R219S', 'L249Y', 'P252I']]
+    """
+    length = len(arr)
+    quintuples = []
+    for i in tqdm(range(length)):
+        for j in range(length):
+            for k in range(length):
+                for l in range(length):
+                    for m in range(length):
+                        if m > l > k > j > i:
+                            if (arr[i][0])[1:-1] \
+                                    != (arr[j][0])[1:-1] \
+                                    != (arr[k][0])[1:-1] \
+                                    != (arr[l][0])[1:-1] \
+                                    != (arr[m][0][1:-1]):
+                                quintuples.append([arr[i][0], arr[j][0], arr[k][0], arr[l][0], arr[m][0]])
+                                if len(quintuples) >= 8E04:
+                                    yield quintuples
+                                    quintuples = []
+    yield quintuples
 
 
 def make_directory_and_enter(directory):
@@ -133,7 +211,13 @@ def make_directory_and_enter(directory):
     return previous_working_directory
 
 
-def create_split_files(array, single_variants, wt_sequence, name, no):
+def create_split_files(
+        array,
+        single_variants,
+        wt_sequence,
+        name,
+        no
+):
     """
     Creates split files from given variants for yielded recombined or diverse variants
     """
@@ -156,15 +240,40 @@ def create_split_files(array, single_variants, wt_sequence, name, no):
 def make_combinations_double_all_diverse(arr, aminoacids):
     """
     Make double substituted naturally diverse variants
+
+    :parameter arr: List of single substitutions in tuple, e.g.,
+    (['L215F'], ['A217N'], ['R219S'], ['L249Y'])
+    :parameter aminoacids: List of amino acids to combine, e.g., all 20 naturally occuring:
+    ['A', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'K', 'L',
+    'M', 'N', 'P', 'Q', 'R', 'S', 'T', 'V', 'W', 'Y']
+
+    :returns doubles: List of double (fully) diverse substitution tuples, e.g.,
+    [('L215A', 'A217C'), ('L215A', 'A217D'), ('L215A', 'A217E'), ('L215A', 'A217F'), ...,
+    ('R219Y', 'L249T'), ('R219Y', 'L249V'), ('R219Y', 'L249W'), ('R219Y', 'L249Y')]
     """
     doubles = []
     for i in tqdm(range(len(arr))):
         for j in range(i + 1, len(arr)):
             for k in aminoacids:
                 for l in aminoacids:
-                    if ((arr[i][0])[1:-1]) != ((arr[j][0])[1:-1]) and\
-                            ((arr[i][0])[:-1] + k)[0] != ((arr[i][0])[:-1] + k)[-1] and\
-                            ((arr[j][0])[:-1] + l)[0] != ((arr[j][0])[:-1] + l)[-1]:
+                    """
+                    Make sure that following substitution types are not
+                    included for prediction. Examples:
+                    1. Both simultaneous substitutions define exactly the 
+                      same substitution at the same position, e.g., A1C/A1C:
+                        (arr[i][0])[1:-1] != (arr[j][0])[1:-1]
+                    2. "To-Wild-Type-Substitutions" at a single position e.g., A1A:
+                        ((arr[i][0])[:-1] + k)[0] != ((arr[i][0])[:-1] + k)[-1]  # e.g., A1A
+                        ((arr[j][0])[:-1] + l)[0] != ((arr[j][0])[:-1] + l)[-1]  # e.g., C2C
+                    3. Just reversed substitution patterns, e.g., A1C/A2D and A2D/A1C
+                      in doubles tuple (only possible until results not emptied/yielded 
+                      and should generally not occur often):
+                        not tuple([(arr[j][0])[:-1] + l, (arr[i][0])[:-1] + k]) in doubles  
+                    """
+                    if (arr[i][0])[1:-1] != (arr[j][0])[1:-1] and \
+                            ((arr[i][0])[:-1] + k)[0] != ((arr[i][0])[:-1] + k)[-1] and \
+                            ((arr[j][0])[:-1] + l)[0] != ((arr[j][0])[:-1] + l)[-1] and \
+                            not tuple([(arr[j][0])[:-1] + l, (arr[i][0])[:-1] + k]) in doubles:
                         doubles.append(tuple([(arr[i][0])[:-1] + k, (arr[j][0])[:-1] + l]))  # tuple needed for
                         if len(doubles) >= 8E04:                                             # list(dict()):
                             doubles = list(dict.fromkeys(doubles))  # removes duplicated list entries
@@ -174,9 +283,46 @@ def make_combinations_double_all_diverse(arr, aminoacids):
     yield doubles
 
 
+def make_combinations_double_all_diverse_and_all_positions(wt_seq, aminoacids):
+    """
+    Make double substituted naturally diverse variants
+
+    :parameter arr: List of single substitutions in tuple, e.g.,
+    (['L215F'], ['A217N'], ['R219S'], ['L249Y'])
+    :parameter aminoacids: List of amino acids to combine, e.g., all 20 naturally occuring:
+    ['A', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'K', 'L',
+    'M', 'N', 'P', 'Q', 'R', 'S', 'T', 'V', 'W', 'Y']
+
+    :returns doubles: List of double (fully) diverse substitution lists, e.g.,
+    [('L215A', 'A217C'), ('L215A', 'A217D'), ('L215A', 'A217E'), ('L215A', 'A217F'), ...,
+    ('R219Y', 'L249T'), ('R219Y', 'L249V'), ('R219Y', 'L249W'), ('R219Y', 'L249Y')]
+    """
+    counter = 0
+    doubles = []
+    for i in tqdm(range(len(wt_seq))):
+        for j in range(i + 1, len(wt_seq)):
+            for k in aminoacids:
+                pos_1 = wt_seq[i] + str(i + 1) + str(k)
+                for l in aminoacids:
+                    pos_2 = wt_seq[j] + str(j + 1) + str(l)
+                    if pos_1[0] != pos_1[-1] \
+                            and pos_2[0] != pos_2[-1] \
+                            and pos_1[1:-1] != pos_2[1:-1]:
+                        doubles.append(tuple([pos_1, pos_2]))  # tuple needed for
+                        if len(doubles) >= 8E04:                                             # list(dict()):
+                            doubles = list(dict.fromkeys(doubles))  # removes duplicated list entries
+                            counter += len(doubles)
+                            yield doubles
+                            doubles = []
+    doubles = list(dict.fromkeys(doubles))
+    yield doubles
+
+
 def make_combinations_triple_all_diverse(arr, aminoacids):
     """
-    Make triple substituted naturally diverse variants
+    Make triple substituted naturally diverse variants.
+    Analogous to function "make_combinations_double_all_diverse"
+    but yielding three combined substitutions.
     """
     triples = []
     for i in tqdm(range(len(arr))):
@@ -201,7 +347,9 @@ def make_combinations_triple_all_diverse(arr, aminoacids):
 
 def make_combinations_quadruple_all_diverse(arr, aminoacids):
     """
-    Make quadruple substituted naturally diverse variants
+    Make quadruple substituted naturally diverse variants.
+    Analogous to function "make_combinations_double_all_diverse"
+    but yielding four combined substitutions.
     """
     quadruples = []
     for i in tqdm(range(len(arr))):
@@ -212,8 +360,11 @@ def make_combinations_quadruple_all_diverse(arr, aminoacids):
                         for n in aminoacids:
                             for o in aminoacids:
                                 for p in aminoacids:
-                                    if ((arr[i][0])[1:-1]) != ((arr[j][0])[1:-1]) != ((arr[k][0])[1:-1]) != \
-                                            ((arr[l][0])[1:-1]) and\
+                                    if ((arr[i][0])[1:-1]) \
+                                            != ((arr[j][0])[1:-1]) \
+                                            != ((arr[k][0])[1:-1]) \
+                                            != ((arr[l][0])[1:-1]) \
+                                            and\
                                             ((arr[i][0])[:-1] + m)[0] != ((arr[i][0])[:-1] + m)[-1] and\
                                             ((arr[j][0])[:-1] + n)[0] != ((arr[j][0])[:-1] + n)[-1] and\
                                             ((arr[k][0])[:-1] + o)[0] != ((arr[k][0])[:-1] + o)[-1] and\

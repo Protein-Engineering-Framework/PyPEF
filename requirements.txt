@@ -6,4 +6,5 @@ matplotlib
 scipy
 adjustText
 scikit-learn
+biopython
 ray[default]

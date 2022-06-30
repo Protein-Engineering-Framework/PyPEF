@@ -17,7 +17,7 @@
 # §Equal contribution
 
 """
-Modules for creating learning and validation sets
+Modules for creating learning and test sets
 from input CSV file (with value separators sep=',' or sep=';')
 having the CSV-format
 
@@ -26,7 +26,7 @@ VARIANT_1;FITNESS_VALUE_1
 VARIANT_2;FITNESS_VALUE_2
 ...
 
-according to the self devised learning and validation set convention
+according to the self devised learning and test set convention
 > VARIANT_NAME_1
 ; FITNESS_1
 VARIANT_SEQUENCE_1
@@ -40,38 +40,23 @@ import numpy as np
 import random
 import pandas as pd
 import re
-import glob
 
 
-def get_wt_sequence(sequence_file):
+def get_wt_sequence(sequence_fasta):
     """
     Gets wild-type sequence from defined input file (can be pure sequence or fasta style)
     """
-    # In wild-type sequence .fa file one has to give the sequence of the studied peptide/protein (wild-type)
-    # If no .csv is defined is input this tries to find and select any .fa file
-    # (risk: could lead to errors if several .fa files exist in folder)
-    if sequence_file is None or sequence_file not in glob.glob(sequence_file):
-        try:
-            types = ('wt_sequence.*', 'wild_type_sequence.*', '*.fa')  # the tuple of file types
-            files_grabbed = []
-            for files in types:
-                files_grabbed.extend(glob.glob(files))
-            for i, file in enumerate(files_grabbed):
-                if i == 0:
-                    sequence_file = file
-            if len(files_grabbed) == 0:
-                raise FileNotFoundError("Found no input wild-type fasta sequence file (.fa) in current directory!")
-            print('Did not find (specified) WT-sequence file! Used wild-type sequence file instead:'
-                  ' {}.'.format(str(sequence_file)))
-        except NameError:
-            raise NameError("Found no input wild-type fasta sequence file (.fa) in current directory!")
     wild_type_sequence = ""
-    with open(sequence_file, 'r') as sf:
-        for lines in sf.readlines():
-            if lines.startswith(">"):
-                continue
-            lines = ''.join(lines.split())
-            wild_type_sequence += lines
+    try:
+        with open(sequence_fasta, 'r') as sf:
+            for lines in sf.readlines():
+                if lines.startswith(">"):
+                    continue
+                lines = ''.join(lines.split())
+                wild_type_sequence += lines
+    except FileNotFoundError:
+        raise FileNotFoundError("Specify input FASTA sequence file for "
+                                "getting the wild-type sequence.")
     return wild_type_sequence
 
 
@@ -79,18 +64,17 @@ def csv_input(csv_file):
     """
     Gets input data from defined .csv file (that contains variant names and fitness labels)
     """
-    if csv_file is None or csv_file not in glob.glob(csv_file):
-        for i, file in enumerate(glob.glob('*.csv')):
-            if file.endswith('.csv'):
-                if i == 0:
-                    csv_file = file
-                    print('Did not find (specified) csv file! Used csv input file instead: {}.'.format(str(csv_file)))
-        if len(glob.glob('*.csv')) == 0:
-            raise FileNotFoundError('Found no input .csv file in current directory.')
+    if csv_file is None:
+        raise FileNotFoundError('Did not find (specified) csv file! '
+              'Used csv input file instead: {}.'.format(str(csv_file)))
     return csv_file
 
 
-def drop_rows(csv_file, amino_acids, threshold_drop):
+def drop_rows(
+        csv_file,
+        amino_acids,
+        threshold_drop
+):
     """
     Drops rows from .csv data if below defined fitness threshold or if
     amino acid/variant name is unknown or if fitness label is not a digit.
@@ -101,6 +85,10 @@ def drop_rows(csv_file, amino_acids, threshold_drop):
     except ValueError:
         separator = ','
         df_raw = pd.read_csv(csv_file, sep=separator, usecols=[0, 1])
+    except FileNotFoundError:
+        raise FileNotFoundError(
+            "Specify the input CSV file containing the variant-fitness data. "
+            "Required CSV format: variant;fitness.")
 
     label = df_raw.iloc[:, 1]
     sequence = df_raw.iloc[:, 0]
@@ -137,8 +125,8 @@ def drop_rows(csv_file, amino_acids, threshold_drop):
             raise TypeError('You might consider checking the input .csv for empty first two columns,'
                             ' e.g. in the last row.')
 
-    print('No. of dropped rows: {}.'.format(len(dropping_rows)), 'Total given variants '
-                                                                 '(if provided plus WT): {}'.format(len(df_raw)))
+    print(f'No. of dropped rows: {len(dropping_rows)}. '
+          f'Total given variants (if provided plus WT): {len(df_raw)}')
 
     df = df_raw.drop(dropping_rows)
     df.dropna(inplace=True)
@@ -147,18 +135,25 @@ def drop_rows(csv_file, amino_acids, threshold_drop):
     return df
 
 
-def get_variants(df, amino_acids, wild_type_sequence):
+def get_variants(
+        df,
+        amino_acids,
+        wild_type_sequence
+):
     """
-    Gets variants and divides and counts the variant data for single substituted and higher substituted variants.
-    Raises NameError if variant naming is not matching the given wild-type sequence, e.g. if variant A17C would define
-    a substitution at residue Ala-17 to Cys but the wild-type sequence has no Ala at position 17.
+    Gets variants and divides and counts the variant data for single substituted
+    and higher substituted variants. Raises NameError if variant naming is not
+    matching the given wild-type sequence, e.g. if variant A17C would define
+    a substitution at residue Ala-17 to Cys but the wild-type sequence has no Ala
+    at position 17.
     """
     x = df.iloc[:, 0]
     y = df.iloc[:, 1]
     wt_position = None
-    single_variants, higher_variants, index_higher, index_lower, higher_values, single_values = [], [], [], [], [], []
+    single_variants, higher_variants, index_higher, index_lower, \
+        higher_values, single_values = [], [], [], [], [], []
     single, double, triple, quadruple, quintuple, sextuple, septuple,\
-    octuple, nonuple, decuple, higher = 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        octuple, nonuple, decuple, higher = 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
     for i, variant in enumerate(x):
         if '/' in variant:
             count = variant.count('/')
@@ -188,9 +183,11 @@ def get_variants(df, amino_acids, wild_type_sequence):
                     new = int(re.findall(r'\d+', splits)[0])
                     if splits[0] in amino_acids:
                         if splits[0] != wild_type_sequence[new - 1]:
-                            raise NameError('Position of amino acids in given sequence does not match the given '
-                                            'positions in the input data! E.g. see position {} and position {} being {}'
-                                            ' in the given sequence'.format(variant, new, wild_type_sequence[new - 1]))
+                            raise NameError(
+                                'Position of amino acids in given sequence does not match the given '
+                                'positions in the input data! E.g. see position {} and position {} being {} '
+                                'in the given sequence'.format(variant, new, wild_type_sequence[new - 1])
+                            )
                     higher_var = wild_type_sequence[new - 1] + str(new) + str(splits[-1])
                     m[a] = higher_var
                     if a == len(m) - 1:
@@ -227,7 +224,7 @@ def get_variants(df, amino_acids, wild_type_sequence):
                 single_variants.append([full_variant])
                 if i not in index_lower:
                     index_lower.append(i)
-    print('Single (for mklsvs if provided plus WT): {}.'.format(single), 'Double: {}.'.format(double),
+    print('Single (for mklsts if provided plus WT): {}.'.format(single), 'Double: {}.'.format(double),
           'Triple: {}.'.format(triple), 'Quadruple: {}.'.format(quadruple), 'Quintuple: {}.'.format(quintuple),
           'Sextuple: {}.'.format(sextuple), 'Septuple: {}.'.format(septuple), 'Octuple: {}.'.format(octuple),
           'Nonuple: {}.'.format(nonuple), 'Decuple: {}.'.format(decuple), 'Higher: {}.'.format(higher))
@@ -245,10 +242,15 @@ def get_variants(df, amino_acids, wild_type_sequence):
     return single_variants, single_values, higher_variants, higher_values
 
 
-def make_sub_ls_vs(single_variants, single_values, higher_variants, higher_values, directed_evolution=False):
+def make_sub_ls_ts(
+        single_variants,
+        single_values,
+        higher_variants,
+        higher_values,
+        directed_evolution=False):
     """
-    Creates learning and validation sets, fills learning set with single substituted variants and splits
-    rest (higher substituted) for learning and validation sets: 3/4 to LS and 1/4 to VS
+    Creates learning and test sets, fills learning set with single substituted variants and splits
+    rest (higher substituted) for learning and test sets: 3/4 to LS and 1/4 to TS
     """
     print('No. of single substituted variants (if provided plus WT): {}.'.format(len(single_variants)),
           'No. of values: {}'.format(len(single_values)))
@@ -264,36 +266,59 @@ def make_sub_ls_vs(single_variants, single_values, higher_variants, higher_value
         print('Error due to different lengths for given variants and label! No. of higher subst. variants: {}.'
               .format(len(higher_variants)), ' Number of given values: {}.'.format(len(higher_values)))
 
-    # 1. CREATION OF LS AND VS SPLIT FOR SINGLE FOR LS AND HIGHER VARIANTS FOR VS
-    sub_ls = list(single_variants)  # Substitutions of LS
-    val_ls = list(single_values)    # Values of LS
-
-    sub_vs = []                     # Substitutions of VS
-    val_vs = []                     # Values of VS
+    # 1. CREATION OF LS AND TS SPLIT FOR SINGLE FOR LS AND HIGHER VARIANTS FOR TS
+    all_variants = single_variants + higher_variants
+    all_values = single_values + higher_values
+    sub_ts = []  # Substitutions of TS
+    values_ts = []  # Values of TS
+    sub_ls = []
+    values_ls = []
 
     if directed_evolution is False:
-        for i in range(len(higher_variants)):
-            if len(higher_variants) < 6:  # if less than 6 higher variants all higher variants are appended to VS
-                sub_vs.append(higher_variants[i])
-                val_vs.append(higher_values[i])
-            elif (i % 3) == 0 and i != 0:  # 1/4 of higher variants to VS, 3/4 to LS: change here for LS/VS ratio change
-                sub_vs.append(higher_variants[i])
-                val_vs.append(higher_values[i])
-            else:                       # 3/4 to LS
-                sub_ls.append(higher_variants[i])
-                val_ls.append(higher_values[i])
+        if len(higher_variants) != 0:
+            sub_ls = list(single_variants)  # Substitutions of LS
+            values_ls = list(single_values)  # Values of LS
+            for i in range(len(higher_variants)):
+                if len(higher_variants) < 6:  # if less than 6 higher variants --> all higher variants to TS
+                    sub_ts.append(higher_variants[i])
+                    values_ts.append(higher_values[i])
+                elif (i % 3) == 0 and i != 0:  # 1/4 of higher variants to TS, 3/4 to LS
+                    sub_ts.append(higher_variants[i])
+                    values_ts.append(higher_values[i])
+                else:                       # 3/4 to LS
+                    sub_ls.append(higher_variants[i])
+                    values_ls.append(higher_values[i])
+        else:  # if no higher substituted variants are available split 80%/20%
+            random_nums = []
+            range_list = np.arange(0, len(all_variants))
+            while len(sub_ls) < len(all_variants) * 4 // 5:  # 80 % Learning Set
+                random_num = random.choice(range_list)
+                if random_num not in random_nums:
+                    random_nums.append(random_num)
+                    sub_ls.append(all_variants[random_num])
+                    values_ls.append(all_values[random_num])
+            else:  # 20 % Test Set
+                for num in range_list:
+                    if num not in random_nums:
+                        sub_ts.append(all_variants[num])
+                        values_ts.append(all_values[num])
 
-    return sub_ls, val_ls, sub_vs, val_vs
+    return sub_ls, values_ls, sub_ts, values_ts
 
 
-def make_sub_ls_vs_randomly(single_variants, single_values, higher_variants, higher_values):
+def make_sub_ls_ts_randomly(
+        single_variants,
+        single_values,
+        higher_variants,
+        higher_values
+):
     """
-    Creation of learning set and validation set by randomly splitting sets
+    Creation of learning set and test set by randomly splitting sets
     """
     length = len(single_variants) + len(higher_variants)
     range_list = np.arange(0, length)
 
-    vs = []
+    ts = []
     ls = []
     while len(ls) < length * 4 // 5:
         random_num = random.choice(range_list)
@@ -302,43 +327,54 @@ def make_sub_ls_vs_randomly(single_variants, single_values, higher_variants, hig
 
     for j in range_list:
         if j not in ls:
-            vs.append(j)
+            ts.append(j)
 
     combined = single_variants + higher_variants  # substitutions
     combined2 = single_values + higher_values  # values
 
     sub_ls = []
-    val_ls = []
-    tot_sub_ls, tot_val_ls = [], []
-    tot_sub_vs, tot_val_vs = [], []
+    values_ls = []
+    tot_sub_ls, tot_values_ls = [], []
+    tot_sub_ts, tot_values_ts = [], []
 
     for i in ls:
         sub_ls.append(combined[i])
-        val_ls.append(combined2[i])
+        values_ls.append(combined2[i])
 
-    sub_vs = []
-    val_vs = []
-    for j in vs:
-        sub_vs.append(combined[j])
-        val_vs.append(combined2[j])
+    sub_ts = []
+    values_ts = []
+    for j in ts:
+        sub_ts.append(combined[j])
+        values_ts.append(combined2[j])
 
     for subs in sub_ls:
-        for subs2 in sub_vs:
+        for subs2 in sub_ts:
             if subs == subs2:
-                print('\n<Warning> LS and VS overlap for: {} - You might want to consider checking the provided '
+                print('\n<Warning> LS and TS overlap for: {} - '
+                      'You might want to consider checking the provided '
                       'datasets for multiple entries'.format(subs), end=' ')
 
     tot_sub_ls.append(sub_ls)
-    tot_val_ls.append(val_ls)
-    tot_sub_vs.append(sub_vs)
-    tot_val_vs.append(val_vs)
+    tot_values_ls.append(values_ls)
+    tot_sub_ts.append(sub_ts)
+    tot_values_ts.append(values_ts)
 
-    return tot_sub_ls[0], tot_val_ls[0], tot_sub_vs[0], tot_val_vs[0]
+    return tot_sub_ls[0], tot_values_ls[0], tot_sub_ts[0], tot_values_ts[0]
 
 
-def make_fasta_ls_vs(filename, wt, sub, val):  # sub = substitution, val = value
+def make_fasta_ls_ts(
+        filename,
+        wt,
+        sub,
+        val
+):  # sub = substitution, val = value
     """
-    Creates learning and validation sets (.fasta style files)
+    Creates learning and test sets (.fasta style files)
+
+    sub: list
+        List of substiutuions of a single variant of the format:
+            - Single substitution variant, e.g. variant A123C: [['A123C']]
+            - Higher variants, e.g. variant A123C/D234E/F345G: [['A123C'], ['D234E], ['F345G']]
     """
     myfile = open(filename, 'w')
     for i, var in enumerate(sub):  # var are lists of (single or multiple) substitutions
@@ -361,4 +397,43 @@ def make_fasta_ls_vs(filename, wt, sub, val):  # sub = substitution, val = value
         print('>', name, file=myfile)
         print(';', val[i], file=myfile)
         print(''.join(temp), file=myfile)
+        # print(name+';'+str(val[i])+';'+''.join(temp), file=myfile)  # output: CSV format
     myfile.close()
+
+
+def get_seqs_from_var_name(
+        wt,
+        sub,
+        val
+) -> tuple[list, list, list]:
+    """
+    Similar to function above but just returns sequences
+
+    variant: list
+        List of substiutuions of a single variant of the format:
+            - Single substitution variant, e.g. variant A123C: [['A123C']]
+            - Higher variants, e.g. variant A123C/D234E/F345G: [['A123C'], ['D234E], ['F345G']]
+    """
+    variant, values, sequences = [], [], []
+    for i, var in enumerate(sub):  # var are lists of (single or multiple) substitutions
+        temp = list(wt)
+        name = ''
+        separation = 0
+        if var == ['WT']:
+            name = 'WT'
+        else:
+            for single_var in var:  # single entries of substitution list
+                position_index = int(str(single_var)[1:-1]) - 1
+                new_amino_acid = str(single_var)[-1]
+                temp[position_index] = new_amino_acid
+                # checking if multiple entries are inside list
+                if separation == 0:
+                    name += single_var
+                else:
+                    name += '/' + single_var
+                separation += 1
+        variant.append(name)
+        values.append(val[i])
+        sequences.append(''.join(temp))
+
+    return variant, values, sequences
