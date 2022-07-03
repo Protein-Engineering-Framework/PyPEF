@@ -7,4 +7,5 @@ scipy
 adjustText
 scikit-learn
 biopython
+schema
 ray[default]
