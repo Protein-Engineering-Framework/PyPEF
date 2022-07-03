@@ -1,3 +1,7 @@
+#!/usr/bin/env python3
+# for installation run me with: pip install . --use-feature=in-tree-build
+
+
 from setuptools import setup, find_packages
 
 
@@ -6,36 +10,39 @@ with open("requirements.txt", "r", encoding="utf-8") as install_requirements:
 
 setup(
     name='pypef',
-    version='0.1.7',
+    version='0.2.0',
     author='Niklas Siedhoff & Alexander-Maurice Illig',
     author_email='n.siedhoff@biotec.rwth-aachen.de',
     license='CC BY-NC-SA 4.0',
-    description='A command-line interface (CLI) tool for performing data-driven protein engineering by building '
-                'machine learning models from sequence variant-fitness data (e.g., provided as CSV data). '
-                'Get a small API provided for encoding and model validation from modules in pypef.api.',
+    description='A command-line interface (CLI) tool for performing data-driven protein engineering '
+                'by building machine learning (ML)-trained regression models from sequence variant '
+                'fitness data (in CSV format) based on different techniques for protein sequence encoding. '
+                'Next to building pure ML models, \'hybrid modeling\' is also possible using a blended '
+                'model optimized for predictive contributions of a statistical and an ML-based prediction.',
     long_description='For detailed description including a short Jupyter Notebook-based '
                      'tutorial please refer to the GitHub page.',
     long_description_content_type='text/markdown',
-    url='https://github.com/niklases/PyPEF',
+    url='https://github.com/Protein-Engineering-Framework/PyPEF',
     py_modules=['pypef'],
-    packages=find_packages(),
+    packages=find_packages(include=['pypef', 'pypef.*']),
+    package_data={'pypef': ['ml/AAindex/*', 'ml/AAindex/Refined_cluster_indices_r0.93_r0.97/*']},
     include_package_data=True,
     install_requires=[requirements],
     python_requires='>=3.7',
     keywords='Pythonic Protein Engineering Framework',
     classifiers=[
-        # 'Operating System :: POSIX :: Linux',
         'Development Status :: 3 - Alpha',
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
+        'Programming Language :: Python :: 3.10',
         'Topic :: Scientific/Engineering :: Bio-Informatics',
         'Topic :: Scientific/Engineering :: Artificial Intelligence'
     ],
     entry_points={
         'console_scripts': [
-            'pypef=pypef.cli.run:run_pypef'
+            'pypef = pypef.main:run_main'
         ],
     }
 )
