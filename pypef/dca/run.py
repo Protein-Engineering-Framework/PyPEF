@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # Created on 05 October 2020
-# @author: Niklas Siedhoff, Alexander-Maurice Illig
-# <n.siedhoff@biotec.rwth-aachen.de>, <a.illig@biotec.rwth-aachen.de>
+# @authors: Niklas Siedhoff, Alexander-Maurice Illig
+# @contact: <n.siedhoff@biotec.rwth-aachen.de>
 # PyPEF - Pythonic Protein Engineering Framework
 # Released under Creative Commons Attribution-NonCommercial 4.0 International Public License (CC BY-NC 4.0)
 # For more information about the license see https://creativecommons.org/licenses/by-nc/4.0/legalcode
@@ -18,6 +18,7 @@
 
 
 import copy
+import ray
 
 from pypef.utils.variant_data import read_csv, remove_nan_encoded_positions
 from pypef.dca.encoding import DCAEncoding, get_dca_data_parallel
@@ -28,12 +29,16 @@ from pypef.utils.low_n_mutation_extrapolation import performance_mutation_extrap
 def run_pypef_hybrid_modeling(arguments):
     threads = abs(arguments['--threads']) if arguments['--threads'] is not None else 1
     threads = threads + 1 if threads == 0 else threads
-    print(f'Using {threads} thread(s) for running...')
-    print(f"Note that the hybrid model only optimizes model performances in terms of "
-          f"Spearman's correlation of measured versus predicted values. Further, the "
-          f"hybrid approach uses only Ridge regression for supervised ML-based hybrid "
-          f"model contribution. In hybrid modeling, the ranks of predictions are "
-          f"important and not the exact predicted value.")
+    if threads > 1:
+        ray.init()
+        print(f'Using {threads} threads for running...')
+    print(
+        f"Note that the hybrid model only optimizes model performances in terms of "
+        f"Spearman's correlation of measured versus predicted values. Further, the "
+        f"hybrid approach uses only Ridge regression for supervised ML-based hybrid "
+        f"model contribution. In hybrid modeling, the ranks of predictions are "
+        f"important and not the exact predicted value."
+    )
 
     if arguments['--ls']:
         performance_ls_ts(

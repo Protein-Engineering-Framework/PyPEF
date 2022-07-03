@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # Created on 05 October 2020
-# @author: Niklas Siedhoff, Alexander-Maurice Illig
-# <n.siedhoff@biotec.rwth-aachen.de>, <a.illig@biotec.rwth-aachen.de>
+# @authors: Niklas Siedhoff, Alexander-Maurice Illig
+# @contact: <n.siedhoff@biotec.rwth-aachen.de>
 # PyPEF - Pythonic Protein Engineering Framework
 # Released under Creative Commons Attribution-NonCommercial 4.0 International Public License (CC BY-NC 4.0)
 # For more information about the license see https://creativecommons.org/licenses/by-nc/4.0/legalcode
@@ -26,6 +26,8 @@ tuning, prediction, and plotting routines.
 
 import copy
 import os
+from typing import Union, Tuple, Dict, Any
+
 import matplotlib
 matplotlib.use('Agg')  # no plt.show(), just save plot
 import matplotlib.pyplot as plt
@@ -44,7 +46,7 @@ from sklearn.cross_decomposition import PLSRegression
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.svm import SVR
 from sklearn.neural_network import MLPRegressor
-from sklearn.linear_model import Ridge, LassoLars, ElasticNet
+from sklearn.linear_model import Ridge, Lasso, ElasticNet
 
 from pypef.utils.variant_data import (
     amino_acids, get_sequences_from_file,
@@ -60,7 +62,7 @@ warnings.filterwarnings(action='ignore', category=UserWarning, module='sklearn')
 warnings.filterwarnings(action='ignore', category=DeprecationWarning, module='sklearn')
 # FutureWarning: The default of 'normalize' will be set to False in version 1.2 and deprecated in version 1.4.
 # If you wish to scale the data, use Pipeline with a StandardScaler in a preprocessing stage.
-# sklearn msg: The default value of 'normalize' should be changed to False in linear models where now normalize=True
+# sklearn: The default value of 'normalize' should be changed to False in linear models where now normalize=True
 warnings.filterwarnings(action='ignore', category=FutureWarning, module='sklearn')
 
 
@@ -308,7 +310,7 @@ class OneHotEncoding:
         self.sequences = sequences
         self.amino_acids = amino_acids  # imported, 20 standard AAs
 
-    def encoding_dict(self) -> dict:
+    def encoding_dict(self) -> dict[str, np.ndarray]:
         encoding_dict = {}
         for idx, amino_acid in enumerate(self.amino_acids):
             encoding_vector = np.zeros(20, dtype=int)
@@ -316,23 +318,23 @@ class OneHotEncoding:
             encoding_dict.update({amino_acid: encoding_vector})
         return encoding_dict
 
-    def one_hot_encode_sequence(self, sequence: str) -> np.array:
+    def one_hot_encode_sequence(self, sequence: str) -> np.ndarray:
         encoded_sequence = []
         for aminoacid in sequence:
             encoded_sequence.append(self.encoding_dict()[aminoacid])
         return np.concatenate(encoded_sequence)
 
-    def collect_encoded_sequences(self):
+    def collect_encoded_sequences(self, silence=False) -> list:
         encoded_sequences = []
-        for sequence in self.sequences:
+        for sequence in tqdm(self.sequences, disable=silence):
             encoded_sequences.append(self.one_hot_encode_sequence(sequence))
         return encoded_sequences
 
 
 def pls_loocv(
-        x_train,
-        y_train
-) -> tuple[PLSRegression, dict]:
+        x_train: list,
+        y_train: list
+) -> Union[tuple[str, str], tuple[PLSRegression, dict]]:
     """
     PLS regression with LOOCV n_components tuning as described by Cadet et al.
     https://doi.org/10.1186/s12859-018-2407-8
@@ -367,7 +369,7 @@ def pls_loocv(
             mse = mean_squared_error(y_test_loo, y_pred_loo)
             mean_squared_error_list.append(mse)
         except ValueError:  # MSE could not be calculated (No values due to numpy.linalg.LinAlgErrors)
-            return 'skip'
+            return 'skip', 'skip'
     mean_squared_error_list = np.array(mean_squared_error_list)
     idx = np.where(mean_squared_error_list == np.min(mean_squared_error_list))[0][0] + 1
     # Model is fitted with best n_components (lowest MSE)
@@ -377,7 +379,7 @@ def pls_loocv(
     return regressor_, best_params
 
 
-def cv_regression_options(regressor):
+def cv_regression_options(regressor: str) -> GridSearchCV:
     """
     Returns the CVRegressor with the tunable regression-specific hyperparameter grid
     for training a regression model.
@@ -387,7 +389,7 @@ def cv_regression_options(regressor):
         - Support Vector Machines Regression
         - Multilayer Perceptron Regression
         - Ridge Regression
-        - LassoLars Regression
+        - Lasso Regression
         - ElasticNet Regression
     """
     if regressor == 'pls':
@@ -427,7 +429,7 @@ def cv_regression_options(regressor):
         # Linear regression with combined L1 and L2 priors as regularizer.
         # min(w):  ||y - Xw||^2_2 + alpha*l1_ratio*||w||_1 + 0.5*alpha*(1 - l1_ratio)*||w||^2_2
         params = {
-            'alpha': np.logspace(1E-6, 1E6, num=100)  # {1.000E-06, 1.322E-06, 1.748E-06, ..., 1.000E06}
+            'alpha': np.logspace(-6, 6, num=100)  # {1.000E-06, 1.322E-06, 1.748E-06, ..., 1.000E06}
         }
         regressor_ = GridSearchCV(ElasticNet(), param_grid=params, cv=5)
 
@@ -440,20 +442,20 @@ def cv_regression_options(regressor):
             # alpha = 0 is equivalent to an ordinary least square regression
             # higher values of alpha reduce overfitting, significantly high values can
             # cause underfitting as well (e.g., regularization strength alpha = 5)
-            'alpha': np.logspace(1E-6, 1E6, num=100)  # {1.000E-06, 1.322E-06, 1.748E-06, ..., 1.000E06}
+            'alpha': np.logspace(-6, 6, num=100)  # {1.000E-06, 1.322E-06, 1.748E-06, ..., 1.000E06}
         }
         regressor_ = GridSearchCV(Ridge(), param_grid=params, cv=5)
 
-    elif regressor == 'lassolars' or regressor == 'l1':
+    elif regressor == 'lasso' or regressor == 'l1':
         # Lasso model fit with Least Angle Regression a.k.a. Lars.
         # Performs L1 regularization, i.e., adds penalty equivalent to absolute value of the magnitude of coefficients
         # min(w): ||y - Xw||^2_2 + alpha*||w||_1
         # Provides sparse solutions: computationally efficient as features with zero coefficients can be ignored
         params = {
             # alpha = 0 is equivalent to an ordinary least square Regression
-            'alpha': np.logspace(1E-6, 1E6, num=100)  # {1.000E-06, 1.322E-06, 1.748E-06, ..., 1.000E06}
+            'alpha': np.logspace(-6, 6, num=100)  # {1.000E-06, 1.322E-06, 1.748E-06, ..., 1.000E06}
         }
-        regressor_ = GridSearchCV(LassoLars(), param_grid=params, cv=5)
+        regressor_ = GridSearchCV(Lasso(), param_grid=params, cv=5)
 
     else:
         raise SystemError("Did not find specified regression model as valid option. See '--help' for valid "
@@ -462,16 +464,17 @@ def cv_regression_options(regressor):
     return regressor_
 
 
-def get_r2(
-        x_learn,
-        x_test,
-        y_learn,
-        y_test,
-        regressor='pls'
+def get_regressor_performances(
+        x_learn: list,
+        x_test: list,
+        y_learn: list,
+        y_test: list,
+        regressor: str = 'pls',
+        verbose: bool = False
 ):
     """
-    The function Get_R2 takes features and labels from the
-    learning and validation set.
+    The function get_regressor_performances takes features and labels from the
+    learning and test set.
 
     When using 'pls_loocv' as regressor, the MSE is calculated for all LOOCV
     sets for predicted vs true labels (mse = mean_squared_error(y_test_loo, y_pred_loo)
@@ -496,6 +499,8 @@ def get_r2(
     else:
         regressor_ = cv_regression_options(regressor)
     try:
+        if verbose:
+            print('CV-based training of regression model...')
         regressor_.fit(x_learn, y_learn)  # fit model
     except ValueError:  # scipy/linalg/decomp_svd.py --> ValueError('illegal value in %dth argument of internal gesdd'
         return [None, None, None, None, None, regressor, None]
@@ -526,8 +531,8 @@ def performance_list(
         threads: int = 1  # for parallelization of DCA-based encoding
 ):
     """
-    returns the sorted list of all the model parameters and
-    the performance values (r2 etc.) from function get_r2.
+    returns the sorted list of all the model parameters and the
+    performance values (R2 etc.) from function get_performances.
     """
     performance_list = []
     train_sequences, train_variants, y_train = get_sequences_from_file(train_set)
@@ -538,27 +543,29 @@ def performance_list(
         x_train = x_onehot_train.collect_encoded_sequences()
         x_test = x_onehot_test.collect_encoded_sequences()
         r2, rmse, nrmse, pearson_r, spearman_rho, regression_model, \
-            params = get_r2(x_train, x_test, y_train, y_test, regressor)
-        if r2 is not None:  # get_r2() returns None for metrics if MSE can't be calculated
+            params = get_regressor_performances(x_train, x_test, y_train, y_test, regressor, verbose=True)
+        if r2 is not None:  # get_regressor_performances() returns None for metrics if MSE can't be calculated
             performance_list.append([
                 'ONEHOTMODEL', r2, rmse, nrmse, pearson_r,
                 spearman_rho, regression_model, params
             ])
     elif encoding == 'dca':
-        x_dca = DCAEncoding(couplings_file)
         if threads > 1:  # NaNs are already being removed by the called function
-            print('Parallel encoding...')
-            train_variants, x_train, y_train = get_dca_data_parallel(train_variants, y_train, x_dca, threads)
-            test_variants, x_test, y_test = get_dca_data_parallel(test_variants, y_test, x_dca, threads)
+            dca_encoder = DCAEncoding(couplings_file, verbose=False)
+            print('Parallel encoding (runs DCA encoding silent, '
+                  'no information about non-encoded variant positions)...')
+            train_variants, x_train, y_train = get_dca_data_parallel(train_variants, y_train, dca_encoder, threads)
+            test_variants, x_test, y_test = get_dca_data_parallel(test_variants, y_test, dca_encoder, threads)
         else:
-            x_train = x_dca.collect_encoded_sequences(train_variants)
-            x_test = x_dca.collect_encoded_sequences(test_variants)
+            dca_encoder = DCAEncoding(couplings_file)
+            x_train = dca_encoder.collect_encoded_sequences(train_variants)
+            x_test = dca_encoder.collect_encoded_sequences(test_variants)
             # NaNs must still be removed
             x_train, y_train = remove_nan_encoded_positions(x_train, y_train)
             x_test, y_test = remove_nan_encoded_positions(x_test, y_test)
         r2, rmse, nrmse, pearson_r, spearman_rho, regression_model, \
-            params = get_r2(x_train, x_test, y_train, y_test, regressor)
-        if r2 is not None:  # get_r2() returns None for metrics if MSE can't be calculated
+            params = get_regressor_performances(x_train, x_test, y_train, y_test, regressor, verbose=True)
+        if r2 is not None:  # get_regressor_performances() returns None for metrics if MSE can't be calculated
             performance_list.append([
                 'DCAMODEL', r2, rmse, nrmse, pearson_r,
                 spearman_rho, regression_model, params
@@ -584,8 +591,8 @@ def performance_list(
             if x_train == 'skip' or x_test == 'skip':
                 continue  # skip the rest and do next iteration
             r2, rmse, nrmse, pearson_r, spearman_rho, regression_model, \
-                params = get_r2(x_train, x_test, y_train, y_test, regressor)
-            if r2 is not None:  # get_r2() returns None for metrics if MSE can't be calculated
+                params = get_regressor_performances(x_train, x_test, y_train, y_test, regressor)
+            if r2 is not None:  # get_regressor_performances() returns None for metrics if MSE can't be calculated
                 performance_list.append([
                     aaindex, r2, rmse, nrmse, pearson_r,
                     spearman_rho, regression_model, params
@@ -659,14 +666,20 @@ def formatted_output(
 def cross_validation(
         x: np.ndarray,
         y: np.ndarray,
-        regressor_,  # Union[PLSRegression, Ridge, LassoLars, ElasticNet etc.]
+        regressor_,  # Union[PLSRegression, Ridge, Lasso, ElasticNet, ...]
         n_samples: int = 5):
+    """
+    Perform k-fold cross-validation on the input data (encoded sequences and
+    corresponding fitness values) with default k = 5. Returns all predicted
+    fitness values of the length y (e.g. (1/5)*len(y) * 5 = 1*len(y)).
+    """
     # perform k-fold cross-validation on all data
-    # k = Number of splits, change for changing k in k-fold split-up, default=5
+    # k = Number of splits, change for changing k in k-fold splitting, default: 5
     y_test_total = []
     y_predicted_total = []
 
     kf = KFold(n_splits=n_samples, shuffle=True)
+
     for train_index, test_index in kf.split(y):
         y = np.array(y)
         try:
@@ -675,9 +688,7 @@ def cross_validation(
 
             for numbers in y_test:
                 y_test_total.append(numbers)
-            regressor_.fit(x_train, y_train)  # Fitting on a random subset for Final_Model
-            # (and on a subset subset for Learning_Model)
-            # Predictions for samples in the test_set during that iteration
+            regressor_.fit(x_train, y_train)
             y_pred_test = regressor_.predict(x_test)
 
             for values in y_pred_test:
@@ -725,7 +736,10 @@ def get_performances(
     return r_squared, rmse, nrmse, pearson_r, spearman_rho
 
 
-def get_regressor(regressor: str, parameter: dict):
+def get_regressor(
+        regressor: str,
+        parameter: dict
+):
     """
     Returns the tuned CVRegressor with the tuned hyperparameters.
     Regression options are
@@ -734,7 +748,7 @@ def get_regressor(regressor: str, parameter: dict):
         - Support Vector Machines Regression
         - Multilayer Perceptron Regression
         - Ridge Regression
-        - LassoLars Regression
+        - Lasso Regression
         - ElasticNet Regression
     """
     if regressor == 'pls' or regressor == 'pls_loocv':
@@ -767,8 +781,8 @@ def get_regressor(regressor: str, parameter: dict):
             alpha=parameter.get('alpha')
         )
 
-    elif regressor == 'lassolars' or regressor == 'l1':
-        regressor_ = LassoLars(
+    elif regressor == 'lasso' or regressor == 'l1':
+        regressor_ = Lasso(
             alpha=parameter.get('alpha')
         )
 
@@ -851,13 +865,13 @@ def save_model(
                 x_train = x_onehot_train.collect_encoded_sequences()
                 x_test = x_onehot_test.collect_encoded_sequences()
             else:  # DCA
-                x_dca = DCAEncoding(couplings_file, verbose=False)
+                dca_encoder = DCAEncoding(couplings_file, verbose=False)
                 if threads > 1:  # parallelization of encoding, NaNs are already being removed by the called function
-                    train_variants, x_train, y_train = get_dca_data_parallel(variants_train, y_train, x_dca, threads)
-                    test_variants, x_test, y_test = get_dca_data_parallel(variants_test, y_test, x_dca, threads)
+                    train_variants, x_train, y_train = get_dca_data_parallel(variants_train, y_train, dca_encoder, threads)
+                    test_variants, x_test, y_test = get_dca_data_parallel(variants_test, y_test, dca_encoder, threads)
                 else:  # encode using a single thread
-                    x_train = x_dca.collect_encoded_sequences(variants_train)
-                    x_test = x_dca.collect_encoded_sequences(variants_test)
+                    x_train = dca_encoder.collect_encoded_sequences(variants_train)
+                    x_test = dca_encoder.collect_encoded_sequences(variants_test)
                     x_train, y_train = remove_nan_encoded_positions(x_train, y_train)
                     x_test, y_test = remove_nan_encoded_positions(x_test, y_test)
 
@@ -912,8 +926,6 @@ def save_model(
         if encoding == 'onehot' or encoding == 'dca':   # only 1 model/encoding  -->
             break                                       # no further iteration needed, thus break loop
 
-    return ()
-
 
 def predict(
         path=None,
@@ -953,19 +965,33 @@ def predict(
         x, x_raw = x_aaidx.collect_encoded_sequences()
     elif encoding == 'onehot':  # OneHot
         x_onehot = OneHotEncoding(np.atleast_1d(sequences).tolist())
-        x = x_onehot.collect_encoded_sequences()
+        if len(sequences) == 1:
+            silence = True
+        else:
+            silence = False
+        x = x_onehot.collect_encoded_sequences(silence=silence)
         x_raw = None
     else:  # DCA
-        if dca_encoder is not None:
-            x_dca = dca_encoder
-        else:
-            x_dca = DCAEncoding(params_file=couplings_file)
-        if threads > 1:  # parallel encoding of variants, NaNs are already being removed by the called function
-            variants, x, _ = get_dca_data_parallel(variants, list(np.zeros(len(variants))), x_dca, threads)
-        else:  # single thread running
-            x = x_dca.collect_encoded_sequences(variants)
+        if dca_encoder is not None:  # use dca_encoder from directed evolution, single thread
+            x = dca_encoder.collect_encoded_sequences(variants)
             x, variants = remove_nan_encoded_positions(x, list(variants))
             x_raw = None
+
+        else:
+            if threads > 1:
+                dca_encoder = DCAEncoding(couplings_file, verbose=False)
+                print('Parallel encoding (runs DCA encoding silent, '
+                      'no information about non-encoded variant positions)...')
+                # parallel encoding of variants, NaNs are already being removed by the called function
+                variants, x, _ = get_dca_data_parallel(
+                    variants, list(np.zeros(len(variants))), dca_encoder, threads
+                )
+            else:  # single thread running
+                dca_encoder = DCAEncoding(couplings_file)
+                x = dca_encoder.collect_encoded_sequences(variants)
+                x, variants = remove_nan_encoded_positions(x, list(variants))
+                x_raw = None
+
         if not x:
             return 'skip'
 
@@ -989,7 +1015,7 @@ def predict(
     # Pay attention if increased negative values would define a better variant --> use negative flag
     predictions.sort()
     predictions.reverse()
-    # if predictions array too large?  if Mult_Path is not None: predictions = predictions[:100000]
+    # if predictions array too large? if Mult_Path is not None: predictions = predictions[:100000]
 
     return predictions
 
@@ -1052,12 +1078,12 @@ def plot(
     else:  # DCA
         if threads is None:
             threads = 1
-        x_dca = DCAEncoding(couplings_file)
+        dca_encoder = DCAEncoding(couplings_file)
         x_raw = None
         if threads > 1:  # NaNs are already being removed by the called function, for ys just filling 0's
-            variants_test, x, y_test = get_dca_data_parallel(variants_test, y_test, x_dca, threads)
+            variants_test, x, y_test = get_dca_data_parallel(variants_test, y_test, dca_encoder, threads)
         else:
-            x_ = x_dca.collect_encoded_sequences(variants_test)
+            x_ = dca_encoder.collect_encoded_sequences(variants_test)
             x, variants_test = remove_nan_encoded_positions(copy.copy(x_), variants_test)
             x, y_test = remove_nan_encoded_positions(copy.copy(x_), y_test)
             assert len(x) == len(variants_test) == len(y_test)

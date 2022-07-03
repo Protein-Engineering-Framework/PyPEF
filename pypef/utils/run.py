@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # Created on 05 October 2020
-# @author: Niklas Siedhoff, Alexander-Maurice Illig
-# <n.siedhoff@biotec.rwth-aachen.de>, <a.illig@biotec.rwth-aachen.de>
+# @authors: Niklas Siedhoff, Alexander-Maurice Illig
+# @contact: <n.siedhoff@biotec.rwth-aachen.de>
 # PyPEF - Pythonic Protein Engineering Framework
 # Released under Creative Commons Attribution-NonCommercial 4.0 International Public License (CC BY-NC 4.0)
 # For more information about the license see https://creativecommons.org/licenses/by-nc/4.0/legalcode
@@ -20,11 +20,12 @@ import os
 import numpy as np
 import re
 import copy
+import ray
 
 from pypef.utils.variant_data import (
     amino_acids, generate_dataframe_and_save_csv,
     remove_nan_encoded_positions, path_aaidx_txt_path_from_utils,
-    get_basename
+    get_basename, read_csv_and_shift_pos_ints
 )
 
 from pypef.utils.learning_test_sets import (
@@ -253,12 +254,15 @@ def run_pypef_utils(arguments):
             intra_gap=arguments['--intra_gap']
         )
 
-    elif arguments['encode']:
-        threads = abs(arguments['--threads']) if arguments['--threads'] is not None else 1
-        threads = threads + 1 if threads == 0 else threads
-        print(f'Using {threads} thread(s) for running...')
-        encoded_sequences = None
+    elif arguments['shift_pos']:
+        read_csv_and_shift_pos_ints(
+            infile=arguments['--input'],
+            offset=arguments['--offset'],
+            substitution_sep=arguments['--mutation_sep']
+        )
 
+    elif arguments['encode']:  # sole parallelized task for utils for DCA encoding
+        encoded_sequences = None
         df = drop_rows(arguments['--input'], amino_acids, arguments['--drop'])
         wt_sequence = get_wt_sequence(arguments['--wt'])
         print(f'Length of provided sequence: {len(wt_sequence)} amino acids.')
@@ -268,9 +272,14 @@ def run_pypef_utils(arguments):
         fitnesses = list(single_values) + list(higher_values)
         variants, fitnesses, sequences = get_seqs_from_var_name(wt_sequence, variants, fitnesses)
         assert len(variants) == len(fitnesses) == len(sequences)
+        print('Encoding variant sequences...')
 
         if arguments['--encoding'] == 'dca':
-
+            threads = abs(arguments['--threads']) if arguments['--threads'] is not None else 1
+            threads = threads + 1 if threads == 0 else threads
+            print(f'Using {threads} thread(s) for running...')
+            if threads > 1:
+                ray.init()
             dca_encode = DCAEncoding(
                 params_file=arguments['--params'],
                 separator=arguments['--mutation_sep']

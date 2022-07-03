@@ -16,7 +16,7 @@ setup(
     long_description='For detailed description including a short Jupyter Notebook-based '
                      'tutorial please refer to the GitHub page.',
     long_description_content_type='text/markdown',
-    url='https://github.com/Protein-Engineering-Framework/PyPEF',
+    url='https://github.com/niklases/PyPEF',
     py_modules=['pypef'],
     packages=find_packages(),
     include_package_data=True,

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # Created on 05 October 2020
-# @author: Niklas Siedhoff, Alexander-Maurice Illig
-# <n.siedhoff@biotec.rwth-aachen.de>, <a.illig@biotec.rwth-aachen.de>
+# @authors: Niklas Siedhoff, Alexander-Maurice Illig
+# @contact: <n.siedhoff@biotec.rwth-aachen.de>
 # PyPEF - Pythonic Protein Engineering Framework
 # Released under Creative Commons Attribution-NonCommercial 4.0 International Public License (CC BY-NC 4.0)
 # For more information about the license see https://creativecommons.org/licenses/by-nc/4.0/legalcode
@@ -16,7 +16,7 @@
 # *Corresponding author
 # §Equal contribution
 
-# Contains Python code used for our 'hybrid modeling' paper,
+# Contains Python code used for the approach presented in our 'hybrid modeling' paper
 # Preprint available at: https://doi.org/10.1101/2022.06.07.495081
 # Code available at: https://github.com/Protein-Engineering-Framework/Hybrid_Model
 
@@ -25,6 +25,7 @@ import copy
 import pickle
 from os import listdir
 from os.path import isfile, join
+from typing import Union, List, Tuple, Any
 
 import numpy as np
 from scipy.stats import spearmanr
@@ -450,7 +451,8 @@ class DCAHybridModel:
                     'n_y_test': len(self.y_test),
                     'spearman_rho': self.spearmanr(
                         self.y_test, self.hybrid_prediction(
-                            self.X_test, reg, beta_1, beta_2)
+                            self.X_test, reg, beta_1, beta_2
+                        )
                     ),
                     'beta_1': beta_1,
                     'beta_2': beta_2,
@@ -478,7 +480,7 @@ class DCAHybridModel:
 
         Parameters
         ----------
-        train_percent_train: float (default = 0.66)
+        train_percent_fit: float (default = 0.66)
             Relative number of variants used for model fitting (not
             hyperparameter validation. Default of 0.66 and overall train
             size of 0.8 means the total size for least squares fitting
@@ -514,7 +516,9 @@ class DCAHybridModel:
         if len(self.y_test) > 0:
             test_spearman_r = self.spearmanr(
                 self.y_test,
-                self.hybrid_prediction(self.X_test, reg, beta_1, beta_2)
+                self.hybrid_prediction(
+                    self.X_test, reg, beta_1, beta_2
+                )
             )
         else:
             test_spearman_r = None
@@ -567,8 +571,8 @@ Below: Some helper functions that call or are dependent on the DCAHybridModel cl
 
 
 def get_model_and_save_pkl(
-        xs,
-        ys,
+        xs: list,
+        ys: list,
         dca_encoder: DCAEncoding,
         train_percent_fit: float = 0.66,  # percent of all data: 0.8 * 0.66
         test_percent: float = 0.2,
@@ -582,9 +586,9 @@ def get_model_and_save_pkl(
 
     Parameters
     ----------
-    test_percent:
-    df: pandas.DataFrame
-        DataFrame of form Substitution;Fitness;Encoding_Features.
+    test_percent: float
+        Percent of DataFrame data used for testing. The remaining data is
+        used for training (fitting and validation).
     train_percent_fit: float
         Percent of DataFrame data to train on.
         The remaining data is used for validation.
@@ -644,7 +648,7 @@ def get_model_and_save_pkl(
         os.mkdir('Pickles')
     except FileExistsError:
         pass
-    print(f'Save model as Pickle file... HYBRIDMODEL')  # CONSTRUCTION : Name Pickle file as PLMC paramas file?
+    print(f'Save model as Pickle file... HYBRIDMODEL')
     pickle.dump(
         {'hybrid_model': hybrid_model, 'beta_1': beta_1, 'beta_2': beta_2,
          'spearman_rho': test_spearman_r, 'regressor': reg},
@@ -658,6 +662,10 @@ def plot_y_true_vs_y_pred(
         variants: np.ndarray,  # just required for labeling
         label=False
 ):
+    """
+    Plots predicted versus true values using the hybrid model for prediction.
+    Function called by function predict_ps.
+    """
     spearman_rho = spearmanr(y_true, y_pred)[0]
 
     figure, ax = plt.subplots()
@@ -712,7 +720,7 @@ def performance_ls_ts(
         Fasta-like file with fitness values. Used for computing performance
         of the tuned regressor for test set entries (performance metric of
         measured and predicted fitness values).
-    n_cores: int
+    threads: int
         Number of threads to use for parallel computing using Ray.
     params_file: str
         PLMC parameter file (containing evolutionary, i.e. MSA-based local
@@ -720,10 +728,7 @@ def performance_ls_ts(
     separator: str
         Character to split the variant to obtain the single substitutions
         (default='/').
-    label: bool
-        Labeling plotted predicted vs. measured variants.
-    y_wt: float = None
-        Wild-type fitness.
+
 
     Returns
     -----------
@@ -734,7 +739,7 @@ def performance_ls_ts(
     _, train_variants, y_train = get_sequences_from_file(ls_fasta)
     _, test_variants, y_test = get_sequences_from_file(ts_fasta)
 
-    dca_encode = DCAEncoding(
+    dca_encoder = DCAEncoding(
         params_file=params_file,
         separator=separator
     )
@@ -743,18 +748,18 @@ def performance_ls_ts(
     # with X = encoded sequence of any variant -->
     # getting wild-type name und subsequently x_wild_type
     # to provide it for the DCAHybridModel
-    target_seq, index = dca_encode.get_target_seq_and_index()
+    target_seq, index = dca_encoder.get_target_seq_and_index()
     wt_name = target_seq[0] + str(index[0]) + target_seq[0]
-    x_wt = get_encoded_sequence(wt_name, dca_encode)
+    x_wt = get_encoded_sequence(wt_name, dca_encoder)
     if threads > 1:
         # Hyperthreading, NaNs are already being removed by the called function
         train_variants, x_train, y_train = get_dca_data_parallel(
-            train_variants, y_train, dca_encode, threads)
+            train_variants, y_train, dca_encoder, threads)
         test_variants, x_test, y_test = get_dca_data_parallel(
-            test_variants, y_test, dca_encode, threads)
+            test_variants, y_test, dca_encoder, threads)
     else:
-        x_train_ = dca_encode.collect_encoded_sequences(train_variants)
-        x_test_ = dca_encode.collect_encoded_sequences(test_variants)
+        x_train_ = dca_encoder.collect_encoded_sequences(train_variants)
+        x_test_ = dca_encoder.collect_encoded_sequences(test_variants)
         # NaNs must still be removed
         x_train, train_variants = remove_nan_encoded_positions(copy.copy(x_train_), train_variants)
         x_train, y_train = remove_nan_encoded_positions(copy.copy(x_train_), y_train)
@@ -781,11 +786,13 @@ def performance_ls_ts(
         alpha_ = 'None'
     else:
         alpha_ = f'{reg.alpha:.3f}'
-    print(f'Individual model weights and regressor hyperparameters:')
-    print(f'Hybrid model individual model contributions: Beta1 (DCA): {beta_1:.3f}, Beta2 (ML): {beta_2:.3f} ('
-          f'regressor: Ridge(alpha={alpha_}))')
-    print('\nTesting performance...')
-    print(f'Spearman\'s rho = {test_spearman_r:.3f}')
+    print(
+        f'Individual model weights and regressor hyperparameters:\n'
+        f'Hybrid model individual model contributions: Beta1 (DCA): '
+        f'{beta_1:.3f}, Beta2 (ML): {beta_2:.3f} (regressor: '
+        f'Ridge(alpha={alpha_}))\nTesting performance...\nSpearman\'s '
+        f'rho = {test_spearman_r:.3f}'
+    )
     try:
         os.mkdir('Pickles')
     except FileExistsError:
@@ -823,14 +830,33 @@ def predict_ps(  # "predict pmult"
 
     Parameters
     -----------
-    prediction_dict: dict,
-        contains arguments which directory to predict, e.g. {'drecomb': True}
-    params_file: str,
-    prediction_set: str,
-    validation_set: str,
-    n_cores: int,
-    separator: str,
-    regressor_pkl: str
+    prediction_dict: dict
+        Contains arguments which directory to predict, e.g. {'drecomb': True},
+        than predicts prediction files that are present in this directory, e.g.
+        in directory './Recomb_Double_Split'.
+    params_file: str
+        PLMC couplings parameter file
+    threads: int
+        Threads used for parallelization for DCA-based sequence encoding
+    separator: str
+        Separator of individual substitution of variants, default '/'
+    hybrid_model_data_pkl: str
+        Pickle file containing the hybrid model and model parameters in
+        a dictionary format
+    test_set: str = None
+        Test set for prediction and plotting of predictions (contains
+        true fitness values of variants).
+    prediction_set: str = None
+        Prediction set for prediction, does not contain true fitness values.
+    figure: str = None
+        Plotting the test set predictions and the corresponding true fitness
+        values.
+    label: bool = False
+        If True, plots associated variant names of predicted variants.
+    negative: bool = False
+        If true, negative defines improved variants having a reduced/negative
+        fitness compared to wild type.
+
 
     Returns
     -----------
@@ -840,10 +866,10 @@ def predict_ps(  # "predict pmult"
         in the respective created folders).
 
     """
-    dca_encode = DCAEncoding(
-        params_file=params_file,
-        separator=separator
-    )
+    if threads > 1:  # silent DCA encoding
+        dca_encoder = DCAEncoding(params_file, separator=separator, verbose=False)
+    else:
+        dca_encoder = DCAEncoding(params_file, separator=separator)
     print(f'Taking regression model from saved model (Pickle file): {hybrid_model_data_pkl}...')
     hybrid_data = pickle.load(open('Pickles/' + hybrid_model_data_pkl, "rb"))
     hybrid_model = hybrid_data['hybrid_model']
@@ -879,9 +905,9 @@ def predict_ps(  # "predict pmult"
                     if threads > 1:  # parallel execution
                         # NaNs are already being removed by the called function
                         variants, xs, _ = get_dca_data_parallel(
-                            variants, list(np.zeros(len(variants))), dca_encode, threads)
+                            variants, list(np.zeros(len(variants))), dca_encoder, threads)
                     else:  # single thread execution
-                        xs = dca_encode.collect_encoded_sequences(variants)
+                        xs = dca_encoder.collect_encoded_sequences(variants)
                         # NaNs must still be removed
                         xs, variants = remove_nan_encoded_positions(xs, variants)
                     assert len(xs) == len(variants)
@@ -907,15 +933,13 @@ def predict_ps(  # "predict pmult"
         if threads > 1:
             # NaNs are already being removed by the called function
             variants, xs, _ = get_dca_data_parallel(
-                variants, list(np.zeros(len(variants))), dca_encode, threads)
+                variants, list(np.zeros(len(variants))), dca_encoder, threads)
         else:
-            xs = dca_encode.collect_encoded_sequences(variants)
+            xs = dca_encoder.collect_encoded_sequences(variants)
             # NaNs must still be removed
             xs, variants = remove_nan_encoded_positions(xs, variants)
             assert len(xs) == len(variants)
         if prediction_set is not None:
-            #for i, (variant, x) in enumerate(zip(variants, xs)):
-            #    write_to_file(get_basename(prediction_set) + '_predicted.txt', f'{variant};{reg.predict([x])[0]}\n')
             y_pred = hybrid_model.hybrid_prediction(xs, reg, beta_1, beta_2)
             y_v_pred = zip(y_pred, variants)
             y_v_pred = sorted(y_v_pred, key=lambda x: x[0], reverse=True)
@@ -934,19 +958,19 @@ def predict_ps(  # "predict pmult"
         try:
             if threads > 1:
                 variants, xs, y_true = get_dca_data_parallel(
-                    variants, y_true, dca_encode, threads)
+                    variants, y_true, dca_encoder, threads)
             else:
                 # NaNs must still be removed
-                xs_ = dca_encode.collect_encoded_sequences(variants)
+                xs_ = dca_encoder.collect_encoded_sequences(variants)
                 xs, variants = remove_nan_encoded_positions(copy.copy(xs_), variants)
                 xs, y_test = remove_nan_encoded_positions(copy.copy(xs_), y_true)
                 assert len(xs) == len(variants) == len(y_test)
         except IndexError:
-            raise SystemError("Potentially, you provided a prediction set for plotting the figure "
-                              "instead of a test set (including measured fitness values, i.e. y_true).")
-
+            raise SystemError(
+                "Potentially, you provided a prediction set for plotting the figure "
+                "instead of a test set (including measured fitness values, i.e. y_true)."
+            )
         y_pred = hybrid_model.hybrid_prediction(xs, reg, beta_1, beta_2)
-
         print('Testing performance...')
         print(f'Spearman\'s rho = {spearmanr(y_true, y_pred)[0]:.3f}')
         if figure is not None:
@@ -957,7 +981,7 @@ def predict_directed_evolution(
         encoder: DCAEncoding,
         variant: str,
         hybrid_model_data_pkl: str
-):
+) -> Union[str, list]:
     """
     Perform directed in silico evolution and predict the fitness of a
     (randomly) selected variant using the hybrid model. This function opens

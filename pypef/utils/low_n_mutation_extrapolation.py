@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # Created on 05 October 2020
-# @author: Niklas Siedhoff, Alexander-Maurice Illig
-# <n.siedhoff@biotec.rwth-aachen.de>, <a.illig@biotec.rwth-aachen.de>
+# @authors: Niklas Siedhoff, Alexander-Maurice Illig
+# @contact: <n.siedhoff@biotec.rwth-aachen.de>
 # PyPEF - Pythonic Protein Engineering Framework
 # Released under Creative Commons Attribution-NonCommercial 4.0 International Public License (CC BY-NC 4.0)
 # For more information about the license see https://creativecommons.org/licenses/by-nc/4.0/legalcode
@@ -28,171 +28,7 @@ from tqdm import tqdm
 
 from pypef.ml.regression import cv_regression_options
 from pypef.dca.hybrid_model import DCAHybridModel
-from pypef.utils.variant_data import process_df_encoding
-
-
-#def plot(
-#        data: dict,
-#        dataset: str,
-#        n_runs: int = 10,
-#        mut_extrapol: bool = False,
-#        conc: bool = False
-#):
-#    """
-#    Description
-#    ----------
-#    Plots mutation extrapolation performances (measured
-#    vs. predicted fitness values of variants) at different levels/degrees
-#    of substitutions, e.g. trained on single substituional variants
-#    and predicting double, triple, and higher substituted variants.
-#    Further, 'conc' allows to learn on concatenated levels of substitutions,
-#    e.g. fist learning on single and predicting double, then learning on
-#    single+double and predicting triple, then learning on single+double+triple
-#    and predicting quadruple substituted variants, and so on.
-#
-#
-#    Parameters
-#    ----------
-#
-#    Returns
-#    ----------
-#    None
-#        Just plots the performances.
-#    """
-#
-#    def get_mean_and_std(
-#        x: list,
-#        sort_arr: np.ndarray,
-#    ) -> tuple:
-#        x = [s for _, s in sorted(zip(sort_arr, x))]
-#        x = np.array(x)
-#        x = np.split(np.array(x), int(len(x) / n_runs))
-#        x = np.vstack(x)
-#        return np.mean(x, axis=1), np.std(x, axis=1, ddof=1, dtype=float)
-#
-#    training_sizes, testing_sizes, spearmanrs, \
-#        beta_1s, beta_2s, alphas, lvl = [], [], [], [], [], [], []
-#    for key in data.keys():
-#        training_sizes.append(data[key]['n_y_train'])
-#        testing_sizes.append(data[key]['n_y_test'])
-#        spearmanrs.append(data[key]['spearman_rho'])
-#        beta_1s.append(data[key]['beta_1'])
-#        beta_2s.append(data[key]['beta_2'])
-#        alphas.append(data[key]['alpha'])
-#        if mut_extrapol:
-#            if not conc:
-#                lvl.append(data[key]['test_mut_level'])
-#            else:
-#                lvl.append(data[key]['conc_test_mut_level'])
-#    sort_arr = np.argsort(training_sizes)
-#
-#    x_training, _ = get_mean_and_std(training_sizes, sort_arr)
-#    x_testing, _ = get_mean_and_std(testing_sizes, sort_arr)
-#
-#    srs, srs_yerr = get_mean_and_std(spearmanrs, sort_arr)
-#
-#    fig, ax = plt.subplots()
-#
-#    if not mut_extrapol:
-#        ax.scatter(x_training, srs, marker='x')
-#        ax.errorbar(x_training, srs, yerr=srs_yerr, linestyle='', capsize=3, color='gray')
-#        ax.set_xscale('log')
-#        ax.set_ylim(-0.05, 1.05)
-#        ax.set_xlabel('Number of datapoints in the training set', size=12)
-#
-#        ax2 = ax.twiny()
-#        ax2.scatter(x_training / (x_testing + x_training), srs, marker='')
-#        ax2.set_xlabel('Relative size of the training set', size=12)
-#
-#    else:
-#        ax.scatter(lvl, srs, marker='x')
-#        ax.set_xticks([item for item in lvl], labels=[item for item in lvl])
-#        ax.set_xlabel('Mutational lvl of test set', size=12)
-#        labels = [item.get_text() for item in ax.get_xticklabels()]
-#        labels[-1] = 'All'
-#        ax.set_xticklabels(labels)
-#
-#        for l, s, tr, te in zip(lvl, srs, training_sizes, testing_sizes):
-#            ax.annotate(f'N_train = {tr}\nN_test = {te}', xy=(l, s), textcoords='offset points', size=4)
-#
-#        # if conc:
-#        #    ax2.scatter(lvl_conc, srs_conc, marker='')
-#
-#    ax.set_ylabel(r"Spearman's $\rho$", size=12)
-#    plt.savefig('%s.png' % dataset, dpi=500, bbox_inches='tight')
-#    plt.clf()
-#
-#
-#def split_train_sizes_for_multiprocessing(
-#        train_sizes,
-#        n_cores
-#):
-#    """
-#    Splitting of train sizes for hyperthreading of the low-N
-#    engineering task for hybrid modeling.
-#    """
-#    sum_training_sizes = sum(train_sizes)
-#    sum_single = 0
-#    train_splits, total_train_splits = [], []
-#    for single in train_sizes:
-#        sum_single += single
-#        if sum_single <= sum_training_sizes // n_cores:
-#            train_splits.append(single)
-#        else:
-#            train_splits.append(single)
-#            total_train_splits.append(train_splits)
-#            train_splits = []
-#            sum_single = 0
-#    len_train_splits = len(list(chain.from_iterable(total_train_splits)))
-#    remaining_train_sizes = train_sizes[len_train_splits:]
-#    for remain in remaining_train_sizes:
-#        total_train_splits.append([remain])
-#    total_train_splits = [x for x in total_train_splits if x != []]
-#    while len(total_train_splits) < n_cores:
-#        split_1 = total_train_splits[0][:int(len(total_train_splits[0]) * 3 / 4)]
-#        split_2 = total_train_splits[0][int(len(total_train_splits[0]) * 3 / 4):]
-#        total_train_splits[0] = split_1
-#        total_train_splits.insert(1, split_2)
-#    while len(total_train_splits) > n_cores:
-#        total_train_splits[0] = total_train_splits[0] + total_train_splits[1]
-#        total_train_splits.pop(1)
-#
-#    return total_train_splits
-
-
-#@ray.remote
-#def _low_n_parallel_hybrid(hybrid_model: DCAHybridModel, train_sizes):
-#    return hybrid_model.run(train_sizes=train_sizes)
-#
-#
-#def low_n_hybrid_model(
-#        hybrid_model: DCAHybridModel,
-#        n_cores: int,
-#        out_files: str = 'out',
-#        n_runs: int = 10
-#):
-#    train_sizes = hybrid_model.get_train_sizes()
-#    if n_cores != 1:  # hyperthreading
-#        if len(train_sizes) < n_cores:
-#            n_cores = len(train_sizes)
-#        train_size_splits = split_train_sizes_for_multiprocessing(
-#            train_sizes, n_cores
-#        )
-#        results = ray.get([
-#            _low_n_parallel_hybrid.remote(
-#                hybrid_model,
-#                train_size_splits[i]) for i in range(len(train_size_splits))
-#        ])
-#        data = {}
-#        for r in results:
-#            data.update(r)
-#    else:
-#        data = {}
-#        for train_size in tqdm(train_sizes):
-#            data.update(hybrid_model.run(list(np.atleast_1d(train_size))))
-#            print('len data sc', len(data))
-#    np.save(f'{out_files}_hybrid_model_data.npy', data)
-#    plot(data, f'{out_files}', n_runs=n_runs)
+from pypef.utils.variant_data import process_df_encoding, get_basename
 
 
 def get_train_sizes(number_variants) -> np.ndarray:
@@ -400,13 +236,14 @@ def performance_mutation_extrapolation(
             pass
     if hybrid_modeling:
         regressor = None
-        name = 'hybrid_ridge'
+        name = 'hybrid_ridge_' + get_basename(encoded_csv)
     elif cv_regressor:
-        name = 'ml_' + cv_regressor
+        name = 'ml_' + cv_regressor + '_' + get_basename(encoded_csv)
         if cv_regressor == 'pls_loocv':
-            raise SystemError('PLS LOOCV is not (yet) implemented '
-                              'for the extrapolation task. Please choose'
-                              'another CV regressor.')
+            raise SystemError(
+                'PLS LOOCV is not implemented for the extrapolation '
+                'task. Please choose another CV regressor.'
+            )
         regressor = cv_regression_options(cv_regressor)
         beta_1, beta_2 = None, None
     else:
@@ -441,10 +278,11 @@ def performance_mutation_extrapolation(
                 open('Pickles/HYBRID_LVL_1', 'wb')
             )
         elif cv_regressor:
+            print('Fitting regressor on lvl 1 substitution data...')
             regressor.fit(X_train, y_train)
             if save_model:
-                print(f'Save model as Pickle file: ML_LVL_1')
-                pickle.dump(regressor, open('Pickles/ML_LVL_1', 'wb'))  # Pickles/ not there construction try os.mkdir
+                print(f'Saving model as Pickle file: ML_LVL_1')
+                pickle.dump(regressor, open('Pickles/ML_LVL_1', 'wb'))
         for i, _ in enumerate(tqdm(collected_levels)):
             if i < len(collected_levels) - 1:  # not last i else error, last entry is: lvl 1 --> all higher variants
                 test_idx = collected_levels[i + 1]
@@ -456,10 +294,6 @@ def performance_mutation_extrapolation(
                     # train_df = self.mutation_level_dfs[train_idx]
                     # train_variants, X_train, y_train = self._process_df_encoding(train_df)
                     if hybrid_modeling:
-                        if beta_2 == 0.0:
-                            alpha = np.nan
-                        else:
-                            alpha = reg.alpha
                         data.update({
                             test_idx + 1:
                                 {
@@ -510,10 +344,6 @@ def performance_mutation_extrapolation(
                                 y_train_conc,
                                 train_size_fit=train_size
                             )
-                            if beta_2_conc == 0.0:
-                                alpha = np.nan
-                            else:
-                                alpha = reg_conc.alpha
                             data.update({
                                 test_idx + 1:
                                     {
@@ -534,6 +364,7 @@ def performance_mutation_extrapolation(
                                     }
                             })
                         else:  # ML updating pureML regression model params with newly inputted concatenated train data
+                            # Fitting regressor on concatenated substitution data
                             regressor.fit(X_train_conc, y_train_conc)
                             data.update({
                                 test_idx + 1:

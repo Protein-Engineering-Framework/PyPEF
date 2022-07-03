@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # Created on 05 October 2020
-# @author: Niklas Siedhoff, Alexander-Maurice Illig
-# <n.siedhoff@biotec.rwth-aachen.de>, <a.illig@biotec.rwth-aachen.de>
+# @authors: Niklas Siedhoff, Alexander-Maurice Illig
+# @contact: <n.siedhoff@biotec.rwth-aachen.de>
 # PyPEF - Pythonic Protein Engineering Framework
 # Released under Creative Commons Attribution-NonCommercial 4.0 International Public License (CC BY-NC 4.0)
 # For more information about the license see https://creativecommons.org/licenses/by-nc/4.0/legalcode
@@ -16,7 +16,7 @@
 # *Corresponding author
 # §Equal contribution
 
-# Contains Python code used for our 'hybrid modeling' paper,
+# Contains Python code used for the approach presented in our 'hybrid modeling' paper
 # Preprint available at: https://doi.org/10.1101/2022.06.07.495081
 # Code available at: https://github.com/Protein-Engineering-Framework/Hybrid_Model
 
@@ -93,7 +93,7 @@ class ActiveSiteError(Exception):
         self.position = position
         self.variant = variant
         self.verbose = verbose
-        message = f"The position {self.position} of variant '{self.variant}' is " \
+        message = f"Info: The position {self.position} of variant '{self.variant}' is " \
                   f"not an effective site in the DCA model and thus cannot be predicted."
         if self.verbose:
             print(message)
@@ -604,11 +604,12 @@ class DCAEncoding(CouplingsModel):
                 f"The variant naming scheme is not fitting to the DCAEncoding "
                 f"scheme. Substitution {substitution} of variant {variant} has "
                 f"the amino acid {wild_type_aa} at position {position}, which "
-                f"does not match the wild type sequence; see summary of (effective) "
-                f"wild-type positions and amino acids above. Please check your input "
-                f"variant data."
+                f"does not match the wild type sequence used as target for DCA-"
+                f"based coupling parameter file generation. See summary of "
+                f"(effective) wild-type positions and amino acids above. Please "
+                f"check your input variant data or generate a new parameter file "
+                f"for encoding."
             )
-
 
     def encode_variant(self, variant: str) -> np.ndarray:
         """
@@ -621,8 +622,6 @@ class DCAEncoding(CouplingsModel):
         variant : str
             Joined string of integers enclosed by two letters representing the wild type
             and variant amino acid in the single letter code. -> Check separator
-        separator : str
-            Character to split the variant to obtain the single substitutions (default='/').
 
         Returns
         -------
@@ -775,7 +774,7 @@ def get_dca_data_parallel(
         Variant-associated fitness values.
     dca_encode : object
         Initialized 'DCAEncoding' class object.
-    n_cores : int
+    threads : int
         Number of processes to be used for parallel execution.
         n_cores = 1 defines no threading (not using Ray).
 

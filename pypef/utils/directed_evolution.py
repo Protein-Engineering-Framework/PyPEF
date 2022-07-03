@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # Created on 05 October 2020
-# @author: Niklas Siedhoff, Alexander-Maurice Illig
-# <n.siedhoff@biotec.rwth-aachen.de>, <a.illig@biotec.rwth-aachen.de>
+# @authors: Niklas Siedhoff, Alexander-Maurice Illig
+# @contact: <n.siedhoff@biotec.rwth-aachen.de>
 # PyPEF - Pythonic Protein Engineering Framework
 # Released under Creative Commons Attribution-NonCommercial 4.0 International Public License (CC BY-NC 4.0)
 # For more information about the license see https://creativecommons.org/licenses/by-nc/4.0/legalcode
@@ -59,8 +59,10 @@ class DirectedEvolution:
             negative=False
     ):
         """
-        Run in silico directed evolution.
+        Runs in silico directed evolution and plots and writes trajectories.
 
+        Parameters
+        ----------
         ml_or_hybrid: str
             'ml' or 'hybrid'
         encoding: str
@@ -128,6 +130,8 @@ class DirectedEvolution:
             prev_mut_loc: int
     ):
         """
+        Parameters
+        ----------
         seq: str,
             Initial sequence to be mutated, must not be WT Seq but can
             also itself be already substituted (iterative sequence substitutions)
@@ -135,8 +139,7 @@ class DirectedEvolution:
             Previous position mutated, new position will be randomly chosen within
             a range, by default: new_pos = previous_pos +- 8
 
-        --------
-        produces a mutant sequence (integer representation), given an initial sequence
+        Produces a mutant sequence (integer representation), given an initial sequence
         and the previous position of mutation.
 
         """
@@ -218,11 +221,8 @@ class DirectedEvolution:
 
             if accepted == 0:
                 prior_mutation_location = random.randint(0, len(self.s_wt))  # not really "prior" as first
-            else:  # check variant naming scheme, i.e., if str+int+str or just int+str
-                if type(v_traj[-1][0]) == str:
-                    prior_mutation_location = int(v_traj[-1][1:-1])
-                else:
-                    prior_mutation_location = int(v_traj[-1][:-1])
+            else:  # get prior mutation position
+                prior_mutation_location = int(re.findall(r"\d+", v_traj[-1])[0])
             prior_y = y_traj[-1]  # prior y, always at [-1]
             prior_sequence = s_traj[-1]  # prior sequence, always at [-1]
 
@@ -334,7 +334,7 @@ class DirectedEvolution:
         plt.savefig(str(self.model) + '_DE_trajectories.png', dpi=500)
         plt.clf()
 
-        with open('Trajectories.csv', 'w') as file:
+        with open('EvoTraj/Trajectories.csv', 'w') as file:
             file.write('Trajectory;Variant;Sequence;Fitness\n')
             for i in range(self.num_trajectories):
                 v_records_str = str(v_records[i])[1:-1].replace("'", "")

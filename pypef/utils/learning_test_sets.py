@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # Created on 05 October 2020
-# @author: Niklas Siedhoff, Alexander-Maurice Illig
-# <n.siedhoff@biotec.rwth-aachen.de>, <a.illig@biotec.rwth-aachen.de>
+# @authors: Niklas Siedhoff, Alexander-Maurice Illig
+# @contact: <n.siedhoff@biotec.rwth-aachen.de>
 # PyPEF - Pythonic Protein Engineering Framework
 # Released under Creative Commons Attribution-NonCommercial 4.0 International Public License (CC BY-NC 4.0)
 # For more information about the license see https://creativecommons.org/licenses/by-nc/4.0/legalcode
@@ -17,7 +17,7 @@
 # §Equal contribution
 
 """
-Modules for creating learning and test sets
+Modules for creating training and test sets
 from input CSV file (with value separators sep=',' or sep=';')
 having the CSV-format
 
@@ -26,7 +26,7 @@ VARIANT_1;FITNESS_VALUE_1
 VARIANT_2;FITNESS_VALUE_2
 ...
 
-according to the self devised learning and test set convention
+according to the self devised training and test set convention
 > VARIANT_NAME_1
 ; FITNESS_1
 VARIANT_SEQUENCE_1

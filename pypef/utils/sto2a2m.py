@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # Created on 05 October 2020
-# @author: Niklas Siedhoff, Alexander-Maurice Illig
-# <n.siedhoff@biotec.rwth-aachen.de>, <a.illig@biotec.rwth-aachen.de>
+# @authors: Niklas Siedhoff, Alexander-Maurice Illig
+# @contact: <n.siedhoff@biotec.rwth-aachen.de>
 # PyPEF - Pythonic Protein Engineering Framework
 # Released under Creative Commons Attribution-NonCommercial 4.0 International Public License (CC BY-NC 4.0)
 # For more information about the license see https://creativecommons.org/licenses/by-nc/4.0/legalcode
@@ -70,8 +70,11 @@ def convert_sto2a2m(
     seqs_cls = [seq_cls for idx, seq_cls in enumerate(sto_alignment) if not idx in delete]
     chunk_size = 60
     with open(a2m_file, 'w') as f:
-        for seq, seq_cls in zip(msa_final, seqs_cls):
-            f.write('>' + seq_cls.id + '\n')
+        for i, (seq, seq_cls) in enumerate(zip(msa_final, seqs_cls)):
+            if i == 0:
+                f.write(f'>TARGET_SEQ\n')
+            else:
+                f.write('>' + seq_cls.id + '\n')
             for chunk in [seq[x:x + chunk_size] for x in range(0, len(seq), chunk_size)]:
                 f.write("".join(chunk) + '\n')
 
@@ -79,8 +82,8 @@ def convert_sto2a2m(
     n_seqs = msa_final.shape[0]
     n_sites = sum(1 for char in msa_final[0] if char.isupper())
     print(f'Generated trimmed MSA {a2m_file} in A2M format:')
-    print(f'No. seqs: {n_seqs}')
-    print(f'No. effective sites: {n_sites} (out of {target_len} sites)')
-    print(f'-le: {0.2 * (n_sites - 1):.1f}')
+    print(f'No. of sequences: {n_seqs}')
+    print(f'No. of effective sites: {n_sites} (out of {target_len} sites)')
+    print(f'-le --lambdae: {0.2 * (n_sites - 1):.1f}')
 
     return n_seqs, n_sites, target_len

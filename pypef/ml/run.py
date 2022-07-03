@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # Created on 05 October 2020
-# @author: Niklas Siedhoff, Alexander-Maurice Illig
-# <n.siedhoff@biotec.rwth-aachen.de>, <a.illig@biotec.rwth-aachen.de>
+# @authors: Niklas Siedhoff, Alexander-Maurice Illig
+# @contact: <n.siedhoff@biotec.rwth-aachen.de>
 # PyPEF - Pythonic Protein Engineering Framework
 # Released under Creative Commons Attribution-NonCommercial 4.0 International Public License (CC BY-NC 4.0)
 # For more information about the license see https://creativecommons.org/licenses/by-nc/4.0/legalcode
@@ -23,8 +23,7 @@ from os.path import isfile, join
 
 # ray imported later locally as only used for parallelized running, thus commented out:
 import ray
-ray.init()
-from pypef.ml.parallelization import r2_list_parallel
+from pypef.ml.parallelization import aaindex_performance_parallel
 
 # importing own modules
 from pypef.ml.regression import (
@@ -33,9 +32,6 @@ from pypef.ml.regression import (
 )
 from pypef.utils.low_n_mutation_extrapolation import low_n, performance_mutation_extrapolation
 from pypef.utils.variant_data import absolute_path_cwd_file
-# import Modules_Parallelization.r2_list_parallel locally to avoid error
-# when not running in parallel, thus commented out:
-# from pypef.cli.parallelization import r2_list_parallel
 
 
 def run_pypef_pure_ml(arguments):
@@ -44,6 +40,10 @@ def run_pypef_pure_ml(arguments):
     running them dependent on user-passed input arguments using docopt
     for argument parsing.
     """
+    threads = abs(arguments['--threads']) if arguments['--threads'] is not None else 1
+    threads = threads + 1 if threads == 0 else threads
+    if threads > 1:
+        ray.init()
     if arguments['--show']:
         if arguments['MODELS'] != str(5):
             try:
@@ -56,9 +56,6 @@ def run_pypef_pure_ml(arguments):
             print(read_models(5))
 
     else:
-        threads = arguments['--threads']
-        if threads is None:
-            threads = 1
         if arguments['--ls'] is not None and arguments['--ts'] is not None:  # LS --> TS
             if arguments['--model'] is None and arguments['--figure'] is None:
                 path = os.getcwd()
@@ -68,8 +65,8 @@ def run_pypef_pure_ml(arguments):
                     t_save = 5
                 # Parallelization of AAindex iteration if threads is not None (but int)
                 if threads > 1 and arguments['--encoding'] == 'aaidx':
-                    print('Using {} threads for parallel computing. Running...'.format(threads))
-                    encoding_performance_list = r2_list_parallel(
+                    print(f'Using {threads} threads for parallel computing. Running...')
+                    encoding_performance_list = aaindex_performance_parallel(
                         train_set=arguments['--ls'],
                         test_set=arguments['--ts'],
                         cores=threads,
@@ -78,7 +75,7 @@ def run_pypef_pure_ml(arguments):
                         sort=arguments['--sort']
                     )
 
-                else:  # run using a single core or use onehot or DCA-based encoding for model construction
+                else:  # run using a single core or use onehot or DCA-based encoding for modeling
                     encoding_performance_list = performance_list(
                         train_set=arguments['--ls'],
                         test_set=arguments['--ts'],

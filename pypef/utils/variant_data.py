@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # Created on 05 October 2020
-# @author: Niklas Siedhoff, Alexander-Maurice Illig
-# <n.siedhoff@biotec.rwth-aachen.de>, <a.illig@biotec.rwth-aachen.de>
+# @authors: Niklas Siedhoff, Alexander-Maurice Illig
+# @contact: <n.siedhoff@biotec.rwth-aachen.de>
 # PyPEF - Pythonic Protein Engineering Framework
 # Released under Creative Commons Attribution-NonCommercial 4.0 International Public License (CC BY-NC 4.0)
 # For more information about the license see https://creativecommons.org/licenses/by-nc/4.0/legalcode
@@ -239,7 +239,7 @@ def generate_dataframe_and_save_csv(
         Dataframe with variant names, fitness values, and features (encoded sequences).
         If save_df_as_csv is True also writes DF to CSV.
     """
-    X = np.stack(sequence_encodings)                                  # construction
+    X = np.stack(sequence_encodings)
     feature_dict = {}            # Collecting features for each MSA position i
     for i in range(X.shape[1]):  # (encoding at pos. i) in a dict
         feature_dict[f'X{i + 1:d}'] = X[:, i]
@@ -274,3 +274,51 @@ def process_df_encoding(df_encoding) -> tuple[np.ndarray, np.ndarray, np.ndarray
         df_encoding.iloc[:, 2:].to_numpy(),
         df_encoding.iloc[:, 1].to_numpy()
     )
+
+
+def read_csv_and_shift_pos_ints(
+        infile: str,
+        offset: int = 0,
+        substitution_sep: str = '/',
+        target_column: int = 1
+):
+    """
+    Shifts position of substitutions of variants for all variants in the provided
+    CSV file and saves the position-shifted variants with the corresponding fitness
+    values to a new CSV file.
+    """
+    df = pd.read_csv(infile, sep=';', comment='#')
+    if df.shape[1] == 1:
+        df = pd.read_csv(infile, sep=',', comment='#')
+    if df.shape[1] == 1:
+        df = pd.read_csv(infile, sep='\t', comment='#')
+    df = df.dropna(subset=df.columns[[target_column]])  # if specific column has a NaN drop entire row
+
+    column_1 = df.iloc[:, 0]
+    column_2 = df.iloc[:, target_column].to_numpy()
+
+    new_col = []
+
+    for variant in column_1:
+        if substitution_sep in variant:
+            split_vars_list = []
+            splitted_var = variant.split(substitution_sep)
+            for s_var in splitted_var:
+                new_var_int = int(s_var[1:-1]) - offset
+                new_variant = s_var[0] + str(new_var_int) + s_var[-1]
+                split_vars_list.append(new_variant)
+            new_variant = ''
+            for i, v in enumerate(split_vars_list):
+                if i != len(split_vars_list) - 1:
+                    new_variant += f'{v}{substitution_sep}'
+                else:
+                    new_variant += v
+            new_col.append(new_variant)
+        else:
+            new_var_int = int(variant[1:-1]) - offset
+            new_variant = variant[0] + str(new_var_int) + variant[-1]
+            new_col.append(new_variant)
+
+    data = np.array([new_col, column_2]).T
+    new_df = pd.DataFrame(data, columns=['variant', 'fitness'])
+    new_df.to_csv(infile[:-4] + '_' + df.columns[target_column] + infile[-4:], sep=';', index=False)
