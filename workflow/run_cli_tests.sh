@@ -17,7 +17,7 @@ pypef='python3 /path/to/pypef-main/pypef/main.py'                               
 threads=16                                                                                                               #
 ##########################################################################################################################
 ### else just use pip-installed pypef version (uncomment):                                                               #
-#pypef=pypef                                                                                                             # 
+#pypef=pypef                                                                                                              # 
 ##########################################################################################################################
 
 
@@ -152,7 +152,7 @@ $pypef hybrid extrapolation -i 37_ANEH_variants_dca_encoded.csv
 $pypef hybrid extrapolation -i 37_ANEH_variants_dca_encoded.csv --conc
 
 
-## Hybrid model (and some pure ML) tests on avGFP dataset 
+### Hybrid model (and some pure ML) tests on avGFP dataset 
 cd '../test_dataset_avgfp'
 
 $pypef encode -i avGFP.csv -e dca -w P42212_F64L.fasta --params uref100_avgfp_jhmmer_119_plmc_42.6.params --threads $threads
@@ -190,8 +190,8 @@ $pypef ml low_n -i avGFP_onehot_encoded.csv --regressor pls
 $pypef ml extrapolation -i avGFP_onehot_encoded.csv --regressor pls
 $pypef ml extrapolation -i avGFP_onehot_encoded.csv --conc --regressor pls
 
-$pypef hybrid low_n -i avGFP_aaidx_encoded.csv --regressor ridge
-$pypef hybrid extrapolation -i avGFP_aaidx_encoded.csv --regressor ridge
-$pypef hybrid extrapolation -i avGFP_aaidx_encoded.csv --conc --regressor ridge
+$pypef ml low_n -i avGFP_aaidx_encoded.csv --regressor ridge
+$pypef ml extrapolation -i avGFP_aaidx_encoded.csv --regressor ridge
+$pypef ml extrapolation -i avGFP_aaidx_encoded.csv --conc --regressor ridge
 
 echo 'All tests finished without error!'
