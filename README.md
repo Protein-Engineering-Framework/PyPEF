@@ -47,6 +47,19 @@ pypef --help
 
 The detailed routine for setting up a new virtual environment with Anaconda, installing the necessary Python packages for that environment, and running the Jupyter notebook tutorial can be found below in the Tutorial section.
 
+## Requirements
+- Python 3.7-3.9
+    - numpy
+    - pandas
+    - tqdm
+    - docopt
+    - matplotlib
+    - scipy
+    - adjustText
+    - scikit-learn
+    - biopython
+    - schema
+    - ray[default]
 
 ## Running Examples
 Printing the help function:   
