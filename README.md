@@ -33,7 +33,7 @@ Tutorial section below).
 <img src="workflow/Splitting_Workflow.png" alt="drawing" width="1000"/>
 
 ## Quick Installation
-A quick installation of the PyPEF command line framework using PyPI for Linux and Windows for **Python 3.7–3.9** can be performed with:
+A quick installation of the PyPEF command line framework using PyPI for Linux and Windows for **Python 3.9** can be performed with:
 
 ```
 pip install -U pypef
@@ -48,7 +48,7 @@ pypef --help
 The detailed routine for setting up a new virtual environment with Anaconda, installing the necessary Python packages for that environment, and running the Jupyter notebook tutorial can be found below in the Tutorial section.
 
 ## Requirements
-- Python 3.7-3.9
+- Python 3.9
     - numpy
     - pandas
     - tqdm
