@@ -285,14 +285,14 @@ class CouplingsModel:
             self.wt_aa_pos = []
             for aa, pos in zip(self._target_seq, self.index_list):
                 self.wt_aa_pos.append(str(aa) + str(pos))
+            print(f'Evaluating gap content of PLMC parameter file... '
+                  f'First amino acid position used in the MSA (PLMC params file) is '
+                  f'{self._target_seq[0]}{self.index_list[0]} and the last position '
+                  f'used is {self._target_seq[-1]}{self.index_list[-1]}.')
+            if len(not_valid) > 0:
+                print(f'\nFurther, non-included positions are:')
+                print(str(not_valid)[1:-1])
             if self.verbose:
-                print(f'Evaluating gap content of PLMC parameter file... '
-                      f'First amino acid position used in the MSA (PLMC params file) is '
-                      f'{self._target_seq[0]}{self.index_list[0]} and the last position '
-                      f'used is {self._target_seq[-1]}{self.index_list[-1]}.')
-                if len(not_valid) > 0:
-                    print(f'\nFurther, non-included positions are:')
-                    print(str(not_valid)[1:-1])
                     print(f'\nSummary of all effective positions represented in the MSA '
                           f'based on wild-type sequence ({len(valid)} encoded positions):')
                     for aa_pos in self.wt_aa_pos:

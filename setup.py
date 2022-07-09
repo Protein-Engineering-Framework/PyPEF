@@ -10,7 +10,7 @@ with open("requirements.txt", "r", encoding="utf-8") as install_requirements:
 
 setup(
     name='pypef',
-    version='0.2.0',
+    version='0.2.1',
     author='Niklas Siedhoff & Alexander-Maurice Illig',
     author_email='n.siedhoff@biotec.rwth-aachen.de',
     license='CC BY-NC-SA 4.0',
@@ -28,13 +28,11 @@ setup(
     package_data={'pypef': ['ml/AAindex/*', 'ml/AAindex/Refined_cluster_indices_r0.93_r0.97/*']},
     include_package_data=True,
     install_requires=[requirements],
-    python_requires='>=3.7',
+    python_requires='>=3.9',
     keywords='Pythonic Protein Engineering Framework',
     classifiers=[
         'Development Status :: 3 - Alpha',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.7',
-        'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
         'Programming Language :: Python :: 3.10',
         'Topic :: Scientific/Engineering :: Bio-Informatics',

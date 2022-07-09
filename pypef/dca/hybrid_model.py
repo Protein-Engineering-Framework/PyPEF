@@ -35,7 +35,7 @@ from scipy.optimize import differential_evolution
 import matplotlib.pyplot as plt
 from pypef.utils.variant_data import get_sequences_from_file, remove_nan_encoded_positions
 from pypef.dca.encoding import DCAEncoding, get_dca_data_parallel, get_encoded_sequence, ActiveSiteError
-from pypef.ml.regression import predictions_out
+from pypef.ml.regression import predictions_out, plot_y_true_vs_y_pred
 
 np.warnings.filterwarnings('error', category=np.VisibleDeprecationWarning)
 
@@ -570,7 +570,7 @@ Below: Some helper functions that call or are dependent on the DCAHybridModel cl
 """
 
 
-def get_model_and_save_pkl(
+def generate_model_and_save_pkl(
         xs: list,
         ys: list,
         dca_encoder: DCAEncoding,
@@ -650,49 +650,15 @@ def get_model_and_save_pkl(
         pass
     print(f'Save model as Pickle file... HYBRIDMODEL')
     pickle.dump(
-        {'hybrid_model': hybrid_model, 'beta_1': beta_1, 'beta_2': beta_2,
-         'spearman_rho': test_spearman_r, 'regressor': reg},
+        {
+            'hybrid_model': hybrid_model,
+            'beta_1': beta_1,
+            'beta_2': beta_2,
+            'spearman_rho': test_spearman_r,
+            'regressor': reg
+        },
         open('Pickles/HYBRIDMODEL', 'wb')
     )
-
-
-def plot_y_true_vs_y_pred(
-        y_true: np.ndarray,
-        y_pred: np.ndarray,
-        variants: np.ndarray,  # just required for labeling
-        label=False
-):
-    """
-    Plots predicted versus true values using the hybrid model for prediction.
-    Function called by function predict_ps.
-    """
-    spearman_rho = spearmanr(y_true, y_pred)[0]
-
-    figure, ax = plt.subplots()
-    ax.scatter(y_true, y_pred, marker='o', s=20, linewidths=0.5, edgecolor='black', alpha=0.7,
-               label=fr'$\rho$ = {spearman_rho:.3f}')
-    ax.legend()
-    ax.set_xlabel(r'$y_\mathrm{true}$' + fr' ($N$ = {len(y_true)})')
-    ax.set_ylabel(r'$y_\mathrm{pred}$' + fr' ($N$ = {len(y_pred)})')
-    print('\nPlotting...')
-    if label:
-        from adjustText import adjust_text
-        print('Adjusting variant labels for plotting can take some '
-              'time (the limit for labeling is 150 data points)...')
-        if len(y_true) < 150:
-            texts = [ax.text(y_true[i], y_pred[i], txt, fontsize=4)
-                     for i, txt in enumerate(variants)]
-            adjust_text(
-                texts, only_move={'points': 'y', 'text': 'y'}, force_points=0.5, lim=250)
-        else:
-            print("Terminating label process. Too many variants "
-                  "(> 150) for plotting (labels would overlap).")
-    file_name = 'DCA_Hybrid_Model_LS_TS_Performance.png'
-    # i = 1
-    # while os.path.isfile(file_name):
-    #     i += 1  # iterate until finding an unused file name
-    #     file_name = f'DCA_Hybrid_Model_LS_TS_Performance({i}).png'
-    plt.savefig(file_name, dpi=500)
 
 
 def performance_ls_ts(
@@ -799,13 +765,18 @@ def performance_ls_ts(
         pass
     print(f'Save model as Pickle file... HYBRIDMODEL')
     pickle.dump(
-        {'hybrid_model': hybrid_model, 'beta_1': beta_1, 'beta_2': beta_2,
-         'spearman_rho': test_spearman_r, 'regressor': reg},
+        {
+            'hybrid_model': hybrid_model,
+            'beta_1': beta_1,
+            'beta_2': beta_2,
+            'spearman_rho': test_spearman_r,
+            'regressor': reg
+        },
         open('Pickles/HYBRIDMODEL', 'wb')
     )
 
 
-def predict_ps(  # "predict pmult"
+def predict_ps(  # also predicting "pmult" dirs
         prediction_dict: dict,
         params_file: str,
         threads: int,
@@ -974,7 +945,14 @@ def predict_ps(  # "predict pmult"
         print('Testing performance...')
         print(f'Spearman\'s rho = {spearmanr(y_true, y_pred)[0]:.3f}')
         if figure is not None:
-            plot_y_true_vs_y_pred(np.array(y_true), np.array(y_pred), np.array(variants), label)
+            plot_y_true_vs_y_pred(
+                np.array(y_true), np.array(y_pred), np.array(variants), label, hybrid=True
+            )
+    else:
+        raise SystemError(
+            'Define set(s) for prediction (e.g. \'-p PS.fasta\' or '
+            'created prediction set folder, e.g. \'--pmult --drecomb\')'
+        )
 
 
 def predict_directed_evolution(

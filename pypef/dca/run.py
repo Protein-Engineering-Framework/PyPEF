@@ -22,7 +22,7 @@ import ray
 
 from pypef.utils.variant_data import read_csv, remove_nan_encoded_positions
 from pypef.dca.encoding import DCAEncoding, get_dca_data_parallel
-from pypef.dca.hybrid_model import performance_ls_ts, predict_ps, get_model_and_save_pkl
+from pypef.dca.hybrid_model import performance_ls_ts, predict_ps, generate_model_and_save_pkl
 from pypef.utils.low_n_mutation_extrapolation import performance_mutation_extrapolation, low_n
 
 
@@ -77,7 +77,8 @@ def run_pypef_hybrid_modeling(arguments):
     if arguments['train_and_save']:
         dca_encode = DCAEncoding(
             params_file=arguments['--params'],
-            separator=arguments['--mutation_sep']
+            separator=arguments['--mutation_sep'],
+            verbose=False
         )
 
         variants, fitnesses, _ = read_csv(arguments['--input'])
@@ -95,7 +96,7 @@ def run_pypef_hybrid_modeling(arguments):
             encoded_sequences, fitnesses = remove_nan_encoded_positions(copy.copy(encoded_sequences_), fitnesses)
         assert len(encoded_sequences) == len(variants) == len(fitnesses)
 
-        get_model_and_save_pkl(
+        generate_model_and_save_pkl(
             xs=encoded_sequences,
             ys=fitnesses,
             dca_encoder=dca_encode,

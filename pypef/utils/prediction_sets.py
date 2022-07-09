@@ -89,6 +89,8 @@ def make_recombinations_double(arr: tuple) -> list:
         ['A217N', 'R219S'], ['A217N', 'L249Y'], ['R219S', 'L249Y']]
     """
     doubles = []
+    arr_pos = [int(substitution[0][1:-1]) for substitution in arr]
+    arr_pos, arr = zip(*sorted(zip(arr_pos, arr), key=lambda x: x[0]))
     for i in tqdm(range(len(arr))):
         for j in range(len(arr)):
             if j > i:
@@ -120,12 +122,16 @@ def make_recombinations_triple(arr: list):
         ['L215F', 'R219S', 'L249Y'], ['A217N', 'R219S', 'L249Y']]
     """
     length = len(arr)
+    arr_pos = [int(substitution[0][1:-1]) for substitution in arr]
+    arr_pos, arr = zip(*sorted(zip(arr_pos, arr), key=lambda x: x[0]))
     triples = []
     for i in tqdm(range(length)):
         for j in range(length):
             for k in range(length):
                 if k > j > i:
-                    if (arr[i][0])[1:-1] != (arr[j][0])[1:-1] != (arr[k][0])[1:-1]:
+                    if (arr[i][0])[1:-1] != (arr[j][0])[1:-1] and \
+                            (arr[i][0])[1:-1] != (arr[k][0])[1:-1] and \
+                            (arr[j][0])[1:-1] != (arr[k][0])[1:-1]:
                         triples.append([arr[i][0], arr[j][0], arr[k][0]])
                         if len(triples) >= 8E04:
                             yield triples
@@ -152,13 +158,20 @@ def make_recombinations_quadruple(arr):
         [['L215F', 'A217N', 'R219S', 'L249Y']]
     """
     length = len(arr)
+    arr_pos = [int(substitution[0][1:-1]) for substitution in arr]
+    arr_pos, arr = zip(*sorted(zip(arr_pos, arr), key=lambda x: x[0]))
     quadruples = []
     for i in tqdm(range(length)):
         for j in range(length):
             for k in range(length):
                 for l in range(length):
                     if l > k > j > i:
-                        if (arr[i][0])[1:-1] != (arr[j][0])[1:-1] != (arr[k][0])[1:-1] != (arr[l][0])[1:-1]:
+                        if (arr[i][0])[1:-1] != (arr[j][0])[1:-1] and \
+                                (arr[i][0])[1:-1] != (arr[k][0])[1:-1] and \
+                                (arr[i][0])[1:-1] != (arr[l][0])[1:-1] and \
+                                (arr[j][0])[1:-1] != (arr[k][0])[1:-1] and \
+                                (arr[j][0])[1:-1] != (arr[l][0])[1:-1] and \
+                                (arr[k][0])[1:-1] != (arr[l][0])[1:-1]:
                             quadruples.append([arr[i][0], arr[j][0], arr[k][0], arr[l][0]])
                             if len(quadruples) >= 8E04:
                                 yield quadruples
@@ -170,13 +183,16 @@ def make_recombinations_quintuple(arr):
     """
     Make quintuple recombination variants.
 
-    :parameter arr: List of single substitutions in tuple, e.g.,
-    (['L215F'], ['A217N'], ['R219S'], ['L249Y'], ['P252I])
+    :parameter arr: List(s) of all available single substitution(s)
+    in tuple, e.g.,
+    (['L215F'], ['A217N'], ['R219S'], ['L249Y'], ['P252I'])
 
     :returns quintuples: List of quintuple substitution lists, e.g.,
     [['L215F', 'A217N', 'R219S', 'L249Y', 'P252I']]
     """
     length = len(arr)
+    arr_pos = [int(substitution[0][1:-1]) for substitution in arr]
+    arr_pos, arr = zip(*sorted(zip(arr_pos, arr), key=lambda x: x[0]))
     quintuples = []
     for i in tqdm(range(length)):
         for j in range(length):
@@ -184,11 +200,16 @@ def make_recombinations_quintuple(arr):
                 for l in range(length):
                     for m in range(length):
                         if m > l > k > j > i:
-                            if (arr[i][0])[1:-1] \
-                                    != (arr[j][0])[1:-1] \
-                                    != (arr[k][0])[1:-1] \
-                                    != (arr[l][0])[1:-1] \
-                                    != (arr[m][0][1:-1]):
+                            if (arr[i][0])[1:-1] != (arr[j][0])[1:-1] and \
+                                    (arr[i][0])[1:-1] != (arr[k][0])[1:-1] and \
+                                    (arr[i][0])[1:-1] != (arr[l][0])[1:-1] and \
+                                    (arr[i][0])[1:-1] != (arr[m][0])[1:-1] and \
+                                    (arr[j][0])[1:-1] != (arr[k][0])[1:-1] and \
+                                    (arr[j][0])[1:-1] != (arr[l][0])[1:-1] and \
+                                    (arr[j][0])[1:-1] != (arr[m][0])[1:-1] and \
+                                    (arr[k][0])[1:-1] != (arr[l][0])[1:-1] and \
+                                    (arr[k][0])[1:-1] != (arr[m][0])[1:-1] and \
+                                    (arr[l][0])[1:-1] != (arr[m][0])[1:-1]:
                                 quintuples.append([arr[i][0], arr[j][0], arr[k][0], arr[l][0], arr[m][0]])
                                 if len(quintuples) >= 8E04:
                                     yield quintuples
@@ -309,7 +330,7 @@ def make_combinations_double_all_diverse_and_all_positions(wt_seq, aminoacids):
                             and pos_2[0] != pos_2[-1] \
                             and pos_1[1:-1] != pos_2[1:-1]:
                         doubles.append(tuple([pos_1, pos_2]))  # tuple needed for
-                        if len(doubles) >= 8E04:                                             # list(dict()):
+                        if len(doubles) >= 8E04:                    # list(dict()):
                             doubles = list(dict.fromkeys(doubles))  # removes duplicated list entries
                             counter += len(doubles)
                             yield doubles
@@ -377,3 +398,6 @@ def make_combinations_quadruple_all_diverse(arr, aminoacids):
                                             quadruples = []
     quadruples = list(dict.fromkeys(quadruples))
     yield quadruples
+
+if __name__ == '__main__':
+    make_recombinations_quintuple((['A86V'], ['T91S'], ['M108Q'], ['A109E'], ['T111P'], ['A86S'], ['T91E'], ['M108L'], ['A109S'], ['T111G'], ['M108R'], ['T111N'], ['T91V'], ['M108T'], ['A109G'], ['T111F'], ['T91A'], ['A109M'], ['A86D'], ['T91R'], ['A109K'], ['T111D'], ['T91Q'], ['A109V'], ['T111S'], ['A86C'], ['T91L'], ['A109T'], ['M108S'], ['A109F'], ['T111L'], ['A86T'], ['A109Q'], ['M108A'], ['A109P'], ['T111Q'], ['A86N'], ['T91Y'], ['A109L'], ['T111A'], ['T91F'], ['A109Y'], ['A86I'], ['A109D'], ['M108K'], ['M108I'], ['T91N'], ['T111C'], ['T91M'], ['T91C'], ['M108P'], ['T111M'], ['T91H'], ['M108C'], ['M108F'], ['M108G'], ['A109N'], ['M108E'], ['A109W'], ['M108W'], ['A109I'], ['T91P'], ['M108H'], ['T91D'], ['A109R'], ['T91I'], ['M108Y'], ['T91G'], ['T91W'], ['A86R'], ['T91K'], ['T111Y'], ['M108D'], ['A86W'], ['M108V'], ['T111I'], ['M108N'], ['A109C'], ['A109H']))

@@ -28,7 +28,7 @@ from pypef.ml.parallelization import aaindex_performance_parallel
 # importing own modules
 from pypef.ml.regression import (
     read_models, formatted_output, performance_list, save_model, predict,
-    predictions_out, plot
+    predictions_out, predict_and_plot
 )
 from pypef.utils.low_n_mutation_extrapolation import low_n, performance_mutation_extrapolation
 from pypef.utils.variant_data import absolute_path_cwd_file
@@ -108,7 +108,7 @@ def run_pypef_pure_ml(arguments):
 
         elif arguments['--figure'] is not None and arguments['--model'] is not None:  # plotting
             path = os.getcwd()
-            plot(
+            predict_and_plot(
                 path=path,
                 fasta_file=arguments['--figure'],
                 model=arguments['--model'],

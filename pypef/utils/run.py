@@ -175,7 +175,8 @@ def run_pypef_utils(arguments):
         if arguments['hybrid'] or arguments['--encoding'] == 'dca':
             dca_encoder = DCAEncoding(
                 params_file=arguments['--params'],
-                separator=arguments['--sep']
+                separator=arguments['--sep'],
+                verbose=False
             )
             if arguments['ml']:
                 ml_or_hybrid = 'ml'
@@ -278,13 +279,13 @@ def run_pypef_utils(arguments):
             threads = abs(arguments['--threads']) if arguments['--threads'] is not None else 1
             threads = threads + 1 if threads == 0 else threads
             print(f'Using {threads} thread(s) for running...')
-            if threads > 1:
-                ray.init()
             dca_encode = DCAEncoding(
                 params_file=arguments['--params'],
-                separator=arguments['--mutation_sep']
+                separator=arguments['--mutation_sep'],
+                verbose=False
             )
             if threads > 1:
+                ray.init()
                 variants, encoded_sequences, fitnesses = get_dca_data_parallel(
                     variants=variants,
                     fitnesses=fitnesses,
