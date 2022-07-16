@@ -144,8 +144,8 @@ bash Anaconda3-2020.11-Linux-x86_64.sh
 ```
 
 After accepting all steps, the conda setup should also be written to your `~/.bashrc`file, so that you can call anaconda typing `conda`.
-Next, to download this repository click Code > Download ZIP and unzip the zipped file, e.g. with `unzip PyPEF-main.zip`, or just clone this repository using your bash shell to your local machine `git clone https://github.com/Protein-Engineering-Framework/PyPEF`.
-To setup a new environment with conda you can either create the conda environment from the provided YAML file inside the PyPEF directory (`cd PyPEF` or `cd PyPEF-main` dependent on the downloaded file name):
+Next, to download this repository click Code > Download ZIP and unzip the zipped file, e.g. with `unzip PyPEF-master.zip`, or just clone this repository using your bash shell to your local machine `git clone https://github.com/Protein-Engineering-Framework/PyPEF`.
+To setup a new environment with conda you can either create the conda environment from the provided YAML file inside the PyPEF directory (`cd PyPEF` or `cd PyPEF-master` dependent on the downloaded file name):
 
 ```
 conda env create --file pypef_environment.yml
@@ -163,7 +163,7 @@ To activate the environment you can define:
 conda activate pypef
 ```
 
-After activating the environment you can install required packages after changing the directory to the PyPEF directory (`cd PyPEF` or `cd PyPEF-main`) and install required packages with pip if you did not use the YAML file for creating the environment (if using conda, packages will be installed in anaconda3/envs/pypef/lib/python3.9/site-packages):
+After activating the environment you can install required packages after changing the directory to the PyPEF directory (`cd PyPEF` or `cd PyPEF-master`) and install required packages with pip if you did not use the YAML file for creating the environment (if using conda, packages will be installed in anaconda3/envs/pypef/lib/python3.9/site-packages):
 
 ```
 python3 -m pip install -r requirements.txt
@@ -249,12 +249,12 @@ unzip main.zip
 Setting the `PYTHONPATH` (so that no import errors occur stating that the package `pypef` and thus dependent absolute imports are unknown):<br>
 &nbsp;&nbsp;Windows (example path, PowerShell)
 ```
-$env:PYTHONPATH="C:\Users\name\path\to\PyPEF-main"
+$env:PYTHONPATH="C:\Users\name\path\to\PyPEF-master"
 ```
 
 &nbsp;&nbsp;Linux (example path)
 ```
-export PYTHONPATH="${PYTHONPATH}:/home/name/path/to/PyPEF-main"
+export PYTHONPATH="${PYTHONPATH}:/home/name/path/to/PyPEF-master"
 ```
 Installing the requirements:
 &nbsp;&nbsp;Windows (PowerShell)
@@ -267,7 +267,7 @@ python -m pip install -r requirements.txt
 python3 -m pip install -r requirements.txt
 ```
 
-Running the main script (from PyPEF-main directory):<br>
+Running the main script (from PyPEF-master directory):<br>
 &nbsp;&nbsp;Windows (PowerShell)
 ```
 python .\pypef\main.py
