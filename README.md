@@ -243,7 +243,7 @@ wget https://github.com/Protein-Engineering-Framework/PyPEF/archive/refs/heads/m
 
 Unzipping the zipped file (manually or e.g. with `unzip`):
 ```
-unzip main.zip
+unzip master.zip
 ```
 
 Setting the `PYTHONPATH` (so that no import errors occur stating that the package `pypef` and thus dependent absolute imports are unknown):<br>
