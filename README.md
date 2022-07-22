@@ -256,7 +256,7 @@ $env:PYTHONPATH="C:\Users\name\path\to\PyPEF-master"
 ```
 export PYTHONPATH="${PYTHONPATH}:/home/name/path/to/PyPEF-master"
 ```
-Installing the requirements:
+Installing the requirements:<br>
 &nbsp;&nbsp;Windows (PowerShell)
 ```
 python -m pip install -r requirements.txt
@@ -295,7 +295,7 @@ gunzip uniref100.fasta.gz
 jackhmmer --incT 199 --cpu 16 --noali -A ANEH_jhmmer.sto Sequence_WT_ANEH.fasta /path/to/uniref100.fasta
 ```
 
-4. Convert the created MSA from Stockholm (.sto) format to A2M format:
+4. Convert the created MSA from [Stockholm](https://en.wikipedia.org/wiki/Stockholm_format) (.sto) format to [A2M](https://en.wikipedia.org/wiki/FASTA_format#Extensions) format:
 ```
 pypef sto2a2m --sto ANEH_jhmmer.sto
 ```
