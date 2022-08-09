@@ -334,7 +334,7 @@ class DirectedEvolution:
         plt.savefig(str(self.model) + '_DE_trajectories.png', dpi=500)
         plt.clf()
 
-        with open('EvoTraj/Trajectories.csv', 'w') as file:
+        with open(os.path.join('EvoTraj', 'Trajectories.csv'), 'w') as file:
             file.write('Trajectory;Variant;Sequence;Fitness\n')
             for i in range(self.num_trajectories):
                 v_records_str = str(v_records[i])[1:-1].replace("'", "")

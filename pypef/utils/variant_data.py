@@ -88,17 +88,15 @@ def get_sequences_from_file(
     with open(fasta, 'r') as f:
         for line in f:
             if '>' in line:
-                words = line.split()
-                names_of_mutations.append(words[1])
-                # words[1] is appended so make sure there is a space in between > and the name!
+                words = line.split('>')
+                names_of_mutations.append(words[1].strip())
 
             elif '#' in line:
-                pass  # are Comments
+                pass  # are comments
 
             elif ';' in line:
-                words = line.split()
-                values.append(float(words[1]))
-                # words[1] is appended so make sure there is a space in between ; and the value!
+                words = line.split(';')
+                values.append(float(words[1].strip()))
 
             else:
                 try:
@@ -125,7 +123,7 @@ def get_sequences_from_file(
 def remove_nan_encoded_positions(
         xs: list,
         ys: list = None
-):
+) -> tuple[list, list]:
     """
     Removes encoded sequence (x) of sequence list xs when NaNs occur in x.
     Also removes the corresponding fitness value y (f(x) --> y) at position i.
@@ -157,6 +155,7 @@ def get_basename(filename: str) -> str:
     Returns
     -------
     str
+        os.path.basename (filename) string without filename extension
     """
     return os.path.basename(filename).split('.')[0]
 

@@ -65,8 +65,10 @@ def csv_input(csv_file):
     Gets input data from defined .csv file (that contains variant names and fitness labels)
     """
     if csv_file is None:
-        raise FileNotFoundError('Did not find (specified) csv file! '
-              'Used csv input file instead: {}.'.format(str(csv_file)))
+        raise FileNotFoundError(
+            f'Did not find (specified) csv file! '
+            f'Used csv input file instead: {str(csv_file)}.'
+        )
     return csv_file
 
 
@@ -394,8 +396,8 @@ def make_fasta_ls_ts(
                 else:
                     name += '/' + single_var
                 separation += 1
-        print('>', name, file=myfile)
-        print(';', val[i], file=myfile)
+        print(f'>{name}', file=myfile)
+        print(f';{val[i]}', file=myfile)
         print(''.join(temp), file=myfile)
         # print(name+';'+str(val[i])+';'+''.join(temp), file=myfile)  # output: CSV format
     myfile.close()

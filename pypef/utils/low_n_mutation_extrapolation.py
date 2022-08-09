@@ -275,14 +275,14 @@ def performance_mutation_extrapolation(
             pickle.dump(
                 {'hybrid_model': hybrid_model, 'beta_1': beta_1, 'beta_2': beta_2,
                  'spearman_rho': float('nan'), 'regressor': reg},
-                open('Pickles/HYBRID_LVL_1', 'wb')
+                open(os.path.join('Pickles', 'HYBRID_LVL_1'), 'wb')
             )
         elif cv_regressor:
             print('Fitting regressor on lvl 1 substitution data...')
             regressor.fit(X_train, y_train)
             if save_model:
                 print(f'Saving model as Pickle file: ML_LVL_1')
-                pickle.dump(regressor, open('Pickles/ML_LVL_1', 'wb'))
+                pickle.dump(regressor, open(os.path.join('Pickles', 'ML_LVL_1'), 'wb'))
         for i, _ in enumerate(tqdm(collected_levels)):
             if i < len(collected_levels) - 1:  # not last i else error, last entry is: lvl 1 --> all higher variants
                 test_idx = collected_levels[i + 1]
@@ -402,12 +402,12 @@ def plot_extrapolation(
         spearman_rhos.append(result_dict['spearman_rho'])
         label_infos.append(
             r'$\leq$' + str(result_dict['max_train_lvl']) + r'$\rightarrow$' + str(result_dict['test_lvl']) +
-            '\n(' + str(result_dict['n_y_train']) + r'$\rightarrow$' + str(result_dict['n_y_test']) + ')'
+            '\n' + str(result_dict['n_y_train']) + r'$\rightarrow$' + str(result_dict['n_y_test'])
         )
-    label_infos[0] = 'Lvl: ' + label_infos[0].split('(')[0] + r'$N$: (' + label_infos[0].split('(')[1]
+    label_infos[0] = 'Lvl: ' + label_infos[0].split('\n')[0] + '\n' + r'$N$: ' + label_infos[0].split('\n')[1]
     if not conc:
         label_infos[-1] = label_infos[-1][6] + r'$\rightarrow$' + '>' + \
-                          label_infos[-1][6] + '\n(' + label_infos[-1].split('(')[1]
+                          label_infos[-1][6] + '\n' + label_infos[-1].split('\n')[1]
     plt.plot(test_lvls, spearman_rhos, 'x--', markeredgecolor='k', linewidth=0.7, markersize=4)
     plt.fill_between(
         np.array(test_lvls),

@@ -32,7 +32,6 @@ from scipy.stats import spearmanr
 from sklearn.linear_model import Ridge
 from sklearn.model_selection import GridSearchCV, train_test_split
 from scipy.optimize import differential_evolution
-import matplotlib.pyplot as plt
 from pypef.utils.variant_data import get_sequences_from_file, remove_nan_encoded_positions
 from pypef.dca.encoding import DCAEncoding, get_dca_data_parallel, get_encoded_sequence, ActiveSiteError
 from pypef.ml.regression import predictions_out, plot_y_true_vs_y_pred
@@ -707,7 +706,8 @@ def performance_ls_ts(
 
     dca_encoder = DCAEncoding(
         params_file=params_file,
-        separator=separator
+        separator=separator,
+        verbose=False
     )
 
     # DCA prediction: delta E = np.subtract(X, self.x_wild_type),
@@ -735,10 +735,10 @@ def performance_ls_ts(
     assert len(x_test) == len(test_variants) == len(y_test)
 
     hybrid_model = DCAHybridModel(
-        X_train=x_train,
-        y_train=y_train,
-        X_test=x_test,
-        y_test=y_test,
+        X_train=np.array(x_train),
+        y_train=np.array(y_train),
+        X_test=np.array(x_test),
+        y_test=np.array(y_test),
         X_wt=x_wt
     )
 
@@ -893,7 +893,7 @@ def predict_ps(  # also predicting "pmult" dirs
                     predictions=all_y_v_pred,
                     model='hybrid',
                     prediction_set=prediction_set,
-                    path=path + '/'
+                    path=path
                 )
             else:  # check next task to do, e.g. predicting trecomb
                 continue
@@ -973,7 +973,7 @@ def predict_directed_evolution(
     except ActiveSiteError:
         return 'skip'
 
-    model_dict = pickle.load(open('Pickles/' + hybrid_model_data_pkl, "rb"))
+    model_dict = pickle.load(open(os.path.join('Pickles', hybrid_model_data_pkl), "rb"))
     model = model_dict['hybrid_model']
     reg = model_dict['regressor']
     beta_1 = model_dict['beta_1']

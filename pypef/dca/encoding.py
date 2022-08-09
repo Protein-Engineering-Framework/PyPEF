@@ -515,10 +515,9 @@ class DCAEncoding(CouplingsModel):
             separator: str = '/',
             verbose: bool = True
     ):
+        super().__init__(filename=params_file)  # inherit functions and variables from class CouplingsModel
         self.verbose = verbose
         self.separator = separator
-        super().__init__(filename=params_file, verbose=verbose)  # inherit functions and variables
-        # from class 'CouplingsModel'
 
     def _get_position_internal(self, position: int):
         """

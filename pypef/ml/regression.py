@@ -840,7 +840,7 @@ def save_model(
                     name = idx
                 else:
                     name = get_basename(idx)
-                cv_filename = f'CV_performance/{name}_{regressor}_CV_Results.txt'
+                cv_filename = os.path.join('CV_performance', f'{name}_{regressor}_CV_Results.txt')
                 try:
                     os.remove(cv_filename)
                 except FileNotFoundError:
@@ -912,7 +912,7 @@ def save_model(
             ax.set_xlabel('Measured')
             ax.set_ylabel('Predicted')
             ax.legend(prop={'size': 8})
-            plt.savefig('CV_performance/' + f'{name}_{regressor}_{n_samples}' + '-fold-CV.png', dpi=250)
+            plt.savefig(os.path.join('CV_performance', f'{name}_{regressor}_{n_samples}-fold-CV.png'), dpi=300)
             plt.close('all')
 
             if train_on_all:  # Train model hyperparameters based on all available data (training + test set)
@@ -933,10 +933,10 @@ def save_model(
                 variants=test_variants,
                 label=True,
                 hybrid=False,
-                name=f'CV_performance/{name}_{regressor}_'
+                name=os.path.join('CV_performance', f'{name}_{regressor}_')
             )
 
-            file = open(os.path.join(path, 'Pickles/' + name), 'wb')
+            file = open(os.path.join(path, 'Pickles', name), 'wb')
             pickle.dump(regressor_, file)
             file.close()
 
@@ -969,7 +969,7 @@ def predict(
     """
     if model is not None:
         # model defines pickle to load (and thus determines encoding AAidx)
-        file = open(os.path.join(path, 'Pickles/' + str(model)), 'rb')
+        file = open(os.path.join(path, 'Pickles', str(model)), 'rb')
         loaded_model = pickle.load(file)
         file.close()
         aaidx = full_aaidx_txt_path(str(model) + '.txt')
@@ -1108,7 +1108,7 @@ def predict_and_plot(
             assert len(x) == len(variants_test) == len(y_test)
 
     try:
-        file = open(os.path.join(path, 'Pickles/'+str(model)), 'rb')
+        file = open(os.path.join(path, 'Pickles', str(model)), 'rb')
         mod = pickle.load(file)
         file.close()
     except FileNotFoundError:
@@ -1229,7 +1229,7 @@ def plot_y_true_vs_y_pred(
     if hybrid:
         spearman_rho = stats.spearmanr(y_true, y_pred)[0]
         ax.scatter(y_true, y_pred, marker='o', s=20, linewidths=0.5, edgecolor='black', alpha=0.7,
-                   label=f'Spearman\'s' + fr'$\rho$ = {spearman_rho:.3f}')
+                   label=f'Spearman\'s ' + fr'$\rho$ = {spearman_rho:.3f}')
         file_name = name + 'DCA_Hybrid_Model_LS_TS_Performance.png'
     else:
         r_squared, rmse, nrmse, pearson_r, spearman_rho = get_performances(

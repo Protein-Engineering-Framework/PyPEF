@@ -10,7 +10,7 @@ with open("requirements.txt", "r", encoding="utf-8") as install_requirements:
 
 setup(
     name='pypef',
-    version='0.2.1',
+    version='0.2.2',
     author='Niklas Siedhoff & Alexander-Maurice Illig',
     author_email='n.siedhoff@biotec.rwth-aachen.de',
     license='CC BY-NC-SA 4.0',
@@ -34,7 +34,6 @@ setup(
         'Development Status :: 3 - Alpha',
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.9',
-        'Programming Language :: Python :: 3.10',
         'Topic :: Scientific/Engineering :: Bio-Informatics',
         'Topic :: Scientific/Engineering :: Artificial Intelligence'
     ],

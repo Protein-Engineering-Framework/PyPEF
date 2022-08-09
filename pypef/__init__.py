@@ -17,4 +17,4 @@
 # §Equal contribution
 
 
-VERSION = '0.2.1-alpha'
+VERSION = '0.2.2-alpha'
