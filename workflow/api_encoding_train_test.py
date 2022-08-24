@@ -2,6 +2,7 @@
 An exemplary script for using PyPEF as an API for encoding sequences to
 train and test ML models and the hybrid model.
 """
+
 import os
 import pandas as pd
 import numpy as np
@@ -22,7 +23,7 @@ wt_sequence = 'MSKGEELFTGVVPILVELDGDVNGHKFSVSGEGEGDATYGKLTLKFICTTGKLPVPWPTL' \
               'VTTLSYGVQCFSRYPDHMKQHDFFKSAMPEGYVQERTIFFKDDGNYKTRAEVKFEGDTLV' \
               'NRIELKGIDFKEDGNILGHKLEYNYNSHNVYIMADKQKNGIKVNFKIRHNIEDGSVQLAD' \
               'HYQQNTPIGDGPVLLPDNHYLSTQSALSKDPNEKRDHMVLLEFVTAAGITHGMDELYK'
-variant_fitness_data = pd.read_csv('avGFP.csv', sep=';')  # taking the avGFP dataset
+variant_fitness_data = pd.read_csv('./test_dataset_avgfp/avGFP.csv', sep=';')  # taking the avGFP dataset
 variants = variant_fitness_data.iloc[:2000, 0]  # "just" using 2000 variants for faster processing
 fitnesses = variant_fitness_data.iloc[:2000, 1]
 
@@ -45,10 +46,18 @@ train_val_splits_indices, test_splits_indices = [], []
 # and split the variant fitness data so that sizes of the data sets are same for
 # all encoding techniques tested.
 print('\nTesting DCA-based sequence encoding...')
-dca_encoder = DCAEncoding(
-    params_file='./test_dataset_avgfp/uref100_avgfp_jhmmer_119_plmc_42.6.params',
-    verbose=False
-)
+try:
+    dca_encoder = DCAEncoding(
+        params_file='./test_dataset_avgfp/uref100_avgfp_jhmmer_119_plmc_42.6.params',
+        verbose=False
+    )
+except (ValueError, FileNotFoundError):
+    raise SystemError(
+        "The couplings .params file for DCA-based encoding has to be downloaded separately and "
+        "saved in ./test_dataset_avgfp/uref100_avgfp_jhmmer_119_plmc_42.6.params\n E.g., create "
+        "the MSA using Jackhmmer and coupling terms using plmc or download from Git LFS:\n"
+        "https://github.com/niklases/PyPEF/raw/main/workflow/test_dataset_avgfp/uref100_avgfp_jhmmer_119_plmc_42.6.params"
+    )
 x_dca_ = dca_encoder.collect_encoded_sequences(variants)
 x_dca, fitnesses = remove_nan_encoded_positions(copy(x_dca_), fitnesses)
 x_dca, variants = remove_nan_encoded_positions(copy(x_dca_), variants)
