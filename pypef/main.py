@@ -152,7 +152,7 @@ Usage:
         [--conc]
     pypef ml --encoding ENCODING_TECHNIQUE --ls LEARNING_SET --ts TEST_SET
         [--save NUMBER] [--regressor TYPE] [--nofft] [--all] [--params PLMC_FILE]
-        [--sort METRIC_INT] [--threads THREADS] [--color]
+        [--sort METRIC_INT] [--threads THREADS]
     pypef ml --show
         [MODELS]
     pypef ml --encoding ENCODING_TECHNIQUE --model MODEL12345 --figure TS_FOR_PLOTTING

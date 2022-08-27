@@ -366,21 +366,28 @@ def make_sub_ls_ts_randomly(
 
 def make_fasta_ls_ts(
         filename,
-        wt,
-        sub,
-        val
-):  # sub = substitution, val = value
+        wt_seq,
+        substitutions,
+        fitness_values
+):
     """
     Creates learning and test sets (.fasta style files)
 
-    sub: list
+    filename: str
+        String for defining the filename for the learning and test set "fasta-like" files.
+    wt: str
+        Wild-type sequence as string
+    substitutions: list
         List of substiutuions of a single variant of the format:
-            - Single substitution variant, e.g. variant A123C: [['A123C']]
-            - Higher variants, e.g. variant A123C/D234E/F345G: [['A123C'], ['D234E], ['F345G']]
+            - Single substitution variant, e.g. variant A123C: ['A123C']
+            - Higher variants, e.g. variant A123C/D234E/F345G: ['A123C', 'D234E, 'F345G']
+            --> Full substitutions list, e.g.: [['A123C'], ['A123C', 'D234E, 'F345G']]
+    fitness_values: list
+        List of ints/floats of the variant fitness values, e.g. for two variants: [1.4, 0.8]
     """
     myfile = open(filename, 'w')
-    for i, var in enumerate(sub):  # var are lists of (single or multiple) substitutions
-        temp = list(wt)
+    for i, var in enumerate(substitutions):  # var are lists of (single or multiple) substitutions
+        temp = list(wt_seq)
         name = ''
         separation = 0
         if var == ['WT']:
@@ -397,28 +404,33 @@ def make_fasta_ls_ts(
                     name += '/' + single_var
                 separation += 1
         print(f'>{name}', file=myfile)
-        print(f';{val[i]}', file=myfile)
+        print(f';{fitness_values[i]}', file=myfile)
         print(''.join(temp), file=myfile)
         # print(name+';'+str(val[i])+';'+''.join(temp), file=myfile)  # output: CSV format
     myfile.close()
 
 
 def get_seqs_from_var_name(
-        wt,
-        sub,
-        val
+        wt_seq,
+        substitutions,
+        fitness_values
 ) -> tuple[list, list, list]:
     """
     Similar to function above but just returns sequences
 
-    variant: list
+    wt: str
+        Wild-type sequence as string
+    substitutions: list
         List of substiutuions of a single variant of the format:
-            - Single substitution variant, e.g. variant A123C: [['A123C']]
-            - Higher variants, e.g. variant A123C/D234E/F345G: [['A123C'], ['D234E], ['F345G']]
+            - Single substitution variant, e.g. variant A123C: ['A123C']
+            - Higher variants, e.g. variant A123C/D234E/F345G: ['A123C', 'D234E, 'F345G']
+            --> Full substitutions list, e.g.: [['A123C'], ['A123C', 'D234E, 'F345G']]
+    fitness_values: list
+        List of ints/floats of the variant fitness values, e.g. for two variants: [1.4, 0.8]
     """
     variant, values, sequences = [], [], []
-    for i, var in enumerate(sub):  # var are lists of (single or multiple) substitutions
-        temp = list(wt)
+    for i, var in enumerate(substitutions):  # var are lists of (single or multiple) substitutions
+        temp = list(wt_seq)
         name = ''
         separation = 0
         if var == ['WT']:
@@ -435,7 +447,7 @@ def get_seqs_from_var_name(
                     name += '/' + single_var
                 separation += 1
         variant.append(name)
-        values.append(val[i])
+        values.append(fitness_values[i])
         sequences.append(''.join(temp))
 
     return variant, values, sequences

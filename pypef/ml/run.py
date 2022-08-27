@@ -92,6 +92,7 @@ def run_pypef_pure_ml(arguments):
                     no_fft=arguments['--nofft'],
                     minimum_r2=0.0
                 )
+
                 save_model(
                     path=path,
                     performance_list=encoding_performance_list,

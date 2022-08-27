@@ -8,4 +8,4 @@ adjustText
 scikit-learn
 biopython
 schema
-ray[default]
+ray[default]<2.0.0

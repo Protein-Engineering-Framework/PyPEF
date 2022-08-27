@@ -828,30 +828,29 @@ def save_model(
         os.mkdir('Pickles')
     except FileExistsError:
         pass
-    cv_filename, name = '', ''
     train_sequences, train_variants, y_train = get_sequences_from_file(training_set)
     test_sequences, test_variants, y_test = get_sequences_from_file(test_set)
     for i, t in enumerate(range(threshold)):
         try:
             idx = performance_list[t][0]
             parameter = performance_list[t][7]
-            if i == 0:
-                if encoding == 'onehot' or encoding == 'dca':
-                    name = idx
-                else:
-                    name = get_basename(idx)
-                cv_filename = os.path.join('CV_performance', f'{name}_{regressor}_CV_Results.txt')
-                try:
-                    os.remove(cv_filename)
-                except FileNotFoundError:
-                    pass
-                file = open(cv_filename, 'w')
-                file.write('5-fold cross-validated performance of top '
-                           'models for validation set across all data.\n\n')
-                if no_fft:
-                    file.write("No FFT used in this model construction, performance represents"
-                               " model accuracies on raw encoded sequence data.\n\n")
-                file.close()
+
+            if encoding == 'onehot' or encoding == 'dca':
+                name = idx
+            else:
+                name = get_basename(idx)
+            cv_filename = os.path.join('CV_performance', f'{name}_{regressor.upper()}_CV_Results.txt')
+            try:
+                os.remove(cv_filename)
+            except FileNotFoundError:
+                pass
+            file = open(cv_filename, 'w')
+            file.write('5-fold cross-validated performance of top '
+                       'models for validation set across all data.\n\n')
+            if no_fft:
+                file.write("No FFT used in this model construction, performance represents"
+                           " model accuracies on raw encoded sequence data.\n\n")
+            file.close()
 
             # Estimating the CV performance of the n_component-fitted model on all data
             if encoding == 'aaidx':  # AAindex encoding technique
@@ -877,9 +876,11 @@ def save_model(
                     x_train_ = dca_encoder.collect_encoded_sequences(train_variants)
                     x_test_ = dca_encoder.collect_encoded_sequences(test_variants)
                     x_train, y_train = remove_nan_encoded_positions(copy.copy(x_train_), y_train)
-                    x_train, train_variants = remove_nan_encoded_positions(copy.copy(x_train_), y_train)
+                    x_train, train_variants = remove_nan_encoded_positions(copy.copy(x_train_), train_variants)
                     x_test, y_test = remove_nan_encoded_positions(copy.copy(x_test_), y_test)
-                    x_test, test_variants = remove_nan_encoded_positions(copy.copy(x_test_), y_test)
+                    x_test, test_variants = remove_nan_encoded_positions(copy.copy(x_test_), test_variants)
+                    assert len(x_train) == len(y_train) == len(train_variants)
+                    assert len(x_test) == len(y_test) == len(test_variants)
 
             x = np.concatenate([x_train, x_test])
             y = np.concatenate([y_train, y_test])
@@ -912,7 +913,7 @@ def save_model(
             ax.set_xlabel('Measured')
             ax.set_ylabel('Predicted')
             ax.legend(prop={'size': 8})
-            plt.savefig(os.path.join('CV_performance', f'{name}_{regressor}_{n_samples}-fold-CV.png'), dpi=300)
+            plt.savefig(os.path.join('CV_performance', f'{name}_{regressor.upper()}_{n_samples}-fold-CV.png'), dpi=300)
             plt.close('all')
 
             if train_on_all:  # Train model hyperparameters based on all available data (training + test set)
@@ -933,7 +934,7 @@ def save_model(
                 variants=test_variants,
                 label=True,
                 hybrid=False,
-                name=os.path.join('CV_performance', f'{name}_{regressor}_')
+                name=f'{name}_{regressor.upper()}_'
             )
 
             file = open(os.path.join(path, 'Pickles', name), 'wb')
@@ -1141,7 +1142,7 @@ def predict_and_plot(
         round(r_squared, 3), round(rmse, 3), round(nrmse, 3), round(pearson_r, 3)) + \
              r'$\rho$ = {}'.format(round(spearman_rho, 3)) + \
              '\n' + r'($N$ = {})'.format(len(y_test))
-    x = np.linspace(min(y_pred) - 1, max(y_pred) + 1, 100)
+    x = np.linspace(min(y_pred), max(y_pred), 100)
     fig, ax = plt.subplots()
     ax.scatter(y_test, y_pred,
                label=legend, marker='o', s=20, linewidths=0.5, edgecolor='black', alpha=0.8)
@@ -1194,7 +1195,7 @@ def predict_and_plot(
         plt.hlines(y=(y_wt + limit_y_pred) - (((y_wt + limit_y_pred) - (y_wt - limit_y_pred)) / 2),
                    xmin=y_wt - limit_y_true, xmax=y_wt + limit_y_true, color='grey', linewidth=0.5)
         crossline = np.linspace(y_wt - limit_y_true, y_wt + limit_y_true)
-        plt.plot(crossline, crossline, color='black', linewidth=0.5)
+        plt.plot(crossline, crossline, color='black', linewidth=0.25)
         steps = float(abs(max(y_pred)))
         gradient = []
         for x in np.linspace(0, steps, 100):
@@ -1242,6 +1243,8 @@ def plot_y_true_vs_y_pred(
                   fr'$\rho$ = {spearman_rho:.3f}' + '\n' + fr'($N$ = {len(y_true)})'
         )
         file_name = name + 'ML_Model_LS_TS_Performance.png'
+    x = np.linspace(min(y_pred), max(y_pred), 100)
+    ax.plot(x, x, color='black', linewidth=0.25)  # plot diagonal line
     ax.legend(prop={'size': 8})
     ax.set_xlabel('Measured')
     ax.set_ylabel('Predicted')

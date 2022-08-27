@@ -2,3 +2,4 @@ build/
 dist/
 pypef.egg-info/
 workflow/.ipynb_checkpoints/
+.idea/
