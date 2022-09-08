@@ -45,7 +45,7 @@ After successful installation, PyPEF should work by calling `pypef` in the shell
 pypef --help
 ```
 
-The detailed routine for setting up a new virtual environment with Anaconda, installing the necessary Python packages for that environment, and running the Jupyter notebook tutorial can be found below in the Tutorial section.
+The detailed routine for setting up a new virtual environment with Anaconda, installing the necessary Python packages for that environment, and running the Jupyter notebook tutorial can be found below in the Tutorial section. Further, executable files for running PyPEF on a single core are available at https://github.com/Protein-Engineering-Framework/PyPEF/releases/tag/v0.2.3-alpha.
 
 ## Requirements
 - Python 3.9
