@@ -24,8 +24,8 @@ import ray
 
 from pypef.utils.variant_data import (
     amino_acids, generate_dataframe_and_save_csv,
-    remove_nan_encoded_positions, path_aaidx_txt_path_from_utils,
-    get_basename, read_csv_and_shift_pos_ints
+    remove_nan_encoded_positions, get_basename,
+    read_csv_and_shift_pos_ints
 )
 
 from pypef.utils.learning_test_sets import (
@@ -44,7 +44,7 @@ from pypef.dca.encoding import DCAEncoding
 from pypef.utils.sto2a2m import convert_sto2a2m
 
 from pypef.dca.encoding import get_dca_data_parallel, get_encoded_sequence
-from pypef.ml.regression import OneHotEncoding, AAIndexEncoding
+from pypef.ml.regression import OneHotEncoding, AAIndexEncoding, full_aaidx_txt_path
 
 
 def run_pypef_utils(arguments):
@@ -321,7 +321,7 @@ def run_pypef_utils(arguments):
                     "flag --model AAINDEX, e.g.: --model CORJ870104."
                 )
             aa_index_encoder = AAIndexEncoding(
-                path_aaidx_txt_path_from_utils(arguments['--model']), sequences
+                full_aaidx_txt_path(arguments['--model'] + '.txt'), sequences
             )
             x_fft, x_raw = aa_index_encoder.collect_encoded_sequences()
             if arguments['--nofft']:
