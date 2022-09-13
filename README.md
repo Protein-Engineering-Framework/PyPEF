@@ -130,7 +130,7 @@ The use of the hybrid model (`pypef hybrid`) - instead of a pure ML model (`pype
 pypef hybrid -l LEARNING_SET.FASTA -t TEST_SET.FASTA --params PLMC_FILE.params
 ``` 
 
-Sample files for testing PyPEF routines are provided in the [workflow/test_dataset](/workflow/test_dataset) directory, which is also used when running the notebook tutorial. PyPEF's package dependencies are linked [here](https://github.com/Protein-Engineering-Framework/PyPEF/network/dependencies).
+Sample files for testing PyPEF routines are provided in the workflow directory, which are also used when running the notebook tutorial. PyPEF's package dependencies are linked [here](https://github.com/Protein-Engineering-Framework/PyPEF/network/dependencies).
 Further, for designing your own API based on the PyPEF workflow, modules can be adapted from the [source code](/pypef).
 
 As standard input files, PyPEF requires the target protein wild-type sequence in [FASTA](https://en.wikipedia.org/wiki/FASTA) format and variant-fitness data in [CSV](https://en.wikipedia.org/wiki/Comma-separated_values) format to split the collected variant-fitness data in learning and test sets that resemble the aligned FASTA format and additionally contain lines indicating the fitness of each corresponding variant (see [ANEH sample files](workflow/test_dataset_aneh), [avGFP sample files](workflow/test_dataset_avgfp), and [MERGE SSM & DMS files](https://github.com/Protein-Engineering-Framework/MERGE/tree/main/Data/_variant_fitness_wtseq)).
