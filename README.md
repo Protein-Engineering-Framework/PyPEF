@@ -48,7 +48,7 @@ pypef --help
 The detailed routine for setting up a new virtual environment with Anaconda, installing the necessary Python packages for that environment, and running the Jupyter notebook tutorial can be found below in the Tutorial section. Further, executable files for running PyPEF on a single core are available at https://github.com/Protein-Engineering-Framework/PyPEF/releases/tag/v0.2.3-alpha.
 
 ## Requirements
-- Python 3.9
+- Python >=3.9
     - numpy
     - pandas
     - tqdm
@@ -59,7 +59,7 @@ The detailed routine for setting up a new virtual environment with Anaconda, ins
     - scikit-learn
     - biopython
     - schema
-    - ray[default]
+    - ray[default] (<2.0.0)
 
 ## Running Examples
 Printing the help function:   

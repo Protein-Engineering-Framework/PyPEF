@@ -41,9 +41,9 @@ train_val_splits_indices, test_splits_indices = [], []
 # 1st example: A. DCA-based encoding
 # -------------------------------------------------------------------------------
 # 1st example, since this approach reduces the amount of data for variant fitness,
-# as not all variants can be encoded using the DCA approach). To compare the test
-# performance with the other encoding techniques to be tested, we start with DCA
-# and split the variant fitness data so that sizes of the data sets are same for
+# as not all variants can necessarily be encoded using the DCA approach. To compare
+# the test performance with the other encoding techniques to be tested, we start with
+# DCA and split the variant fitness data so that sizes of the data sets are same for
 # all encoding techniques tested.
 print('\nTesting DCA-based sequence encoding...')
 try:
