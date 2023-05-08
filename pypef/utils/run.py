@@ -17,6 +17,9 @@
 # §Equal contribution
 
 import os
+import logging
+logger = logging.getLogger('pypef.utils.run')
+
 import numpy as np
 import re
 import copy
@@ -52,24 +55,24 @@ def run_pypef_utils(arguments):
         wt_sequence = get_wt_sequence(arguments['--wt'])
         t_drop = float(arguments['--drop'])
 
-        print(f'Length of provided sequence: {len(wt_sequence)} amino acids.')
+        logger.info(f'Length of provided sequence: {len(wt_sequence)} amino acids.')
         df = drop_rows(arguments['--input'], amino_acids, t_drop)
         no_rnd = arguments['--numrnd']
 
         single_variants, single_values, higher_variants, higher_values = get_variants(
             df, amino_acids, wt_sequence)
-        print(f'Number of single variants: {len(single_variants)}.')
+        logger.info(f'Number of single variants: {len(single_variants)}.')
         if len(single_variants) == 0:
-            print('Found NO single substitution variants for possible recombination!')
+            logger.info('Found NO single substitution variants for possible recombination!')
         sub_ls, val_ls, sub_ts, val_ts = make_sub_ls_ts(
             single_variants, single_values, higher_variants, higher_values)
-        print('Tip: You can edit your LS and TS datasets just by '
+        logger.info('Tip: You can edit your LS and TS datasets just by '
               'cutting/pasting between the LS and TS fasta datasets.')
 
-        print('Creating LS dataset...', end='\r')
-        make_fasta_ls_ts('LS.fasta', wt_sequence, sub_ls, val_ls)
-        print('Creating TS dataset...', end='\r')
-        make_fasta_ls_ts('TS.fasta', wt_sequence, sub_ts, val_ts)
+        logger.info('Creating LS dataset...')
+        make_fasta_ls_ts('LS.fasl', wt_sequence, sub_ls, val_ls)
+        logger.info('Creating TS dataset...')
+        make_fasta_ls_ts('TS.fasl', wt_sequence, sub_ts, val_ts)
 
         try:
             no_rnd = int(no_rnd)
@@ -79,13 +82,12 @@ def run_pypef_utils(arguments):
             random_set_counter = 1
             no_rnd = int(no_rnd)
             while random_set_counter <= no_rnd:
-                print(f'Creating random LS and TS No. {random_set_counter}...', end='\r')
                 sub_ls, val_ls, sub_ts, val_ts = make_sub_ls_ts_randomly(
                     single_variants, single_values,
                     higher_variants, higher_values
                 )
-                make_fasta_ls_ts('LS_random_' + str(random_set_counter) + '.fasta', wt_sequence, sub_ls, val_ls)
-                make_fasta_ls_ts('TS_random_' + str(random_set_counter) + '.fasta', wt_sequence, sub_ts, val_ts)
+                make_fasta_ls_ts('LS_random_' + str(random_set_counter) + '.fasl', wt_sequence, sub_ls, val_ls)
+                make_fasta_ls_ts('TS_random_' + str(random_set_counter) + '.fasl', wt_sequence, sub_ts, val_ts)
                 random_set_counter += 1
 
     elif arguments['mkps']:
@@ -96,46 +98,46 @@ def run_pypef_utils(arguments):
         drop_wt = []
         for i in range(len(df)):
             if df.iloc[i, 0] == 'WT':
-                print('Dropping wild-type (WT) from DataFrame as it cannot be used for (re-)combination.')
+                logger.info('Dropping wild-type (WT) from DataFrame as it cannot be used for (re-)combination.')
                 drop_wt.append(i)
         df = df.drop(drop_wt).reset_index(drop=True)
 
-        print('Length of provided sequence: {} amino acids.'.format(len(wt_sequence)))
+        logger.info(f'Length of provided sequence: {len(wt_sequence)} amino acids.')
         single_variants, _, higher_variants, _ = get_variants(df, amino_acids, wt_sequence)
-        print('Using single substitution variants for (re-)combination. '
-              'Number of single variants: {}.'.format(len(single_variants)))
+        logger.info(f'Using single substitution variants for (re-)combination. '
+                    f'Number of single variants: {len(single_variants)}.')
         if len(single_variants) == 0:
-            print('Found NO single substitution variants for possible recombination! '
-                  'No prediction files can be created!')
+            logger.info('Found NO single substitution variants for possible recombination! '
+                        'No prediction files can be created!')
 
         if arguments['--drecomb']:
-            print('Creating Recomb_Double_Split...')
+            logger.info('Creating Recomb_Double_Split...')
             for no, files in enumerate(make_recombinations_double(single_variants)):
                 double_mutants = np.array(files)
                 create_split_files(double_mutants, single_variants, wt_sequence, 'Recomb_Double', no)
 
         if arguments['--trecomb']:
-            print('Creating Recomb_Triple_Split...')
+            logger.info('Creating Recomb_Triple_Split...')
             for no, files in enumerate(make_recombinations_triple(single_variants)):
                 triple_mutants = np.array(files)
                 create_split_files(triple_mutants, single_variants, wt_sequence, 'Recomb_Triple', no)
 
         if arguments['--qarecomb']:
-            print('Beware that this step might require much disk space as PyPEF is '
-                  'creating prediction files in TXT format. Creating Recomb_Quadruple_Split...')
+            logger.info('Beware that this step might require much disk space as PyPEF is '
+                        'creating prediction files in TXT format. Creating Recomb_Quadruple_Split...')
             for no, files in enumerate(make_recombinations_quadruple(single_variants)):
                 quadruple_mutants = np.array(files)
                 create_split_files(quadruple_mutants, single_variants, wt_sequence, 'Recomb_Quadruple', no)
 
         if arguments['--qirecomb']:
-            print('Beware that this step might require much disk space as PyPEF is '
-                  'creating prediction files in TXT format. Creating Recomb_Quintuple_Split...')
+            logger.info('Beware that this step might require much disk space as PyPEF is '
+                        'creating prediction files in plain text format. Creating Recomb_Quintuple_Split...')
             for no, files in enumerate(make_recombinations_quintuple(single_variants)):
                 quintuple_mutants = np.array(files)
                 create_split_files(quintuple_mutants, single_variants, wt_sequence, 'Recomb_Quintuple', no)
 
         if arguments['--ddiverse']:
-            print('Creating Diverse_Double_Split...')
+            logger.info('Creating Diverse_Double_Split...')
             # if functions required, uncomment the next two lines and comment the other ones
             # for no, files in enumerate(
             #     make_recombinations_double_all_diverse_and_all_positions(wt_sequence, amino_acids)):
@@ -144,15 +146,15 @@ def run_pypef_utils(arguments):
                 create_split_files(doubles, single_variants, wt_sequence, 'Diverse_Double', no + 1)
 
         if arguments['--tdiverse']:
-            print('Beware that this step might require much disk space as PyPEF is '
-                  'creating prediction files in TXT format. Creating Diverse_Triple_Split... ')
+            logger.info('Beware that this step might require much disk space as PyPEF is '
+                        'creating prediction files in plain text format. Creating Diverse_Triple_Split... ')
             for no, files in enumerate(make_combinations_triple_all_diverse(single_variants, amino_acids)):
                 triples = np.array(files)
                 create_split_files(triples, single_variants, wt_sequence, 'Diverse_Triple', no + 1)
 
         if arguments['--qdiverse']:
-            print('Beware that this step might require much disk space as PyPEF is '
-                  'creating prediction files in TXT format. Creating Diverse_Quadruple_Split...')
+            logger.info('Beware that this step might require much disk space as PyPEF is '
+                       'creating prediction files in plain text format. Creating Diverse_Quadruple_Split...')
             for no, files in enumerate(make_combinations_quadruple_all_diverse(single_variants, amino_acids)):
                 quadruples = np.array(files)
                 create_split_files(quadruples, single_variants, wt_sequence, 'Diverse_Quadruple', no + 1)
@@ -161,7 +163,7 @@ def run_pypef_utils(arguments):
                 and arguments['--qarecomb'] is False and arguments['--qirecomb'] is False \
                 and arguments['--ddiverse'] is False and arguments['--tdiverse'] is False \
                 and arguments['--qdiverse'] is False:
-            print(f'\nMaking prediction set fasta file from {csv_file}...\n')
+            logger.info(f'\nMaking prediction set fasta file from {csv_file}...\n')
             make_fasta_ps(
                 filename=f'{get_basename(csv_file)}_prediction_set.fasta',
                 wt=wt_sequence,
@@ -187,8 +189,8 @@ def run_pypef_utils(arguments):
             ml_or_hybrid = 'ml'
         # Prediction using a saved model Pickle file specific AAindex used for encoding
         # Model saved in Pickle file also for DCA-based encoding, a default file name
-        print('Not counting WT as variant in directed evolution '
-              'as it cannot be used for (re-)combination.')
+        logger.info('Not counting WT as variant in directed evolution '
+                    'as it cannot be used for (re-)combination.')
         path = os.getcwd()
         try:
             # "temperature" parameter: determines sensitivity of Metropolis-Hastings acceptance criteria
@@ -207,27 +209,27 @@ def run_pypef_utils(arguments):
         if usecsv:
             csv_file = csv_input(arguments['--input'])
             t_drop = float(arguments['--drop'])
-            print(f'Length of provided sequence: {len(s_wt)} amino acids.')
+            logger.info(f'Length of provided sequence: {len(s_wt)} amino acids.')
             df = drop_rows(csv_file, amino_acids, t_drop)
             drop_wt = []
             for i in range(len(df)):
                 if df.iloc[i, 0] == 'WT':
-                    print('Using fitness value (y_WT) for wild-type (WT) as specified in CSV.')
+                    logger.info('Using fitness value (y_WT) for wild-type (WT) as specified in CSV.')
                     drop_wt.append(i)
                     y_wt = df.iloc[i, 1]
             df = df.drop(drop_wt).reset_index(drop=True)
             single_variants, single_values, higher_variants, higher_values = \
                 get_variants(df, amino_acids, s_wt)
-            print(f'Number of single variants: {len(single_variants)}.')
+            logger.info(f'Number of single variants: {len(single_variants)}.')
             if len(single_variants) == 0:
-                print('Found NO single substitution variants for possible recombination!')
+                logger.info('Found NO single substitution variants for possible recombination!')
             single_vars, single_ys = list(single_variants), list(single_values)  # only tuples to lists
 
         else:
             single_vars = None  # What happens now? (Full diverse?)
         # Metropolis-Hastings-driven directed evolution on single mutant .csv amino acid substitution data
         csvaa = arguments['--csvaa']  # only use identified substitutions --> taken from CSV file
-        print('Running evolution trajectories and plotting...\n')
+        logger.info('Running evolution trajectories and plotting...\n')
         DirectedEvolution(
             ml_or_hybrid=ml_or_hybrid,
             encoding=arguments['--encoding'],
@@ -266,19 +268,19 @@ def run_pypef_utils(arguments):
         encoded_sequences = None
         df = drop_rows(arguments['--input'], amino_acids, arguments['--drop'])
         wt_sequence = get_wt_sequence(arguments['--wt'])
-        print(f'Length of provided sequence: {len(wt_sequence)} amino acids.')
+        logger.info(f'Length of provided sequence: {len(wt_sequence)} amino acids.')
         single_variants, single_values, higher_variants, higher_values = get_variants(
             df, amino_acids, wt_sequence)
         variants = list(single_variants) + list(higher_variants)
         fitnesses = list(single_values) + list(higher_values)
         variants, fitnesses, sequences = get_seqs_from_var_name(wt_sequence, variants, fitnesses)
         assert len(variants) == len(fitnesses) == len(sequences)
-        print('Encoding variant sequences...')
+        logger.info('Encoding variant sequences...')
 
         if arguments['--encoding'] == 'dca':
             threads = abs(arguments['--threads']) if arguments['--threads'] is not None else 1
             threads = threads + 1 if threads == 0 else threads
-            print(f'Using {threads} thread(s) for running...')
+            logger.info(f'Using {threads} thread(s) for running...')
             dca_encode = DCAEncoding(
                 params_file=arguments['--params'],
                 separator=arguments['--mutation_sep'],
@@ -336,5 +338,3 @@ def run_pypef_utils(arguments):
             csv_file=arguments['--input'],
             encoding_type=arguments['--encoding']
         )
-
-    print('\nDone!\n')

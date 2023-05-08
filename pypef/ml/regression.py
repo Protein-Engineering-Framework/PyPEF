@@ -24,10 +24,11 @@ tuning, prediction, and plotting routines.
 """
 
 
-import copy
 import os
-from typing import Union, Tuple, Dict, Any
+from typing import Union
 
+import logging
+logger = logging.getLogger('pypef.ml.regression')
 import matplotlib
 matplotlib.use('Agg')  # no plt.show(), just save plot
 import matplotlib.pyplot as plt
@@ -328,12 +329,11 @@ class OneHotEncoding:
         encoded_sequences = []
         for sequence in tqdm(self.sequences, disable=silence):
             encoded_sequences.append(self.one_hot_encode_sequence(sequence))
-        return encoded_sequences
-
+        return np.array(encoded_sequences)
 
 def pls_loocv(
-        x_train: list,
-        y_train: list
+        x_train: np.ndarray,
+        y_train: np.ndarray
 ) -> Union[tuple[str, str], tuple[PLSRegression, dict]]:
     """
     PLS regression with LOOCV n_components tuning as described by Cadet et al.
@@ -358,6 +358,9 @@ def pls_loocv(
                 for k in test:
                     x_test_loo.append(x_train[k])
                     y_test_loo.append(y_train[k])
+                x_learn_loo = np.array(x_learn_loo)
+                x_test_loo = np.array(x_test_loo)
+                y_learn_loo = np.array(y_learn_loo)
                 try:
                     pls.fit(x_learn_loo, y_learn_loo)
                 except ValueError:  # scipy/linalg/decomp_svd.py ValueError:
@@ -500,7 +503,7 @@ def get_regressor_performances(
         regressor_ = cv_regression_options(regressor)
     try:
         if verbose:
-            print('CV-based training of regression model...')
+            logger.info('CV-based training of regression model...')
         regressor_.fit(x_learn, y_learn)  # fit model
     except ValueError:  # scipy/linalg/decomp_svd.py --> ValueError('illegal value in %dth argument of internal gesdd'
         return [None, None, None, None, None, regressor, None]
@@ -521,19 +524,20 @@ def get_regressor_performances(
 
 
 def performance_list(
-        train_set,
-        test_set,
-        encoding='aaidx',
-        regressor='pls',
-        no_fft=False,
-        sort='1',
-        couplings_file=None,
+        train_set: str,
+        test_set: str,
+        encoding: str = 'aaidx',
+        regressor: str = 'pls',
+        no_fft: bool = False,
+        sort: str = '1',
+        couplings_file: str = None,
         threads: int = 1  # for parallelization of DCA-based encoding
 ):
     """
     returns the sorted list of all the model parameters and the
     performance values (R2 etc.) from function get_performances.
     """
+    encoding = encoding.lower()
     performance_list = []
     train_sequences, train_variants, y_train = get_sequences_from_file(train_set)
     test_sequences, test_variants, y_test = get_sequences_from_file(test_set)
@@ -552,22 +556,22 @@ def performance_list(
     elif encoding == 'dca':
         if threads > 1:  # NaNs are already being removed by the called function
             dca_encoder = DCAEncoding(couplings_file, verbose=False)
-            print('Parallel encoding (runs DCA encoding silent, '
-                  'no information about non-encoded variant positions)...')
+            logger.info('Parallel encoding (runs DCA encoding silent, '
+                        'no information about non-encoded variant positions)...')
             train_variants, x_train, y_train = get_dca_data_parallel(train_variants, y_train, dca_encoder, threads)
             test_variants, x_test, y_test = get_dca_data_parallel(test_variants, y_test, dca_encoder, threads)
         else:
             dca_encoder = DCAEncoding(couplings_file)
-            x_train = dca_encoder.collect_encoded_sequences(train_variants)
-            x_test = dca_encoder.collect_encoded_sequences(test_variants)
+            x_train_ = dca_encoder.collect_encoded_sequences(train_variants)
+            x_test_ = dca_encoder.collect_encoded_sequences(test_variants)
             # NaNs must still be removed
-            x_train, y_train = remove_nan_encoded_positions(x_train, y_train)
-            x_test, y_test = remove_nan_encoded_positions(x_test, y_test)
+            x_train, y_train = remove_nan_encoded_positions(x_train_, y_train)
+            x_test, y_test = remove_nan_encoded_positions(x_test_, y_test)
         r2, rmse, nrmse, pearson_r, spearman_rho, regression_model, \
             params = get_regressor_performances(x_train, x_test, y_train, y_test, regressor, verbose=True)
         if r2 is not None:  # get_regressor_performances() returns None for metrics if MSE can't be calculated
             performance_list.append([
-                'DCAMODEL', r2, rmse, nrmse, pearson_r,
+                'DCAMLMODEL', r2, rmse, nrmse, pearson_r,
                 spearman_rho, regression_model, params
             ])
 
@@ -722,6 +726,8 @@ def get_performances(
     pearson_r: float
     spearman_rho: float
     """
+    y_true = list(y_true)
+    y_pred = list(y_pred)
     r_squared = r2_score(y_true, y_pred)
     rmse = np.sqrt(mean_squared_error(y_true, y_pred))
     stddev = np.std(y_true, ddof=1)
@@ -814,11 +820,11 @@ def save_model(
     files (pickle.dump), which can be loaded again for doing predictions.
     Also, in Save_Model included is the def cross_validation-based computing
     of the k-fold CV performance of the n component-optimized model on all
-    data (learning + validation set); by default  k  is 5 (n_samples = 5).
+    data (learning + test set); by default  k  is 5 (n_samples = 5).
     Plots of the CV performance for the t best models are stored inside the
     folder CV_performance.
     """
-    print('Encoding and cross validation on all data (creating folder CV_performance)...')
+    logger.info('Encoding and cross validation on all data (creating folder CV_performance)...')
     regressor = regressor.lower()
     try:
         os.mkdir('CV_performance')
@@ -875,10 +881,10 @@ def save_model(
                 else:  # encode using a single thread
                     x_train_ = dca_encoder.collect_encoded_sequences(train_variants)
                     x_test_ = dca_encoder.collect_encoded_sequences(test_variants)
-                    x_train, y_train = remove_nan_encoded_positions(copy.copy(x_train_), y_train)
-                    x_train, train_variants = remove_nan_encoded_positions(copy.copy(x_train_), train_variants)
-                    x_test, y_test = remove_nan_encoded_positions(copy.copy(x_test_), y_test)
-                    x_test, test_variants = remove_nan_encoded_positions(copy.copy(x_test_), test_variants)
+
+                    x_train, y_train, train_variants = remove_nan_encoded_positions(x_train_, y_train, train_variants)
+                    x_test, y_test, test_variants = remove_nan_encoded_positions(x_test_, y_test, test_variants)
+
                     assert len(x_train) == len(y_train) == len(train_variants)
                     assert len(x_test) == len(y_test) == len(test_variants)
 
@@ -994,27 +1000,30 @@ def predict(
         x_raw = None
     else:  # DCA
         if dca_encoder is not None:  # use dca_encoder from directed evolution, single thread
-            x = dca_encoder.collect_encoded_sequences(variants)
-            x, variants = remove_nan_encoded_positions(x, list(variants))
+            x_ = dca_encoder.collect_encoded_sequences(variants)
+            x, variants = remove_nan_encoded_positions(x_, variants)
             x_raw = None
 
         else:
             if threads > 1:
                 dca_encoder = DCAEncoding(couplings_file, verbose=False)
-                print('Parallel encoding (runs DCA encoding silent, '
-                      'no information about non-encoded variant positions)...')
+                logger.info('Parallel encoding (runs DCA encoding silent, '
+                            'no information about non-encoded variant positions)...')
                 # parallel encoding of variants, NaNs are already being removed by the called function
                 variants, x, _ = get_dca_data_parallel(
                     variants, list(np.zeros(len(variants))), dca_encoder, threads
                 )
             else:  # single thread running
                 dca_encoder = DCAEncoding(couplings_file)
-                x = dca_encoder.collect_encoded_sequences(variants)
-                x, variants = remove_nan_encoded_positions(x, list(variants))
+                x_ = dca_encoder.collect_encoded_sequences(variants)
+                x, variants = remove_nan_encoded_positions(x_, variants)
                 x_raw = None
-
-        if not x:
-            return 'skip'
+        if type(x) == list:
+            if not x:
+                return 'skip'
+        elif type(x) == np.ndarray:
+            if not x.any():
+                return 'skip'
 
     assert len(variants) == len(x)
 
@@ -1024,11 +1033,16 @@ def predict(
         else:  # predict AAidx-FFTed or onehot or DCA-based encoding
             ys = loaded_model.predict(x)
     except ValueError:
-        raise ValueError(
+        raise SystemError(
             "If you used an encoding such as onehot, make sure to use the correct model, e.g. -m ONEHOT. "
             "If you used an AAindex-encoded model you likely tried to predict using a model encoded with "
             "(or without) FFT featurization ('--nofft') while the model was trained without (or with) FFT "
             "featurization so check Model_Results.txt line 1, if the models were trained with or without FFT."
+        )
+    except AttributeError:
+        raise SystemError(
+            "The model specified is likely a hybrid or pure statistical DCA (and no pure ML model).\n"
+            "Check the specified model provided via the \'-m\' flag."
         )
 
     predictions = [(float(ys[i]), variants[i]) for i in range(len(ys))]  # List of tuples
@@ -1104,13 +1118,12 @@ def predict_and_plot(
             variants_test, x, y_test = get_dca_data_parallel(variants_test, y_test, dca_encoder, threads)
         else:
             x_ = dca_encoder.collect_encoded_sequences(variants_test)
-            x, variants_test = remove_nan_encoded_positions(copy.copy(x_), variants_test)
-            x, y_test = remove_nan_encoded_positions(copy.copy(x_), y_test)
-            assert len(x) == len(variants_test) == len(y_test)
+            x, variants_test, y_test = remove_nan_encoded_positions(x_, variants_test, y_test)
+        assert len(x) == len(variants_test) == len(y_test)
 
     try:
         file = open(os.path.join(path, 'Pickles', str(model)), 'rb')
-        mod = pickle.load(file)
+        model_ = pickle.load(file)
         file.close()
     except FileNotFoundError:
         raise FileNotFoundError(
@@ -1123,9 +1136,9 @@ def predict_and_plot(
     try:
         # predicting (again) with (re-)loaded model (that was trained on training or full data)
         if no_fft and encoding == 'aaidx':  # predict using raw AAidx encoding
-            y_pred_ = mod.predict(x_raw)
+            y_pred_ = model_.predict(x_raw)
         else:  # predict AAidx-FFTed or onehot or DCA-based encoding
-            y_pred_ = mod.predict(x)
+            y_pred_ = model_.predict(x)
     except ValueError:
         raise ValueError(
             "You likely tried to plot a test set with (or without) "
@@ -1135,7 +1148,6 @@ def predict_and_plot(
         )
     for y_p in y_pred_:
         y_pred.append(float(y_p))
-
     r_squared, rmse, nrmse, pearson_r, spearman_rho = \
         get_performances(y_test, y_pred)
     legend = '$R^2$ = {}\nRMSE = {}\nNRMSE = {}\nPearson\'s $r$ = {}\nSpearman\'s '.format(
@@ -1149,14 +1161,14 @@ def predict_and_plot(
     ax.legend(prop={'size': 8})
     ax.plot(x, x, color='black', linewidth=0.5)  # plot diagonal line
     if label is not False:
-        print('Adjusting variant labels for plotting can take some '
-              'time (the limit for labeling is 150 data points)...')
+        logger.info('Adjusting variant labels for plotting can take some '
+                    'time (the limit for labeling is 150 data points)...')
         if len(y_test) < 150:
             texts = [ax.text(y_test[i], y_pred[i], txt, fontsize=4) for i, txt in enumerate(variants_test)]
             adjust_text(texts, only_move={'points': 'y', 'text': 'y'}, force_points=0.5, lim=250)
         else:
-            print("Terminating label process. Too many variants "
-                  "(> 150) for plotting (labels would overlap).")
+            logger.info("Terminating label process. Too many variants "
+                        "(> 150) for plotting (labels would overlap).")
     if color is not False:
         try:
             y_wt = float(y_wt)
@@ -1230,11 +1242,11 @@ def plot_y_true_vs_y_pred(
     if hybrid:
         spearman_rho = stats.spearmanr(y_true, y_pred)[0]
         ax.scatter(y_true, y_pred, marker='o', s=20, linewidths=0.5, edgecolor='black', alpha=0.7,
-                   label=f'Spearman\'s ' + fr'$\rho$ = {spearman_rho:.3f}')
+                   label=f'Spearman\'s ' + fr'$\rho$ = {spearman_rho:.3f}' + '\n' + fr'($N$ = {len(y_true)})')
         file_name = name + 'DCA_Hybrid_Model_LS_TS_Performance.png'
     else:
         r_squared, rmse, nrmse, pearson_r, spearman_rho = get_performances(
-            y_true=list(y_true), y_pred=list(y_pred)
+            y_true=y_true, y_pred=y_pred
         )
         ax.scatter(
             y_true, y_pred, marker='o', s=20, linewidths=0.5, edgecolor='black', alpha=0.7,
@@ -1243,24 +1255,24 @@ def plot_y_true_vs_y_pred(
                   fr'$\rho$ = {spearman_rho:.3f}' + '\n' + fr'($N$ = {len(y_true)})'
         )
         file_name = name + 'ML_Model_LS_TS_Performance.png'
-    x = np.linspace(min(y_pred), max(y_pred), 100)
-    ax.plot(x, x, color='black', linewidth=0.25)  # plot diagonal line
+        x = np.linspace(min(y_pred), max(y_pred), 100)
+        ax.plot(x, x, color='black', linewidth=0.25)  # plot diagonal line
     ax.legend(prop={'size': 8})
     ax.set_xlabel('Measured')
     ax.set_ylabel('Predicted')
-    print('\nPlotting...')
+    logger.info('Plotting...')
     if label:
-        print('Adjusting variant labels for plotting can take some '
-              'time (the limit for labeling is 150 data points)...')
+        logger.info('Adjusting variant labels for plotting can take some '
+                    'time (the limit for labeling is 150 data points)...')
         if len(y_true) < 150:
             texts = [ax.text(y_true[i], y_pred[i], txt, fontsize=4)
                      for i, txt in enumerate(variants)]
             adjust_text(
                 texts, only_move={'points': 'y', 'text': 'y'}, force_points=0.5, lim=250)
         else:
-            print("Terminating label process. Too many variants "
-                  "(> 150) for plotting (labels would overlap).")
-
+            logger.info("Terminating label process. Too many variants "
+                        "(> 150) for plotting (labels would overlap).")
+    # Uncomment for renaming new plots
     # i = 1
     # while os.path.isfile(file_name):
     #     i += 1  # iterate until finding an unused file name

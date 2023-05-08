@@ -21,6 +21,8 @@
 """
 PyPEF - Pythonic Protein Engineering Framework
 
+written by Niklas Siedhoff and Alexander-Maurice Illig.
+
 Modeling options
 ----------------
     I. Pure ML modeling
@@ -60,8 +62,8 @@ Modeling options
         variant's relative 'evolutionary energy' to the wild type) and DCA-encoding based
         training of a ML model similar to pure ML modeling option I.1.
         Based on features generated from the direct coupling analysis (.params file output
-        by PLMC). Individual model contributions are optimization only based on Spearman's
-        correlation coefficient and thus, only variant fitness ranks are to be considered
+        using the plmc framework). Individual model contributions are optimization only based on
+        Spearman's correlation coefficient and thus, only variant fitness ranks are to be considered
         for evaluating model performance, not the exact predicted fitness value. For regression,
         only L2-regularized linear regression (Ridge regression) is provided as modeling option.
 
@@ -131,8 +133,8 @@ Usage:
     pypef shift_pos --input CSV_FILE --offset OFFSET
         [--sep CSV_COLUMN_SEPARATOR] [--mutation_sep MUTATION_SEPARATOR] [--fitness_key FITNESS_KEY]
     pypef sto2a2m --sto STO_MSA_FILE [--inter_gap INTER_GAP] [--intra_gap INTRA_GAP]
-    pypef hybrid --ls LEARNING_SET --ts TEST_SET --params PLMC_FILE
-        [--label] [--threads THREADS]
+    pypef hybrid --params PLMC_FILE --ts TEST_SET
+        [--ls LEARNING_SET] [--label] [--threads THREADS]
     pypef hybrid --model MODEL --params PLMC_FILE
         [--ts TEST_SET]
         [--figure TS_FOR_PLOTTING] [--label]
@@ -264,18 +266,40 @@ Options:
                                     A2M format [default: False].
 """
 
+from sys import argv, version_info
+from pypef import __version__
+if version_info[0] < 3 or version_info[1] < 9:
+    raise SystemError(f"The current version of PyPEF (v {__version__}) "
+                      f"requires at least Python 3.9 or higher.")
+
+import time
+from datetime import timedelta
+import logging
 
 from docopt import docopt
 from schema import Schema, SchemaError, Optional, Or, Use
 
-from pypef import VERSION
+
 from pypef.ml.run import run_pypef_pure_ml
 from pypef.dca.run import run_pypef_hybrid_modeling
 from pypef.utils.run import run_pypef_utils
 
 
+logger = logging.getLogger("pypef")
+logger.setLevel(logging.INFO)
+
+ch = logging.StreamHandler()
+ch.setLevel(logging.DEBUG)
+
+formatter = logging.Formatter(
+    "%(asctime)s,%(msecs)03d %(levelname)s %(filename)s:%(lineno)d -- %(message)s",
+    "%Y-%m-%d %H:%M:%S"
+)
+ch.setFormatter(formatter)
+logger.addHandler(ch)
+
+
 schema = Schema({
-    # '<name>': str,
     Optional('--all'): bool,
     Optional('--color'): bool,
     Optional('--conc'): bool,
@@ -352,8 +376,11 @@ def validate(args):
 
 
 def run_main():
-    arguments = docopt(__doc__, version=VERSION)
-    # print(arguments)  # uncomment line for printing argument dict
+    arguments = docopt(__doc__, version=__version__)
+    start_time = time.time()
+    logger.debug(f'main.py __name__: {__name__}, version: {__version__}')
+    logger.debug(str(argv)[1:-1].replace("\'", "").replace(",", ""))
+    logger.debug(f'\n{arguments}')
     arguments = validate(arguments)
     if arguments['directevo']:
         run_pypef_utils(arguments)
@@ -363,6 +390,10 @@ def run_main():
         run_pypef_hybrid_modeling(arguments)
     else:
         run_pypef_utils(arguments)
+
+    elapsed = str(timedelta(seconds=time.time()-start_time)).split(".")[0]
+    elapsed = f'{elapsed.split(":")[0]} h {elapsed.split(":")[1]} min {elapsed.split(":")[2]} s'
+    logger.info(f'Done! (Run time: {elapsed})')
 
 
 if __name__ == '__main__':

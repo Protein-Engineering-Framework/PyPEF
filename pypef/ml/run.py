@@ -21,7 +21,8 @@ import os
 from os import listdir
 from os.path import isfile, join
 
-# ray imported later locally as only used for parallelized running, thus commented out:
+import logging
+logger = logging.getLogger('pypef.ml.run')
 import ray
 from pypef.ml.parallelization import aaindex_performance_parallel
 
@@ -65,7 +66,7 @@ def run_pypef_pure_ml(arguments):
                     t_save = 5
                 # Parallelization of AAindex iteration if threads is not None (but int)
                 if threads > 1 and arguments['--encoding'] == 'aaidx':
-                    print(f'Using {threads} threads for parallel computing. Running...')
+                    logger.info(f'Using {threads} threads for parallel computing. Running...')
                     encoding_performance_list = aaindex_performance_parallel(
                         train_set=arguments['--ls'],
                         test_set=arguments['--ts'],
@@ -93,6 +94,7 @@ def run_pypef_pure_ml(arguments):
                     minimum_r2=0.0
                 )
 
+                # save_model encodes variants again (possibly change)
                 save_model(
                     path=path,
                     performance_list=encoding_performance_list,
@@ -121,7 +123,7 @@ def run_pypef_pure_ml(arguments):
                 couplings_file=arguments['--params'],  # only for DCA
                 threads=threads  # only for DCA
             )
-            print('\nCreated plot!\n')
+            logger.info('\nCreated plot!\n')
 
         # Prediction of single .fasta file
         elif arguments['--ps'] is not None and arguments['--model'] is not None:
@@ -174,16 +176,16 @@ def run_pypef_pure_ml(arguments):
                     and arguments['--ddiverse'] is False \
                     and arguments['--tdiverse'] is False \
                     and arguments['--qdiverse'] is False:
-                print('Define prediction target for --pmult, e.g. --pmult --drecomb.')
+                raise SystemError('Define prediction target for --pmult, e.g. --pmult --drecomb.')
 
             for args in recombs_total:
                 predictions_total = []
-                print(f'Running predictions for variant-sequence files in directory {args[1:-1]}...')
+                logger.info(f'Running predictions for variant-sequence files in directory {args[1:-1]}...')
                 path_recomb = path + args
                 os.chdir(path)
                 files = [f for f in listdir(path_recomb) if isfile(join(path_recomb, f)) if f.endswith('.fasta')]
                 for i, file in enumerate(files):
-                    print(f'Encoding files ({i+1}/{len(files)}) for prediction...\n')
+                    logger.info(f'Encoding files ({i+1}/{len(files)}) for prediction...\n')
                     predictions = predict(
                         path=path,
                         prediction_set=file,
@@ -221,5 +223,3 @@ def run_pypef_pure_ml(arguments):
                 encoded_csv=arguments['--input'],
                 cv_regressor=arguments['--regressor']
             )
-
-        print('\nDone!\n')

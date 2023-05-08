@@ -16,8 +16,9 @@
 # *Corresponding author
 # §Equal contribution
 
+from __future__ import annotations
 import os
-import sys
+
 import numpy as np
 import pandas as pd
 
@@ -68,15 +69,17 @@ def path_aaidx_txt_path_from_utils(filename):
 
 
 def get_sequences_from_file(
-        fasta,
-        mult_path=None
-):
+        fasta: str,
+        mult_path: str | None = None
+) -> (np.ndarray, np.ndarray, np.ndarray):
     """
-    "Get_Sequences" reads (learning and test).fasta format
-    files and extracts the name, the target value and the
-    sequence of the peptide. See example directory for required
-    fasta file format. Make sure every marker (> and ;) is
-    seperated by an space ' ' from the value respectively name.
+    "Get_Sequences" reads (learning and test) .fasta and
+    .fasta-like ".fasl" format files and extracts the name,
+    the target value and the sequence of the protein.
+    Only takes one-liner sequences for correct input.
+    See example directory for required fasta file format.
+    Make sure every marker (> and ;) is seperated by a
+    space ' ' from the value respectively name.
     """
     if mult_path is not None:
         os.chdir(mult_path)
@@ -86,60 +89,104 @@ def get_sequences_from_file(
     names_of_mutations = []
 
     with open(fasta, 'r') as f:
+        words = ""
         for line in f:
-            if '>' in line:
+            if line.startswith('>'):
+                if words != "":
+                    sequences.append(words)
                 words = line.split('>')
                 names_of_mutations.append(words[1].strip())
+                words = ""
 
-            elif '#' in line:
+            elif line.startswith('#'):
                 pass  # are comments
 
-            elif ';' in line:
+            elif line.startswith(';'):
+                if words != "":
+                    sequences.append(words)
                 words = line.split(';')
                 values.append(float(words[1].strip()))
+                words = ""
 
             else:
                 try:
-                    words = line.split()
-                    sequences.append(words[0])
+                    words += line.strip()
                 except IndexError:
                     raise IndexError("Learning or Validation sets (.fasta) likely "
                                      "have emtpy lines (e.g. at end of file)")
-
+        if words != "":
+            sequences.append(words)
     # Check consistency
     if len(values) != 0:
         if len(sequences) != len(values):
-            print('Error: Number of sequences does '
-                  'not fit with number of target values!')
-            print('Number of sequences: {}, Number of target values: {}.'.format(
-                str(len(sequences)), str(len(values))))
-            sys.exit()
+            raise SystemError(
+                f'Error: Number of sequences does not fit with number of target values! '
+                f'Number of sequences: {str(len(sequences))}, Number of target values: {str(len(values))}.'
+            )
     if mult_path is not None:
         os.chdir('..')
 
-    return sequences, names_of_mutations, values
+    return np.array(sequences), np.array(names_of_mutations), np.array(values)
 
 
 def remove_nan_encoded_positions(
-        xs: list,
-        ys: list = None
-) -> tuple[list, list]:
+        xs: np.ndarray | list,
+        *yss
+):
     """
     Removes encoded sequence (x) of sequence list xs when NaNs occur in x.
     Also removes the corresponding fitness value y (f(x) --> y) at position i.
     ys can als be any type of list, e.g. variants or sequences.
     """
-    if ys is None:
-        ys = np.zeros(len(xs))
+    if type(xs) == np.ndarray:
+        xs = list(xs)
+    temp = []
+    for ys in yss:
+        try:
+            if isinstance(ys, pd.Series):
+                temp.append(list(ys))
+            elif ys is None:
+                if len(yss) == 1:
+                    temp = (None,)
+                else:
+                    temp.append([None])
+            else:
+                temp.append(list(ys))
+        except ValueError:
+            temp.append(list(ys))
+        except TypeError:
+            temp = (None,)
+    if temp:
+        yss = temp
+    if not yss == () and not yss == (None,):
+        for i, ys in enumerate(yss):
+            assert len(xs) == len(ys), "Number of input sequences to be compared unequal."
+            try:
+                for j, x in enumerate(xs):
+                    if np.shape(np.array(xs, dtype='object'))[1] and np.shape(np.array(ys, dtype='object'))[1]:
+                        assert len(xs[j]) == len(ys[j]), "Length of input sequences to be compared unequal."
+            except IndexError:
+                break
     drop = []
     for i, x in enumerate(xs):
-        if None in x:
-            drop.append(i)
+        try:
+            if None in x:
+                drop.append(i)
+        except TypeError:
+            raise TypeError(
+                "Take lists of lists as input, e.g., for single sequence "
+                "[[1, 2, 3, 4]]."
+            )
     drop = sorted(drop, reverse=True)
     for idx in drop:
         del xs[idx]
-        del ys[idx]
-    return xs, ys
+        if not yss == () and not yss == (None,):
+            for ys in yss:
+                del ys[idx]
+    if len(yss) == 1:
+        return np.array(xs, dtype='object'), np.array(yss[0])
+
+    return np.array(xs, dtype='object'), *np.array(yss, dtype='object')
 
 
 def get_basename(filename: str) -> str:

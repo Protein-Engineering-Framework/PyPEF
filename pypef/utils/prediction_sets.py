@@ -46,7 +46,7 @@ def make_fasta_ps(
         substitution
 ):
     """
-    Creates prediction sets (.fasta style files)
+    Creates prediction sets (.fasta style files, i.e. without fitness values)
     """
     myfile = open(filename, 'w')
     count = 0
@@ -399,5 +399,18 @@ def make_combinations_quadruple_all_diverse(arr, aminoacids):
     quadruples = list(dict.fromkeys(quadruples))
     yield quadruples
 
+
 if __name__ == '__main__':
-    make_recombinations_quintuple((['A86V'], ['T91S'], ['M108Q'], ['A109E'], ['T111P'], ['A86S'], ['T91E'], ['M108L'], ['A109S'], ['T111G'], ['M108R'], ['T111N'], ['T91V'], ['M108T'], ['A109G'], ['T111F'], ['T91A'], ['A109M'], ['A86D'], ['T91R'], ['A109K'], ['T111D'], ['T91Q'], ['A109V'], ['T111S'], ['A86C'], ['T91L'], ['A109T'], ['M108S'], ['A109F'], ['T111L'], ['A86T'], ['A109Q'], ['M108A'], ['A109P'], ['T111Q'], ['A86N'], ['T91Y'], ['A109L'], ['T111A'], ['T91F'], ['A109Y'], ['A86I'], ['A109D'], ['M108K'], ['M108I'], ['T91N'], ['T111C'], ['T91M'], ['T91C'], ['M108P'], ['T111M'], ['T91H'], ['M108C'], ['M108F'], ['M108G'], ['A109N'], ['M108E'], ['A109W'], ['M108W'], ['A109I'], ['T91P'], ['M108H'], ['T91D'], ['A109R'], ['T91I'], ['M108Y'], ['T91G'], ['T91W'], ['A86R'], ['T91K'], ['T111Y'], ['M108D'], ['A86W'], ['M108V'], ['T111I'], ['M108N'], ['A109C'], ['A109H']))
+    k = list(make_recombinations_quintuple((
+        ['A86V'], ['T91S'], ['M108Q'], ['A109E'], ['T111P'], ['A86S'], ['T91E'], ['M108L'], ['A109S'], ['T111G'],
+        ['M108R'], ['T111N'], ['T91V'], ['M108T'], ['A109G'], ['T111F'], ['T91A'], ['A109M'], ['A86D'], ['T91R'],
+        ['A109K'], ['T111D'], ['T91Q'], ['A109V'], ['T111S'], ['A86C'], ['T91L'], ['A109T'], ['M108S'], ['A109F'],
+        ['T111L'], ['A86T'], ['A109Q'], ['M108A'], ['A109P'], ['T111Q'], ['A86N'], ['T91Y'], ['A109L'], ['T111A'],
+        ['T91F'], ['A109Y'], ['A86I'], ['A109D'], ['M108K'], ['M108I'], ['T91N'], ['T111C'], ['T91M'], ['T91C'],
+        ['M108P'], ['T111M'], ['T91H'], ['M108C'], ['M108F'], ['M108G'], ['A109N'], ['M108E'], ['A109W'], ['M108W'],
+        ['A109I'], ['T91P'], ['M108H'], ['T91D'], ['A109R'], ['T91I'], ['M108Y'], ['T91G'], ['T91W'], ['A86R'],
+        ['T91K'], ['T111Y'], ['M108D'], ['A86W'], ['M108V'], ['T111I'], ['M108N'], ['A109C'], ['A109H']
+    )))
+    for i, k_ in enumerate(k):
+        print(i + 1, np.shape(k_))
+    # (10 * 80,000 (* 5)) + (1 * 2503 (* 5))

@@ -19,6 +19,9 @@
 
 import os
 import random
+import logging
+logger = logging.getLogger('pypef.utils.low_n_mutation_extrapolation')
+
 import pandas as pd
 import numpy as np
 from scipy import stats
@@ -57,7 +60,7 @@ def plot_low_n(
     """
     Plot the performance results of the low N engineering task.
     """
-    print('\nPlotting...\n')
+    logger.info('Plotting...')
     plt.plot(train_sizes, avg_spearmanr, 'ko--', linewidth=1, markersize=1.5)
     plt.fill_between(
         np.array(train_sizes),
@@ -94,9 +97,10 @@ def low_n(
     if cv_regressor:
         name = 'ml_' + cv_regressor
         if cv_regressor == 'pls_loocv':
-            raise SystemError('PLS LOOCV is not (yet) implemented '
-                              'for the extrapolation task. Please choose'
-                              'another CV regressor.')
+            raise SystemError(
+                'PLS LOOCV is not (yet) implemented for the extrapolation task. '
+                'Please choose another CV regression option.'
+            )
         regressor = cv_regression_options(cv_regressor)
     elif hybrid_modeling:
         name = 'hybrid_ridge'
@@ -106,6 +110,8 @@ def low_n(
 
     avg_spearmanr, stddev_spearmanr = [], []
     # test_sizes = [n_variants - size for size in train_sizes]
+    if hybrid_modeling:
+        logger.info('Using first CSV row/entry as wild type reference...')
     for size in tqdm(train_sizes):
         spearmanr_nruns = []
         for _ in range(n_runs):
@@ -127,7 +133,8 @@ def low_n(
                     X_wt=x_wt
                 )
                 beta_1, beta_2, reg = hybrid_model.settings(
-                    X_train, y_train, train_size_fit=train_size_train)
+                    X_train, y_train, train_size_fit=train_size_train
+                )
                 spearmanr_nruns.append(
                     hybrid_model.spearmanr(
                         y_test,
@@ -187,10 +194,10 @@ def count_mutation_levels_and_get_dfs(df_encoding) -> tuple:
                 higher_nine_i.append(i)
         else:
             single_variants_index.append(i)
-    print(f'No. Singles: {len(single_variants_index)}\nNo. All higher: {len(all_higher_variants_index)}\n'
-          f'2: {len(double_i)}\n3: {len(triple_i)}\n4: {len(quadruple_i)}\n'
-          f'5: {len(quintuple_i)}\n6: {len(sextuple_i)}\n7: {len(septuple_i)}\n'
-          f'8: {len(octuple_i)}\n9: {len(nonuple_i)}\n>=10: {len(higher_nine_i)}')
+    logger.info(f'\nNo. Singles: {len(single_variants_index)}\nNo. All higher: {len(all_higher_variants_index)}\n'
+                f'2: {len(double_i)}\n3: {len(triple_i)}\n4: {len(quadruple_i)}\n'
+                f'5: {len(quintuple_i)}\n6: {len(sextuple_i)}\n7: {len(septuple_i)}\n'
+                f'8: {len(octuple_i)}\n9: {len(nonuple_i)}\n>=10: {len(higher_nine_i)}')
     return (
         df_encoding.iloc[single_variants_index, :],
         df_encoding.iloc[double_i, :],
@@ -278,10 +285,10 @@ def performance_mutation_extrapolation(
                 open(os.path.join('Pickles', 'HYBRID_LVL_1'), 'wb')
             )
         elif cv_regressor:
-            print('Fitting regressor on lvl 1 substitution data...')
+            logger.info('Fitting regressor on lvl 1 substitution data...')
             regressor.fit(X_train, y_train)
             if save_model:
-                print(f'Saving model as Pickle file: ML_LVL_1')
+                logger.info(f'Saving model as Pickle file: ML_LVL_1')
                 pickle.dump(regressor, open(os.path.join('Pickles', 'ML_LVL_1'), 'wb'))
         for i, _ in enumerate(tqdm(collected_levels)):
             if i < len(collected_levels) - 1:  # not last i else error, last entry is: lvl 1 --> all higher variants
@@ -393,7 +400,7 @@ def plot_extrapolation(
     """
     Plot extrapolation results.
     """
-    print('\nPlotting...\n')
+    logger.info('Plotting...')
     test_lvls, spearman_rhos, label_infos = [], [], []
     for test_lvl, result_dict in extrapolation_data.items():
         if result_dict['spearman_rho'] is np.nan:

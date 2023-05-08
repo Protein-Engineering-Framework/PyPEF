@@ -39,6 +39,8 @@ Mutation effects predicted from sequence co-variation. Nature Biotechnology, in 
 
 
 from collections.abc import Iterable  # originally imported 'from collections'
+import logging
+logger = logging.getLogger('pypef.dca.encoding')
 
 import numpy as np
 import ray
@@ -47,7 +49,7 @@ from pypef.utils.variant_data import amino_acids
 
 
 _SLICE = np.s_[:]
-np.warnings.filterwarnings('error', category=np.VisibleDeprecationWarning)
+# np.warnings.filterwarnings('error', category=np.VisibleDeprecationWarning)  # DEV
 
 class InvalidVariantError(Exception):
     """
@@ -73,7 +75,7 @@ class InvalidVariantError(Exception):
         super().__init__(self.message)
 
 
-class ActiveSiteError(Exception):
+class EffectiveSiteError(Exception):
     """
     Description
     -----------
@@ -93,10 +95,10 @@ class ActiveSiteError(Exception):
         self.position = position
         self.variant = variant
         self.verbose = verbose
-        message = f"Info: The position {self.position} of variant '{self.variant}' is " \
+        message = f"The position {self.position} of variant '{self.variant}' is " \
                   f"not an effective site in the DCA model and thus cannot be predicted."
         if self.verbose:
-            print(message)
+            logger.info(message)
             self.message = message
             super().__init__(self.message)
 
@@ -285,19 +287,16 @@ class CouplingsModel:
             self.wt_aa_pos = []
             for aa, pos in zip(self._target_seq, self.index_list):
                 self.wt_aa_pos.append(str(aa) + str(pos))
-            print(f'Evaluating gap content of PLMC parameter file... '
+            logger.info(f'Evaluating gap content of PLMC parameter file... '
                   f'First amino acid position used in the MSA (PLMC params file) is '
                   f'{self._target_seq[0]}{self.index_list[0]} and the last position '
                   f'used is {self._target_seq[-1]}{self.index_list[-1]}.')
             if len(not_valid) > 0:
-                print(f'\nFurther, non-included positions are:')
-                print(str(not_valid)[1:-1])
+                logger.info(f'Further, non-included positions are:\n{str(not_valid)[1:-1]}')
             if self.verbose:
-                    print(f'\nSummary of all effective positions represented in the MSA '
-                          f'based on wild-type sequence ({len(valid)} encoded positions):')
-                    for aa_pos in self.wt_aa_pos:
-                        print(f'{aa_pos}', end=' ')
-                    print('\n')
+                    logger.info(f'Summary of all effective positions represented in the MSA '
+                                f'based on wild-type sequence ({len(valid)} encoded positions):\n'
+                                f'{str([aa_pos for aa_pos in self.wt_aa_pos])[1:-1]}'.replace("'", ""))
 
             # single site frequencies f_i and fields h_i
             self.f_i, = np.fromfile(
@@ -372,11 +371,8 @@ class CouplingsModel:
             Length of sequence must correspond to model length (self.L)
         """
         if len(sequence) != self.L:
-            raise ValueError(
-                "Sequence length inconsistent with model length: {} {}".format(
-                    len(sequence), self.L
-                )
-            )
+            raise ValueError(f"Sequence length inconsistent with model length: {len(sequence)} {self.L}")
+
 
         if isinstance(sequence, str):
             sequence = list(sequence)
@@ -405,11 +401,7 @@ class CouplingsModel:
             Length of list must correspond to model length (self.L)
         """
         if len(mapping) != self.L:
-            raise ValueError(
-                "Mapping length inconsistent with model length: {} {}".format(
-                    len(mapping), self.L
-                )
-            )
+            raise ValueError(f"Mapping length inconsistent with model length: {len(mapping)} {self.L}")
 
         self._index_list = np.array(mapping)
         self.index_map = {b: a for a, b in enumerate(self.index_list)}
@@ -430,9 +422,7 @@ class CouplingsModel:
         """
         if ((isinstance(indices, Iterable) and not isinstance(indices, str)) or
                 (isinstance(indices, str) and len(indices) > 1)):
-            return np.array(
-                [mapping[i] for i in indices]
-            )
+            return np.array([mapping[i] for i in indices])
         else:
             return mapping[indices]
 
@@ -461,6 +451,7 @@ class CouplingsModel:
         j = self.__map(j, self.index_map) if j is not None else _SLICE
         A_i = self.__map(A_i, self.alphabet_map) if A_i is not None else _SLICE
         A_j = self.__map(A_j, self.alphabet_map) if A_j is not None else _SLICE
+
         return matrix[i, j, A_i, A_j]
 
     def __2d_access(self, matrix, i=None, A_i=None):
@@ -482,6 +473,7 @@ class CouplingsModel:
         """
         i = self.__map(i, self.index_map) if i is not None else _SLICE
         A_i = self.__map(A_i, self.alphabet_map) if A_i is not None else _SLICE
+
         return matrix[i, A_i]
 
     def Jij(self, i=None, j=None, A_i=None, A_j=None):
@@ -570,6 +562,7 @@ class DCAEncoding(CouplingsModel):
         Ji = 0.0
         for j, A_j in zip(self.index_list, sequence):
             Ji += self.Jij(i=i, A_i=A_i, j=j, A_j=A_j)
+
         return Ji
 
     @staticmethod
@@ -633,7 +626,7 @@ class DCAEncoding(CouplingsModel):
 
             i = self._get_position_internal(position)
             if not i:
-                raise ActiveSiteError(position, variant, self.verbose)
+                raise EffectiveSiteError(position, variant, self.verbose)
 
             self.check_substitution_naming_against_wt(substitution, variant)
             i_mapped = self.index_map[i]
@@ -645,7 +638,7 @@ class DCAEncoding(CouplingsModel):
 
         return X_var
 
-    def collect_encoded_sequences(self, variants: list) -> list:
+    def collect_encoded_sequences(self, variants: list) -> np.ndarray:
         """
         Description
         -----------
@@ -677,10 +670,10 @@ class DCAEncoding(CouplingsModel):
         for i, variant in enumerate(tqdm(variants, disable=set_silence)):
             try:
                 encoded_sequences.append(self.encode_variant(variant))
-            except ActiveSiteError:
+            except EffectiveSiteError:
                 encoded_sequences.append([None])
 
-        return encoded_sequences
+        return np.array(encoded_sequences, dtype='object')
 
 
 """
@@ -711,7 +704,7 @@ def get_encoded_sequence(
     """
     try:
         encoded_seq = dca_encode.encode_variant(variant)
-    except ActiveSiteError:  # position not included in processed MSA
+    except EffectiveSiteError:  # position not included in processed MSA
         return
 
     return encoded_seq
@@ -748,8 +741,9 @@ def _get_data_parallel(
     for i, (variant, fitness) in enumerate(zip(variants, fitnesses)):
         try:
             data.append([variant, dca_encode.encode_variant(variant), fitness])
-        except ActiveSiteError:  # do not append non-encoded sequences and
+        except EffectiveSiteError:  # do not append non-encoded sequences and
             pass                 # associated fitness values
+
     return data
 
 
@@ -785,12 +779,12 @@ def get_dca_data_parallel(
         List of variant names that cannot be used for modelling as they are not effective
         positions in the underlying MSA used for generating local and coupling terms.
     """
-    print(f'{len(variants)} input variants.')
-    print(f'Encoding variant sequences. This might take some time...')
+    logger.info(f'{len(variants)} input variants. Encoding variant sequences. '
+                f'This might take some time...')
 
     idxs_nan = np.array([i for i, b in enumerate(np.isnan(fitnesses)) if b])  # find fitness NaNs
     if idxs_nan.size > 0:  # remove NaNs if present
-        print('Fitness NaNs are:', idxs_nan)
+        logger.info(f'Fitness NaNs are: {idxs_nan}')
         fitnesses = np.delete(fitnesses, idxs_nan)
         variants = np.delete(variants, idxs_nan)
 
@@ -810,7 +804,7 @@ def get_dca_data_parallel(
     encoded_sequences = [item[1] for item in data]
     fitnesses = [item[2] for item in data]
 
-    print(f'{len(data)} variants after NaN-valued and non-effective '
-          f'site-substituted variant (ActiveSiteError) dropping.')
+    logger.info(f'{len(data)} variants after NaN-valued and non-effective '
+                f'site-substituted variant (EffectiveSiteError) dropping.')
 
     return variants, encoded_sequences, fitnesses

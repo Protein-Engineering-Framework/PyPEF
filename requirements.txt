@@ -1,4 +1,4 @@
-numpy<1.24.0
+numpy
 pandas
 tqdm
 docopt
@@ -8,4 +8,4 @@ adjustText
 scikit-learn
 biopython
 schema
-ray[default]<2.0.0
+ray[default]

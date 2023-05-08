@@ -16,8 +16,8 @@
 # *Corresponding author
 # §Equal contribution
 
-
-import copy
+import logging
+logger = logging.getLogger('pypef.dca.run')
 import ray
 
 from pypef.utils.variant_data import read_csv, remove_nan_encoded_positions
@@ -31,8 +31,8 @@ def run_pypef_hybrid_modeling(arguments):
     threads = threads + 1 if threads == 0 else threads
     if threads > 1:
         ray.init()
-        print(f'Using {threads} threads for running...')
-    print(
+        logger.info(f'Using {threads} threads for running...')
+    logger.info(
         f"Note that the hybrid model only optimizes model performances in terms of "
         f"Spearman's correlation of measured versus predicted values. Further, the "
         f"hybrid approach uses only Ridge regression for supervised ML-based hybrid "
@@ -40,7 +40,7 @@ def run_pypef_hybrid_modeling(arguments):
         f"important and not the exact predicted value."
     )
 
-    if arguments['--ls']:
+    if arguments['--ts']:
         performance_ls_ts(
             ls_fasta=arguments['--ls'],
             ts_fasta=arguments['--ts'],
@@ -49,7 +49,8 @@ def run_pypef_hybrid_modeling(arguments):
             separator=arguments['--mutation_sep']
         )
 
-    if arguments['--params'] and arguments['--model']:
+
+    elif arguments['--params'] and arguments['--model']:
         prediction_dict = {}
         prediction_dict.update({
             'drecomb': arguments['--drecomb'],
@@ -66,7 +67,7 @@ def run_pypef_hybrid_modeling(arguments):
             params_file=arguments['--params'],
             threads=threads,
             separator=arguments['--mutation_sep'],
-            hybrid_model_data_pkl=arguments['--model'],
+            model_pickle_file=arguments['--model'],
             test_set=arguments['--ts'],
             prediction_set=arguments['--ps'],
             figure=arguments['--figure'],
@@ -74,7 +75,7 @@ def run_pypef_hybrid_modeling(arguments):
             negative=arguments['--negative']
         )
 
-    if arguments['train_and_save']:
+    elif arguments['train_and_save']:
         dca_encode = DCAEncoding(
             params_file=arguments['--params'],
             separator=arguments['--mutation_sep'],
@@ -92,8 +93,7 @@ def run_pypef_hybrid_modeling(arguments):
             )
         else:  # Single thread, requires deletion of NaNs
             encoded_sequences_ = dca_encode.collect_encoded_sequences(variants)
-            encoded_sequences, variants = remove_nan_encoded_positions(copy.copy(encoded_sequences_), variants)
-            encoded_sequences, fitnesses = remove_nan_encoded_positions(copy.copy(encoded_sequences_), fitnesses)
+            encoded_sequences, variants, fitnesses = remove_nan_encoded_positions(encoded_sequences_, variants, fitnesses)
         assert len(encoded_sequences) == len(variants) == len(fitnesses)
 
         generate_model_and_save_pkl(
@@ -105,7 +105,7 @@ def run_pypef_hybrid_modeling(arguments):
             random_state=arguments['--rnd_state']
         )
 
-    if arguments['low_n'] or arguments['extrapolation']:
+    elif arguments['low_n'] or arguments['extrapolation']:
         if arguments['low_n']:
             low_n(
                 encoded_csv=arguments['--input'],
@@ -119,4 +119,11 @@ def run_pypef_hybrid_modeling(arguments):
                 hybrid_modeling=arguments['hybrid']
             )
 
-    print('\nDone!\n')
+    else:
+        performance_ls_ts(
+            ls_fasta=arguments['--ls'],
+            ts_fasta=arguments['--ts'],
+            threads=threads,
+            params_file=arguments['--params'],
+            separator=arguments['--mutation_sep']
+        )

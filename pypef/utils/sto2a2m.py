@@ -16,6 +16,8 @@
 # *Corresponding author
 # §Equal contribution
 
+import logging
+logger = logging.getLogger('pypef.utils.sto2a2m')
 import numpy as np
 from tqdm import tqdm
 from Bio import AlignIO
@@ -35,9 +37,9 @@ def convert_sto2a2m(
     a2m_file = f"{sto_file.split('.sto')[0]}.a2m"
 
     # Load the stockholm alignment
-    print('Loading MSA in stockholm format...')
+    logger.info('Loading MSA in stockholm format...')
     sto_alignment = AlignIO.read(sto_file, 'stockholm')
-    print('Trimming MSA...')
+    logger.info('Trimming MSA...')
     # Save this 'raw' multiple sequence alignment as numpy array 
     raw_msa = []
     for record in tqdm(sto_alignment):
@@ -81,9 +83,9 @@ def convert_sto2a2m(
     # Get number of sequences and effective sites in the alignment
     n_seqs = msa_final.shape[0]
     n_sites = sum(1 for char in msa_final[0] if char.isupper())
-    print(f'Generated trimmed MSA {a2m_file} in A2M format:')
-    print(f'No. of sequences: {n_seqs}')
-    print(f'No. of effective sites: {n_sites} (out of {target_len} sites)')
-    print(f'-le --lambdae: {0.2 * (n_sites - 1):.1f}')
+    logger.info(f'Generated trimmed MSA {a2m_file} in A2M format:\n'
+                f'No. of sequences: {n_seqs}\n'
+                f'No. of effective sites: {n_sites} (out of {target_len} sites)\n'
+                f'-le --lambdae: {0.2 * (n_sites - 1):.1f}')
 
     return n_seqs, n_sites, target_len

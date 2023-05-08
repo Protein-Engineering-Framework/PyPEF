@@ -24,6 +24,7 @@ similar as presented by Biswas et al.
 import os
 import re
 import random
+
 import matplotlib.pyplot as plt
 import numpy as np
 import warnings
@@ -320,7 +321,7 @@ class DirectedEvolution:
             for j, v in enumerate(v_record):      # j = 1, 2, 3, ..., ; v = variant name; y_records[i][j] = fitness
                 if len(v_record) > traj_max_len:
                     traj_max_len = len(v_record)
-                if i == 0:                      # j + 1 -> x axis position shifted by 1
+                if i == 0:                      # j + 1 -> x-axis position shifted by 1
                     label_x_y_name.append(ax.text(j + 1, y_records_[i][j], v, size=9))
                 else:
                     if v != 'WT':  # only plot 'WT' name once at i == 0

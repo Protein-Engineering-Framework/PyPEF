@@ -8,7 +8,6 @@ Encoding of sequences is not parallelized in this script.
 import os
 import pandas as pd
 import numpy as np
-from copy import copy
 from scipy.stats import spearmanr
 from tqdm import tqdm
 import matplotlib.pyplot as plt
@@ -21,7 +20,6 @@ from pypef.ml.regression import (
     path_aaindex_dir, full_aaidx_txt_path
 )
 from pypef.dca.hybrid_model import DCAHybridModel
-
 
 # avGFP wild type sequence
 wt_sequence = 'MSKGEELFTGVVPILVELDGDVNGHKFSVSGEGEGDATYGKLTLKFICTTGKLPVPWPTL' \
@@ -37,7 +35,7 @@ wt_sequence = 'MSKGEELFTGVVPILVELDGDVNGHKFSVSGEGEGDATYGKLTLKFICTTGKLPVPWPTL' \
 # the test performance with the other encoding techniques to be tested, we start with
 # DCA and split the variant fitness data so that sizes of the data sets are same for
 # all encoding techniques tested.
-print('\nRunning script... which takes ~ 4h in total...\n\nTesting DCA-based sequence encoding...')
+print('\nRunning script... which takes ~ 4h in total...\n\n(1/4) Testing DCA-based sequence encoding...\n' + "=" * 50)
 try:
     dca_encoder = DCAEncoding(
         params_file='./test_dataset_avgfp/uref100_avgfp_jhmmer_119_plmc_42.6.params',
@@ -48,12 +46,21 @@ except (ValueError, FileNotFoundError):
         os.mkdir('test_dataset_avgfp')
     print('Did not find required files for DCA-based encoding. Downloading required files...')
     import urllib.request
+    from hashlib import sha256
     # Single substituted encoded variants: CSV files including variant name and true fitness
     url = 'https://github.com/Protein-Engineering-Framework/PyPEF/raw/master/workflow/test_dataset_avgfp/avGFP.csv'
     urllib.request.urlretrieve(url, './test_dataset_avgfp/avGFP.csv')
+    with open('./test_dataset_avgfp/avGFP.csv', 'rb') as f:
+        sha256_hash = sha256(f.read()).hexdigest()
+    if not sha256_hash == 'be4623f35a5ba05d33a29ae6e69dc3c2e994e3c9092cd5880a8d0bbc12f187b1':
+        raise SystemError("Hash of downloaded CSV file not correct, terminating further running.")
     # Getting plmc parameter file
     url = 'https://github.com/niklases/PyPEF/raw/main/workflow/test_dataset_avgfp/uref100_avgfp_jhmmer_119_plmc_42.6.params'
     urllib.request.urlretrieve(url, './test_dataset_avgfp/uref100_avgfp_jhmmer_119_plmc_42.6.params')  # File size: 71.2 MB
+    with open('./test_dataset_avgfp/uref100_avgfp_jhmmer_119_plmc_42.6.params', 'rb') as f:
+        sha256_hash = sha256(f.read()).hexdigest()
+    if not sha256_hash == '8baa30bc7d568906d4b587d4c6babd025041bf2f967f303fa38070d2df339830':
+        raise SystemError("Hash of downloaded DCA parameter file not correct, terminating further running.")
     print('Successfully downloaded all required files!')
     dca_encoder = DCAEncoding(
         params_file='./test_dataset_avgfp/uref100_avgfp_jhmmer_119_plmc_42.6.params',
@@ -62,8 +69,8 @@ except (ValueError, FileNotFoundError):
 
 variant_fitness_data = pd.read_csv('./test_dataset_avgfp/avGFP.csv', sep=';')  # loading the avGFP dataset
 
-variants = variant_fitness_data.iloc[:2000, 0]  # "just" using 2000 variants for faster processing
-fitnesses = variant_fitness_data.iloc[:2000, 1].tolist()
+variants = variant_fitness_data.iloc[:2000, 0].values  # "just" using 2000 variants for faster processing
+fitnesses = variant_fitness_data.iloc[:2000, 1].values
 
 # Splitting in sets for training (fitting and hyperparameter validation) and testing
 # Change number of applied splits for training and testing here, default: n_splits = 5
@@ -74,9 +81,9 @@ train_val_splits_indices, test_splits_indices = [], []
 
 x_dca_ = dca_encoder.collect_encoded_sequences(variants)
 # removing not DCA-encodable positions (and also fitnesses, variants, and sequences)
-x_dca, fitnesses = remove_nan_encoded_positions(copy(x_dca_), fitnesses)
-_, variants = remove_nan_encoded_positions(copy(x_dca_), variants)
+x_dca, fitnesses, variants = remove_nan_encoded_positions(x_dca_, fitnesses, variants)  # from the 2000, 1427 remain
 
+# Split double and higher substituted variants to multiple single substitutions separated by '/'
 variants_split = []
 for variant in variants:
     variants_split.append(variant.split('/'))
@@ -120,7 +127,7 @@ print('-'*80 + f'\n{n_splits}-fold mean Spearmans rho (ML)= {np.mean(ten_split_p
 
 # 2nd example: AAindex encoding over all 566 amino acid descriptor sets
 # -------------------------------------------------------------------------------
-print('\n\nTesting AAindex-based sequence encoding...')
+print('\n\n(2/4) Testing AAindex-based sequence encoding...\n' + "=" * 50)
 spearmans_rhos_aaidx, aa_index = [], []
 # e.g., looping over the 566 AAindex entries, encode with each AAindex and test performance
 # which can be seen as a AAindex hyperparameter search on the test set, i.e.,
@@ -136,13 +143,14 @@ for index, aaindex in enumerate(aa_indices):
         print(f'Skipped AAindex {aaindex}')
         continue
     for i, indices in enumerate(train_val_splits_indices):
+        print(f'\rSplit {i+1}/{len(train_val_splits_indices)}', end='')
         x_train_val = np.array(x_aaidx_no_fft)[indices]
         y_train_val = np.array(fitnesses)[indices]
         x_test = np.array(x_aaidx_no_fft)[test_splits_indices[i]]
         y_test = np.array(fitnesses)[test_splits_indices[i]]
         performances = get_regressor_performances(x_train_val, x_test, y_train_val, y_test, regressor='ridge')
         ten_split_performance.append(performances[4])
-    print(f'{index + 1}/{len(aa_indices)}: AAindex {aaindex}, '
+    print(f'\r{index + 1}/{len(aa_indices)}: AAindex {aaindex}, '
           f'{n_splits}-fold mean Spearmans rho = {np.mean(ten_split_performance):.3f} '
           f'+- {np.std(ten_split_performance, ddof=1):.3f}')
     mean_perfromances.append(np.mean(ten_split_performance))
@@ -159,7 +167,7 @@ print('-'*80 + f'\nBest {n_splits}-fold mean Spearmans rho = {max_value:.3f} '
 
 # 3rd example: OneHot encoding
 # -------------------------------------------------------------------------------
-print('\nTesting OneHot sequence encoding...')
+print('\n(3/4) Testing OneHot sequence encoding...\n' + "=" * 50)
 onehot_encoder = OneHotEncoding(sequences)
 x_onehot = onehot_encoder.collect_encoded_sequences()
 ten_split_performance = []
@@ -186,8 +194,7 @@ fitnesses = variant_fitness_data.iloc[:, 1].tolist()
 
 x_dca_ = dca_encoder.collect_encoded_sequences(variants)
 # removing not DCA-encodable positions (and also reduce fitnesses, variants, and sequences accordingly)
-x_dca, fitnesses = remove_nan_encoded_positions(copy(x_dca_), fitnesses)
-_, variants = remove_nan_encoded_positions(copy(x_dca_), variants)
+x_dca, fitnesses, variants = remove_nan_encoded_positions(x_dca_, fitnesses, variants)
 
 variants_split = []
 for variant in variants:
@@ -209,7 +216,7 @@ all_mean_performances_dca, all_mean_performances_hybrid, \
     all_mean_performances_aaidx, all_mean_performances_onehot = [], [], [], []
 all_stddevs_dca, all_stddevs_hybrid, all_stddevs_aaidx, all_stddevs_onehot = [], [], [], []
 low_n_train = np.arange(50, 1001, 50)
-print(f'Testing low N performance, with N_train = {list(low_n_train)}...')
+print(f'\n(4/4) Testing low N performance (with N_train = {list(low_n_train)})...\n' + "=" * 50)
 for n_train in tqdm(low_n_train):
     performances_dca, performances_hybrid, performances_aaidx, performances_onehot = [], [], [], []
     for rnd_state in [42, 213, 573, 917, 823]:
@@ -218,7 +225,7 @@ for n_train in tqdm(low_n_train):
         performances_dca.append(get_regressor_performances(
             x_dca_train, x_dca_test, y_train, y_test, regressor='ridge')[4])  # [4] defines spearmanr
 
-        x_wt = dca_encoder.collect_encoded_sequences(['A110A'])
+        x_wt = dca_encoder.collect_encoded_sequences(['A110A'])  # A110A defines wild type (at an encodeable position)
         hybrid_model = DCAHybridModel(X_train=x_dca_train, y_train=y_train, X_wt=x_wt)
         beta_1, beta_2, hybrid_regressor = hybrid_model.settings(X_train=x_dca_train, y_train=y_train)
         y_hybrid_pred = hybrid_model.hybrid_prediction(X=x_dca_test, reg=hybrid_regressor, beta_1=beta_1, beta_2=beta_2)
@@ -269,4 +276,4 @@ plt.legend()
 plt.xlabel(r'$N_\mathrm{Train}$')
 plt.ylabel(r'$\rho$')
 plt.savefig('low_N_avGFP_extrapolation.png', dpi=500)
-print('\nDone!')
+print('\nDone! See created figure \'low_N_avGFP_extrapolation.png\'.')

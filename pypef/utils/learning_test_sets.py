@@ -36,6 +36,9 @@ VARIANT_SEQUENCE_2
 ...
 """
 
+import logging
+logger = logging.getLogger('pypef.utils.learning_test_sets')
+
 import numpy as np
 import random
 import pandas as pd
@@ -55,8 +58,8 @@ def get_wt_sequence(sequence_fasta):
                 lines = ''.join(lines.split())
                 wild_type_sequence += lines
     except FileNotFoundError:
-        raise FileNotFoundError("Specify input FASTA sequence file for "
-                                "getting the wild-type sequence.")
+        raise FileNotFoundError("Did not find FASTA file. Check/specify input FASTA "
+                                "sequence file for getting the wild-type sequence.")
     return wild_type_sequence
 
 
@@ -127,8 +130,8 @@ def drop_rows(
             raise TypeError('You might consider checking the input .csv for empty first two columns,'
                             ' e.g. in the last row.')
 
-    print(f'No. of dropped rows: {len(dropping_rows)}. '
-          f'Total given variants (if provided plus WT): {len(df_raw)}')
+    logger.info(f'No. of dropped rows: {len(dropping_rows)}. '
+                f'Total given variants (if provided plus WT): {len(df_raw)}')
 
     df = df_raw.drop(dropping_rows)
     df.dropna(inplace=True)
@@ -226,10 +229,12 @@ def get_variants(
                 single_variants.append([full_variant])
                 if i not in index_lower:
                     index_lower.append(i)
-    print('Single (for mklsts if provided plus WT): {}.'.format(single), 'Double: {}.'.format(double),
-          'Triple: {}.'.format(triple), 'Quadruple: {}.'.format(quadruple), 'Quintuple: {}.'.format(quintuple),
-          'Sextuple: {}.'.format(sextuple), 'Septuple: {}.'.format(septuple), 'Octuple: {}.'.format(octuple),
-          'Nonuple: {}.'.format(nonuple), 'Decuple: {}.'.format(decuple), 'Higher: {}.'.format(higher))
+    logger.info(
+        '\nSingle (for mklsts if provided plus WT): {}\nDouble: {}\nTriple: {}\nQuadruple: {}\nQuintuple: {}\n'
+        'Sextuple: {}\nSeptuple: {}\nOctuple: {}\nNonuple: {}\nDecuple: {}\nHigher (>Decuple): {}'.format(
+            single, double, triple, quadruple, quintuple, sextuple, septuple, octuple, nonuple, decuple, higher
+        )
+    )
     for vals in y[index_higher]:
         higher_values.append(vals)
     for vals in y[index_lower]:
@@ -254,19 +259,20 @@ def make_sub_ls_ts(
     Creates learning and test sets, fills learning set with single substituted variants and splits
     rest (higher substituted) for learning and test sets: 3/4 to LS and 1/4 to TS
     """
-    print('No. of single substituted variants (if provided plus WT): {}.'.format(len(single_variants)),
-          'No. of values: {}'.format(len(single_values)))
-    print('No. of higher substituted variants: {}.'.format(len(higher_variants)),
-          'No. of values: {}'.format(len(higher_values)))
+    logger.info(f'No. of single substituted variants (if provided plus WT): {len(single_variants)}.'
+                f'No. of values: {len(single_values)}.')
+    logger.info(f'No. of higher substituted variants: {len(higher_variants)}. '
+                f'No. of values: {len(higher_values)}.')
 
     if len(single_values) != len(single_variants):
-        print('Error due to different lengths for given variants and label!'
-              ' No. of single substituted variants: {}.'.format(len(single_variants)),
-              ' Number of given values: {}.'.format(len(single_values)))
+        logger.info(f'Error due to different lengths for given variants and label! '
+                    'No. of single substituted variants: {len(single_variants)}. '
+                    'Number of given values: {len(single_values)}.')
 
     if len(higher_values) != len(higher_variants):
-        print('Error due to different lengths for given variants and label! No. of higher subst. variants: {}.'
-              .format(len(higher_variants)), ' Number of given values: {}.'.format(len(higher_values)))
+        logger.info(f'Error due to different lengths for given variants and label! '
+                    f'No. of higher subst. variants: {len(higher_variants)}. '
+                    f'Number of given values: {len(higher_values)}.')
 
     # 1. CREATION OF LS AND TS SPLIT FOR SINGLE FOR LS AND HIGHER VARIANTS FOR TS
     all_variants = single_variants + higher_variants
@@ -352,9 +358,9 @@ def make_sub_ls_ts_randomly(
     for subs in sub_ls:
         for subs2 in sub_ts:
             if subs == subs2:
-                print('\n<Warning> LS and TS overlap for: {} - '
-                      'You might want to consider checking the provided '
-                      'datasets for multiple entries'.format(subs), end=' ')
+                logger.warning(f'\n<Warning> LS and TS overlap for: {subs} - '
+                               f'You might want to consider checking the provided '
+                               f'datasets for multiple entries')
 
     tot_sub_ls.append(sub_ls)
     tot_values_ls.append(values_ls)
@@ -371,14 +377,15 @@ def make_fasta_ls_ts(
         fitness_values
 ):
     """
-    Creates learning and test sets (.fasta style files)
+    Creates learning and test sets (.fasta style-like files with fitness values
+    indicated by starting semicolon ';')
 
     filename: str
         String for defining the filename for the learning and test set "fasta-like" files.
     wt: str
         Wild-type sequence as string
     substitutions: list
-        List of substiutuions of a single variant of the format:
+        List of substitutions of a single variant of the format:
             - Single substitution variant, e.g. variant A123C: ['A123C']
             - Higher variants, e.g. variant A123C/D234E/F345G: ['A123C', 'D234E, 'F345G']
             --> Full substitutions list, e.g.: [['A123C'], ['A123C', 'D234E, 'F345G']]
@@ -406,7 +413,7 @@ def make_fasta_ls_ts(
         print(f'>{name}', file=myfile)
         print(f';{fitness_values[i]}', file=myfile)
         print(''.join(temp), file=myfile)
-        # print(name+';'+str(val[i])+';'+''.join(temp), file=myfile)  # output: CSV format
+        # print(name+';'+str(val[i])+';'+''.join(temp), file=myfile)  # uncomment output: CSV format
     myfile.close()
 
 
