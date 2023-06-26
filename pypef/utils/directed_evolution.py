@@ -21,6 +21,8 @@ Modules for performing random evolution walks
 similar as presented by Biswas et al.
 """
 
+
+from __future__ import annotations
 import os
 import re
 import random
@@ -29,6 +31,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import warnings
 from adjustText import adjust_text
+import logging
+logger = logging.getLogger('pypef.utils.directed_evolution')
 
 from pypef.ml.regression import predict
 from pypef.dca.hybrid_model import predict_directed_evolution
@@ -53,11 +57,11 @@ class DirectedEvolution:
             temp: float,
             path: str,
             model: str = None,
-            no_fft=False,
-            dca_encoder=None,
-            usecsv=False,
-            csvaa=False,
-            negative=False
+            no_fft: bool = False,
+            dca_encoder: str | None = None,
+            usecsv: bool = False,
+            csvaa: bool = False,
+            negative: bool = False
     ):
         """
         Runs in silico directed evolution and plots and writes trajectories.
@@ -92,8 +96,8 @@ class DirectedEvolution:
             Loaded Pickle file for regression/hybrid modeling.
         no_fft: bool
             If True, not using FFT for AAindex-based encoding
-        dca_encoder = None or DCAEncoding object
-            dca_encoder = DCAEncoding(
+        dca_encoder = None or PLMC object
+            dca_encoder = PLMC(
                   params_file=arguments['--plmc_params'],
                   separator=arguments['--sep']
             )
@@ -121,7 +125,6 @@ class DirectedEvolution:
         self.usecsv = usecsv
         self.csvaa = csvaa
         self.negative = negative
-
         self.de_step_counter = 0  # DE steps
         self.traj_counter = 0  # Trajectory counter
 
@@ -217,6 +220,7 @@ class DirectedEvolution:
         y_traj.append(self.y_wt)
         s_traj.append(self.s_wt)
         accepted = 0
+        logger.info(f"Step 0: WT --> {self.y_wt:.3f}")
         for iteration in range(self.num_iterations):  # num_iterations
             self.de_step_counter = iteration
 
@@ -240,21 +244,26 @@ class DirectedEvolution:
                 predictions = predict(  # AAidx, OneHot, or DCA-based pure ML prediction
                     path=self.path,
                     model=self.model,
-                    encoding=self.encoding,
+                    encoding=self.encoding,  # TODO: check names/rename
                     variants=np.atleast_1d(new_full_variant),
                     sequences=np.atleast_1d(new_sequence),
                     no_fft=self.no_fft,
-                    dca_encoder=self.dca_encoder
+                    couplings_file=self.dca_encoder
                 )
 
             else:  # hybrid modeling and prediction
                 predictions = predict_directed_evolution(
                     encoder=self.dca_encoder,
                     variant=self.s_wt[int(new_variant[:-1]) - 1] + new_variant,
+                    sequence=new_sequence,
                     hybrid_model_data_pkl=self.model
                 )
-
-            if predictions == 'skip':  # skip if variant cannot be encoded by DCA-based encoding technique
+            if predictions != 'skip':
+                logger.info(f"Step {self.de_step_counter + 1}: "
+                            f"{self.s_wt[int(new_variant[:-1]) - 1]}{new_variant} --> {predictions[0][0]:.3f}")
+            else:  # skip if variant cannot be encoded by DCA-based encoding technique
+                logger.info(f"Step {self.de_step_counter + 1}: "
+                            f"{self.s_wt[int(new_variant[:-1]) - 1]}{new_variant} --> {predictions}")
                 continue
             new_y, new_var = predictions[0][0], predictions[0][1]  # new_var == new_variant nonetheless
             # probability function for trial sequence
@@ -308,7 +317,7 @@ class DirectedEvolution:
         # Idea: Standardizing DCA-HybridModel predictions as just trained by Spearman's rho
         # e.g., meaning that fitness values could differ only at the 6th decimal place and only
         # predicted fitness ranks matter and not associated fitness values
-        fig, ax = plt.subplots()  # figsize=(10, 6)
+        fig, ax = plt.subplots(figsize=(10,6))  # figsize=(10, 6)
         ax.locator_params(integer=True)
         y_records_ = []
         for i, fitness_array in enumerate(y_records):
@@ -322,16 +331,17 @@ class DirectedEvolution:
                 if len(v_record) > traj_max_len:
                     traj_max_len = len(v_record)
                 if i == 0:                      # j + 1 -> x-axis position shifted by 1
-                    label_x_y_name.append(ax.text(j + 1, y_records_[i][j], v, size=9))
+                    label_x_y_name.append(ax.text(j + 1, y_records_[i][j], v, size=7))
                 else:
                     if v != 'WT':  # only plot 'WT' name once at i == 0
-                        label_x_y_name.append(ax.text(j + 1, y_records_[i][j], v, size=9))
-        adjust_text(label_x_y_name, only_move={'points': 'y', 'text': 'y'}, force_points=0.5)
+                        label_x_y_name.append(ax.text(j + 1, y_records_[i][j], v, size=7))
+        adjust_text(label_x_y_name, only_move={'points': 'y', 'text': 'y'}, force_points=0.6)
         ax.legend()
         plt.xticks(np.arange(1,  traj_max_len + 1, 1), np.arange(1, traj_max_len + 1, 1))
 
         plt.ylabel('Predicted fitness')
         plt.xlabel('Mutation trial steps')
+        plt.tight_layout()
         plt.savefig(str(self.model) + '_DE_trajectories.png', dpi=500)
         plt.clf()
 

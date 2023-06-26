@@ -18,6 +18,7 @@
 
 import logging
 logger = logging.getLogger('pypef.utils.sto2a2m')
+
 import numpy as np
 from tqdm import tqdm
 from Bio import AlignIO
@@ -31,7 +32,10 @@ def convert_sto2a2m(
     """
     Converts alignment in format STO to A2M format.
     Removes specific sequences with inter and/or intra gaps
-    over specific thresholds.
+    over specific thresholds. More alignment type transferring
+    options can be performed using the reformat.pl script of the
+    HH-suite; (c) Johannes Soeding, 2012:
+    https://github.com/soedinglab/hh-suite/blob/master/scripts/reformat.pl
     """
     # Generate the a2m output filename
     a2m_file = f"{sto_file.split('.sto')[0]}.a2m"

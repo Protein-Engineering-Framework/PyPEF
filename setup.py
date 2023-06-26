@@ -11,7 +11,7 @@ with open("requirements.txt", "r", encoding="utf-8") as install_requirements:
 
 setup(
     name='pypef',
-    version='0.2.4',
+    version='0.3',
     author='Niklas Siedhoff & Alexander-Maurice Illig',
     author_email='n.siedhoff@biotec.rwth-aachen.de',
     license='CC BY-NC-SA 4.0',

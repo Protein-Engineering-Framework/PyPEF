@@ -17,4 +17,4 @@
 # §Equal contribution
 
 
-__version__ = '0.2.4-alpha'
+__version__ = '0.3-alpha'

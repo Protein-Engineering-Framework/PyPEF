@@ -2,7 +2,7 @@ This repository contains the source files and supplementary information for the 
 
 Niklas E. Siedhoff<sup>*1,§*</sup>, Alexander-Maurice Illig<sup>*1,§*</sup>, Ulrich Schwaneberg<sup>*1,2*</sup>, Mehdi D. Davari<sup>*3,\**</sup>, <br>
 PyPEF – An Integrated Framework for Data-Driven Protein Engineering, *J. Chem. Inf. Model.* 2021, 61, 3463-3476 <br>
-https://doi.org/10.1021/acs.jcim.1c00099<br>
+https://doi.org/10.1021/acs.jcim.1c00099 <br>
 
 as well as additional framework features described in the preprint<br>
 
@@ -35,8 +35,15 @@ Preprint available at bioRxiv: https://doi.org/10.1101/2022.06.07.495081.
 
 <a name="pypef"></a>
 # PyPEF: Pythonic Protein Engineering Framework
+[![PyPI version](https://img.shields.io/pypi/v/PyPEF?color=blue)](https://pypi.org/project/pypef/)
+[![Python version](https://img.shields.io/pypi/pyversions/PyPEF)](https://www.python.org/downloads/)
 
-a framework written in Python 3 for performing sequence-based machine learning-assisted protein engineering to predict a protein's fitness from its sequence. Written by Niklas Siedhoff and Alexander-Maurice Illig.
+a framework written in Python 3 for performing sequence-based machine learning-assisted protein engineering to predict a protein's fitness from its sequence using different forms of sequence encoding:
+- One-hot encoding
+- Amino acid descriptor sets (taken from AAindex database) encoding
+- Direct coupling analysis (amino acid coevolution based on multiple sequence alignments) encoding
+
+Written by Niklas Siedhoff and Alexander-Maurice Illig.
 
 <p align="center">
     <img src="workflow/test_dataset_aneh/exemplary_validation_color_plot.png" alt="drawing" width="500"/>
@@ -65,22 +72,39 @@ After successful installation, PyPEF should work by calling `pypef` in the shell
 pypef --help
 ```
 
-The detailed routine for setting up a new virtual environment with Anaconda, installing the necessary Python packages for that environment, and running the Jupyter notebook tutorial can be found below in the Tutorial section. Further, executable files for running PyPEF on a single core are available at https://github.com/Protein-Engineering-Framework/PyPEF/releases/tag/v0.2.3-alpha.
+The detailed routine for setting up a new virtual environment with Anaconda, installing the necessary Python packages for that environment, and running the Jupyter notebook tutorial can be found below in the Tutorial section.
 
 <a name="requirements"></a>
 ## Requirements
 - Python >=3.9
-    - numpy
-    - pandas
-    - tqdm
-    - docopt
-    - matplotlib
+    - numpy 
     - scipy
-    - adjustText
+    - pandas
     - scikit-learn
+    - tensorflow 
+    - ray[default]
+    - matplotlib
+    - tqdm
     - biopython
     - schema
-    - ray[default] (<2.0.0)
+    - docopt
+    - adjustText
+
+If errors occur with third-party packages, you can check the required Python version dependencies (if available); also, as a rule of thumb, it is often helpful to use the second most recent Python version instead of the latest, since development for the latest version is often ongoing:
+
+[![Python version](https://img.shields.io/pypi/pyversions/numpy?label=numpy%3A%20python)](https://github.com/numpy/numpy)
+[![Python version](https://img.shields.io/pypi/pyversions/scipy?label=scipy%3A%20python)](https://github.com/scipy/scipy)
+[![Python version](https://img.shields.io/pypi/pyversions/pandas?label=pandas%3A%20python)](https://github.com/pandas-dev/pandas)
+[![Python version](https://img.shields.io/pypi/pyversions/scikit-learn?label=scikit-learn%3A%20python)](https://github.com/scikit-learn/scikit-learn)
+[![Python version](https://img.shields.io/pypi/pyversions/tensorflow?label=tensorflow%3A%20python)](https://github.com/tensorflow/tensorflow)
+[![Python version](https://img.shields.io/pypi/pyversions/ray?label=ray%3A%20python)](https://github.com/ray-project/ray)
+[![Python version](https://img.shields.io/pypi/pyversions/matplotlib?label=matplotlib%3A%20python)](https://github.com/matplotlib/matplotlib)
+[![Python version](https://img.shields.io/pypi/pyversions/tqdm?label=tqdm%3A%20python)](https://github.com/tqdm/tqdm)
+[![Python version](https://img.shields.io/pypi/pyversions/biopython?label=biopython%3A%20python)](https://github.com/biopython/biopython)
+[![Python version](https://img.shields.io/pypi/pyversions/schema?label=schema%3A%20python)](https://github.com/keleshev/schema)
+[![Python version](https://img.shields.io/pypi/pyversions/docopt?label=docopt%3A%20python)](https://github.com/docopt/docopt)
+[![Python version](https://img.shields.io/pypi/pyversions/adjusttext?label=adjusttext%3A%20python)](https://github.com/Phlya/adjustText)
+
 
 <a name="examples"></a>
 ## Running Examples
@@ -106,7 +130,7 @@ pypef ml --show
 
 Load a trained model, predict fitness of test sequences using that model, and plot the measured versus the predicted fitness values:
 ```
-pypef ml -e aaidx -m MODEL -f TEST_SET.FASL
+pypef ml -e aaidx -m MODEL -t TEST_SET.FASL
 ```
 `-m MODEL`is the saved model Pickle file name, for `-e aaidx` this will be the AAindex to use for encoding, e.g. `-m ARGP820101`, for `-e onehot` it will be `-m ONEHOTMODEL` and for `-e dca` it will be `-m DCAMODEL`.
 
@@ -137,6 +161,7 @@ pypef encode -i VARIANT-FITNESS_DATA.CSV -w WT_SEQUENCE.FASTA -e aaidx
 ```
 
 Using the created variant-encoded sequence-fitness CSV file for a simulated "low *N*" engineering task:
+
 ```
 pypef ml low_n -i VARIANT-FITNESS-ENCODING_DATA.CSV --regressor pls
 ```
@@ -152,14 +177,32 @@ The use of the hybrid model (`pypef hybrid`) - instead of a pure ML model (`pype
 pypef hybrid -l LEARNING_SET.FASL -t TEST_SET.FASL --params PLMC_FILE.params
 ``` 
 
-Sample files for testing PyPEF routines are provided in the workflow directory, which are also used when running the notebook tutorial. PyPEF's package dependencies are linked [here](https://github.com/Protein-Engineering-Framework/PyPEF/network/dependencies).
+Also, it is now possible to infer DCA model parameters using [GREMLIN](https://www.pnas.org/doi/10.1073/pnas.1314045110)'s [TensorFlow implementation](https://github.com/sokrypton/GREMLIN_CPP/blob/master/GREMLIN_TF.ipynb) and a generated MSA in FASTA or A2M format:
+
+```
+pypef param_inference --msa MSA.fasta -w WT_SEQUENCE.FASTA --opt_iter 250
+``` 
+
+For getting coupling information and highly evolved amino acids:
+```
+pypef save_msa_info --msa MSA.fasta -w WT_SEQUENCE.FASTA --opt_iter 250
+```
+
+Using saved GREMLIN model for testing:
+
+```
+pypef hybrid -l LEARNING_SET.FASL -t TEST_SET.FASL --params GREMLIN
+``` 
+
+
+Sample files for testing PyPEF routines are provided in the workflow directory, which are also used when running the notebook tutorial. PyPEF's package dependencies are linked [here](https://github.com/niklases/PyPEF/network/dependencies).
 Further, for designing your own API based on the PyPEF workflow, modules can be adapted from the [source code](/pypef).
 
 As standard input files, PyPEF requires the target protein wild-type sequence in [FASTA](https://en.wikipedia.org/wiki/FASTA) format and variant-fitness data in [CSV](https://en.wikipedia.org/wiki/Comma-separated_values) format to split the collected variant-fitness data in learning and test sets that resemble the aligned FASTA format and additionally contain lines indicating the fitness of each corresponding variant (see [ANEH sample files](workflow/test_dataset_aneh), [avGFP sample files](workflow/test_dataset_avgfp), and [MERGE SSM & DMS files](https://github.com/Protein-Engineering-Framework/MERGE/tree/main/Data/_variant_fitness_wtseq)).
 
 <a name="tutorial"></a>
 ## Tutorial
-Before starting running the tutorial, it is a good idea to set-up a new Python environment using Anaconda, https://www.anaconda.com/, e.g. using [Anaconda](https://www.anaconda.com/products/individual) ([Anaconda3-2020.11-Linux-x86_64.sh installer download](https://repo.anaconda.com/archive/Anaconda3-2020.11-Linux-x86_64.sh)) or [Miniconda](https://docs.conda.io/en/latest/miniconda.html).
+Before starting running the tutorial, it is a good idea to set up a new Python environment using Anaconda, https://www.anaconda.com/, e.g. using [Anaconda](https://www.anaconda.com/products/individual) ([Anaconda3-2020.11-Linux-x86_64.sh installer download](https://repo.anaconda.com/archive/Anaconda3-2020.11-Linux-x86_64.sh)) or [Miniconda](https://docs.conda.io/en/latest/miniconda.html).
 Change to the download directory and run the installation, e.g. in Linux:
 
 ```
@@ -167,7 +210,7 @@ bash Anaconda3-2020.11-Linux-x86_64.sh
 ```
 
 After accepting all steps, the conda setup should also be written to your `~/.bashrc`file, so that you can call anaconda typing `conda`.
-Next, to download this repository click Code > Download ZIP and unzip the zipped file, e.g. with `unzip PyPEF-master.zip`, or just clone this repository using your bash shell to your local machine `git clone https://github.com/Protein-Engineering-Framework/PyPEF`.
+Next, to download this repository click Code > Download ZIP and unzip the zipped file, e.g. with `unzip PyPEF-master.zip`, or just clone this repository using your bash shell to your local machine `git clone https://github.com/niklases/PyPEF`.
 To setup a new environment with conda you can either create the conda environment from the provided YAML file inside the PyPEF directory (`cd PyPEF` or `cd PyPEF-master` dependent on the downloaded file name and chose YAML file for your operating system):
 
 ```
@@ -225,7 +268,7 @@ Copy the notebook URL in your internet browser and select the Workflow_PyPEF.ipy
      &nbsp;&nbsp;&nbsp;&nbsp;0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, <br>
      &nbsp;&nbsp;&nbsp;&nbsp;0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0&nbsp;]<br>
     
-- DCA: Direct coupling analysis of multiple sequence alignments to extract evolutionary query-specific features. DCA-based features will be generated from the local and coupling terms of the parameter file (paramfile) output by [plmc](https://github.com/debbiemarkslab/plmc) for each target variant sequence. This encoding technique generally outperforms the other encoding techniques described here, but depends on finding and aligning a minimum set of evolutionarily related/homologous sequences - which is not possible for every target sequence. Preprocessing steps for generating the paramfile based on a target sequence are described in the [hybrid model repository](https://github.com/Protein-Engineering-Framework/Hybrid_Model/blob/main/Examples/example_pabp.ipynb). Unlike the other encoding techniques presented, this evolution-based encoding technique is system-specific rather than amino acid-specific, i.e., it does not treat each amino acid the same, but according to its evolutionary position- and coupling-specific history. The DCA-based encoding technique is further also provided for constructing a pure ML model:<br> 
+- DCA: Direct coupling analysis of multiple sequence alignments to extract evolutionary query-specific features. DCA-based features will be generated from the local and coupling terms of the parameter file (paramfile) output by [plmc](https://github.com/debbiemarkslab/plmc) for each target variant sequence. This encoding technique generally outperforms the other encoding techniques described here, but depends on finding and aligning a minimum set of evolutionarily related/homologous sequences - which is not possible for every target sequence. Preprocessing steps for generating the paramfile based on a target sequence are described in the [hybrid model repository](https://github.com/Protein-Engineering-Framework/Hybrid_Model/blob/main/Examples/example_pabp.ipynb). Unlike the other encoding techniques presented, this evolution-based encoding technique is system-specific rather than amino acid-specific, i.e. it does not treat each amino acid the same, but according to its evolutionary position- and coupling-specific history. The DCA-based encoding technique is further also provided for constructing a pure ML model:<br> 
   &nbsp;&nbsp;sequence 'MKLLF' --> [2.3445, 1.3294, 1.6245, 0.8901, 3.2317]&nbsp;&nbsp;, while<br>
   &nbsp;&nbsp;sequence 'MKLKF' --> [2.3472, 1.3601, 1.5431, 1.3749, 3.0186]&nbsp;&nbsp;.  
 
@@ -268,7 +311,7 @@ The following model hyperparameter ranges are tested during (*k*-fold) cross-val
 PyPEF was developed to be run from a command-line interface while `python3 ./pypef/main.py` (when using the downloaded version of this repository and setting the `PYTHONPATH`) is equal to `pypef` when installed with pip. 
 Downloading/cloning the repository files (manually or with `wget`/`git clone`):<br>
 ```
-wget https://github.com/Protein-Engineering-Framework/PyPEF/archive/refs/heads/master.zip
+wget wget https://github.com/Protein-Engineering-Framework/PyPEF/archive/refs/heads/master.zip
 ```
 
 Unzipping the zipped file (manually or e.g. with `unzip`):
@@ -312,42 +355,57 @@ python3 ./pypef/main.py
 ## Preprocessing for DCA-based Sequence Encoding
 
 1. Downloading sequence database (e.g. UniRef100):
-```
-wget https://ftp.uniprot.org/pub/databases/uniprot/uniref/uniref100/uniref100.fasta.gz
-```
+   ```
+   wget https://ftp.uniprot.org/pub/databases/uniprot/uniref/uniref100/uniref100.fasta.gz
+   ```
 
 2. Extracting sequence database:
-```
-gunzip uniref100.fasta.gz
-```
+   ```
+   gunzip uniref100.fasta.gz
+   ```
 
 3. After [installing jackhmmer as part of the HMMER package](http://hmmer.org/documentation.html), construct an MSA for your target sequence provided in FASTA format (and for example set `--incT` to half the sequence length (0.5*L*) and the number of used CPUs for computing):
-```
-jackhmmer --incT 199 --cpu 16 --noali -A ANEH_jhmmer.sto Sequence_WT_ANEH.fasta /path/to/uniref100.fasta
-```
+   ```
+   jackhmmer --incT 199 --cpu 16 --noali -A ANEH_jhmmer.sto Sequence_WT_ANEH.fasta /path/to/uniref100.fasta
+   ```
 
 4. Convert the created MSA from [Stockholm](https://en.wikipedia.org/wiki/Stockholm_format) (.sto) format to [A2M](https://en.wikipedia.org/wiki/FASTA_format#Extensions) format:
-```
-pypef sto2a2m --sto ANEH_jhmmer.sto
-```
+   ```
+   pypef sto2a2m --sto ANEH_jhmmer.sto
+   ```
+   
+5. Now you can follow approaches 5.1 (using GREMLIN; implemented in TensorFlow) or 5.2 (using plmc; extern parameter generation in C). 
 
-5. After [installing plmc](https://github.com/debbiemarkslab/plmc#compilation), generate the evolutionary coupling file, which is used for encoding sequences. For example, set `-le` to the value output by `sto2a2m`:
-```
-plmc -o ANEH_72.6.params -le 72.6 -m 100 -g -f WT_ANEH ANEH_jhmmer.a2m
-```
+    5.1. Running GREMLIN on the generated MSA (in FASTA or A2M format):
+    ```
+    pypef param_inference --msa ANEH_jhmmer.a2m -w WT_SEQUENCE.FASTA --opt_iter 250
+    ```
+    The pickled GREMLIN file can then be used for encoding new/test sequences:
+    ```
+    pypef ml -e dca -l LS.fasl -t TS.fasl --regressor pls --params GREMLIN
+    ```
+    Or for hybrid modeling:
+    ```
+    pypef hybrid -l LS.fasl -t TS.fasl --params GREMLIN
+    ```
 
-Done! The output parameter (.params) file can be used for encoding sequences with the DCA-based encoding technique (`-e dca`) by providing it to PyPEF; e.g. for pure ML modeling: 
-```
-pypef ml -e dca -l LS.fasl -t TS.fasl --regressor pls --params ANEH_72.6.params
-```
-Or for hybrid modeling:
-```
-pypef hybrid -l LS.fasl -t TS.fasl --params ANEH_72.6.params
-```
+    5.2 After [installing plmc](https://github.com/debbiemarkslab/plmc#compilation), generate the evolutionary coupling file, which is used for encoding sequences. For example, set `-le` to the value output by `sto2a2m`:
+    ```
+    plmc -o ANEH_72.6.params -le 72.6 -m 100 -g -f WT_ANEH ANEH_jhmmer.a2m
+    ```
+    
+    The output parameter (.params) file can be used for encoding sequences with the DCA-based encoding technique (`-e dca`) by providing it to PyPEF; e.g. for pure ML modeling:
+    ```
+    pypef ml -e dca -l LS.fasl -t TS.fasl --regressor pls --params ANEH_72.6.params
+    ```
+    Or for hybrid modeling:
+    ```
+    pypef hybrid -l LS.fasl -t TS.fasl --params ANEH_72.6.params
+    ```
 
 <a name="api-usage"></a>
 ## API Usage for Sequence Encoding
-For script-based encoding of sequences using PyPEF and the available AAindex-, OneHot- or DCA-based techniques, the classes and corresponding functions can be imported, i.e. `OneHotEncoding`, `AAIndexEncoding`, `DCAEncoding`, and `DCAHybridModel`. In addition, implemented functions for CV-based tuning of regression models can be used to train and validate models, eventually deriving them to obtain performances on retained data for testing. An exemplary script for CV-based (low-*N*) tuning of models and using them for testing is provided at [workflow/api_encoding_train_test.py](workflow/api_encoding_train_test.py).
+For script-based encoding of sequences using PyPEF and the available AAindex-, OneHot- or DCA-based techniques, the classes and corresponding functions can be imported, i.e. `OneHotEncoding`, `AAIndexEncoding`, `GREMLIN` (DCA),  `PLMC` (DCA), and `DCAHybridModel`. In addition, implemented functions for CV-based tuning of regression models can be used to train and validate models, eventually deriving them to obtain performances on retained data for testing. An exemplary script for CV-based (low-*N*) tuning of models and using them for testing is provided at [workflow/api_encoding_train_test.py](workflow/api_encoding_train_test.py).
 
 <p align="center">
     <img src="workflow/low_N_avGFP_extrapolation.png" alt="drawing" width="500"/>

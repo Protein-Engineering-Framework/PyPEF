@@ -18,7 +18,6 @@
 
 from __future__ import annotations
 import os
-
 import numpy as np
 import pandas as pd
 
@@ -29,6 +28,26 @@ amino_acids = [
     'M', 'N', 'P', 'Q', 'R',
     'S', 'T', 'V', 'W', 'Y'
 ]
+
+
+def get_wt_sequence(sequence_fasta):
+    """
+    Gets wild-type sequence from defined input file (can be pure sequence or fasta style)
+    """
+    if sequence_fasta is None:
+        return None
+    wild_type_sequence = ""
+    try:
+        with open(sequence_fasta, 'r') as sf:
+            for lines in sf.readlines():
+                if lines.startswith(">"):
+                    continue
+                lines = ''.join(lines.split())
+                wild_type_sequence += lines
+    except FileNotFoundError:
+        raise FileNotFoundError("Did not find FASTA file. Check/specify input FASTA "
+                                "sequence file for getting the wild-type sequence.")
+    return wild_type_sequence
 
 
 def read_models(number):
@@ -136,13 +155,13 @@ def remove_nan_encoded_positions(
     """
     Removes encoded sequence (x) of sequence list xs when NaNs occur in x.
     Also removes the corresponding fitness value y (f(x) --> y) at position i.
-    ys can als be any type of list, e.g. variants or sequences.
+    ys can also be any type of list, e.g. variants or sequences.
     """
-    if type(xs) == np.ndarray:
-        xs = list(xs)
+    xs = list(xs)
     temp = []
     for ys in yss:
         try:
+            ys = list(np.atleast_1d(ys))
             if isinstance(ys, pd.Series):
                 temp.append(list(ys))
             elif ys is None:
@@ -151,11 +170,15 @@ def remove_nan_encoded_positions(
                 else:
                     temp.append([None])
             else:
-                temp.append(list(ys))
+                if type(ys) == np.ndarray:
+                    if np.array(ys).ndim == 0:
+                        temp.append([list(np.atleast_1d(ys).tolist())])
+                    else:
+                        temp.append(list(np.atleast_1d(ys).tolist()))
+                else:
+                    temp.append(list(ys))
         except ValueError:
             temp.append(list(ys))
-        except TypeError:
-            temp = (None,)
     if temp:
         yss = temp
     if not yss == () and not yss == (None,):
@@ -205,6 +228,59 @@ def get_basename(filename: str) -> str:
         os.path.basename (filename) string without filename extension
     """
     return os.path.basename(filename).split('.')[0]
+
+
+def get_seqs_from_var_name(
+        wt_seq,
+        substitutions,
+        fitness_values
+) -> tuple[list, list, list]:
+    """
+    Similar to function above but just returns sequences
+
+    wt: str
+        Wild-type sequence as string
+    substitutions: list
+        List of substiutuions of a single variant of the format:
+            - Single substitution variant, e.g. variant A123C: ['A123C']
+            - Higher variants, e.g. variant A123C/D234E/F345G: ['A123C', 'D234E, 'F345G']
+            --> Full substitutions list, e.g.: [['A123C'], ['A123C', 'D234E, 'F345G']]
+    fitness_values: list
+        List of ints/floats of the variant fitness values, e.g. for two variants: [1.4, 0.8]
+    """
+    variant, values, sequences = [], [], []
+    for i, var in enumerate(substitutions):  # var are lists of (single or multiple) substitutions
+        temp = list(wt_seq)
+        name = ''
+        separation = 0
+        if var == ['WT']:
+            name = 'WT'
+        else:
+            for single_var in var:  # single entries of substitution list
+                position_index = int(str(single_var)[1:-1]) - 1
+                new_amino_acid = str(single_var)[-1]
+                temp[position_index] = new_amino_acid
+                # checking if multiple entries are inside list
+                if separation == 0:
+                    name += single_var
+                else:
+                    name += '/' + single_var
+                separation += 1
+        variant.append(name)
+        values.append(fitness_values[i])
+        sequences.append(''.join(temp))
+
+    return variant, values, sequences
+
+
+def split_variants(variants, sep='/'):
+    """
+    Splits variants according to mutation separator.
+    """
+    variants_splitted = []
+    for variant in variants:
+        variants_splitted.append(variant.split(sep))
+    return variants_splitted
 
 
 def read_csv(
@@ -285,10 +361,10 @@ def generate_dataframe_and_save_csv(
         Dataframe with variant names, fitness values, and features (encoded sequences).
         If save_df_as_csv is True also writes DF to CSV.
     """
-    X = np.stack(sequence_encodings)
+    x = np.stack(sequence_encodings)
     feature_dict = {}            # Collecting features for each MSA position i
-    for i in range(X.shape[1]):  # (encoding at pos. i) in a dict
-        feature_dict[f'X{i + 1:d}'] = X[:, i]
+    for i in range(x.shape[1]):  # (encoding at pos. i) in a dict
+        feature_dict[f'X{i + 1:d}'] = x[:, i]
 
     df_dca = pd.DataFrame()
     df_dca.insert(0, 'variant', variants)
@@ -325,6 +401,7 @@ def process_df_encoding(df_encoding) -> tuple[np.ndarray, np.ndarray, np.ndarray
 def read_csv_and_shift_pos_ints(
         infile: str,
         offset: int = 0,
+        col_sep: str = ';',
         substitution_sep: str = '/',
         target_column: int = 1
 ):
@@ -333,12 +410,17 @@ def read_csv_and_shift_pos_ints(
     CSV file and saves the position-shifted variants with the corresponding fitness
     values to a new CSV file.
     """
-    df = pd.read_csv(infile, sep=';', comment='#')
+    df = pd.read_csv(infile, sep=col_sep, comment='#')
     if df.shape[1] == 1:
         df = pd.read_csv(infile, sep=',', comment='#')
     if df.shape[1] == 1:
         df = pd.read_csv(infile, sep='\t', comment='#')
-    df = df.dropna(subset=df.columns[[target_column]])  # if specific column has a NaN drop entire row
+    try:
+        df = df.dropna(subset=df.columns[[target_column]])  # if specific column has a NaN drop entire row
+    except IndexError:
+        raise IndexError("Did only detect a single column which might indicate a missing "
+                         "target value column / a wrong specification of the CSV column "
+                         "spearator character (e.g., --sep \';\').")
 
     column_1 = df.iloc[:, 0]
     column_2 = df.iloc[:, target_column].to_numpy()
@@ -356,7 +438,7 @@ def read_csv_and_shift_pos_ints(
             new_variant = ''
             for i, v in enumerate(split_vars_list):
                 if i != len(split_vars_list) - 1:
-                    new_variant += f'{v}{substitution_sep}'
+                    new_variant += f'{v}/'  # substitution_sep replaced by '/'
                 else:
                     new_variant += v
             new_col.append(new_variant)
@@ -367,4 +449,4 @@ def read_csv_and_shift_pos_ints(
 
     data = np.array([new_col, column_2]).T
     new_df = pd.DataFrame(data, columns=['variant', 'fitness'])
-    new_df.to_csv(infile[:-4] + '_' + df.columns[target_column] + infile[-4:], sep=';', index=False)
+    new_df.to_csv(infile[:-4] + '_new' + infile[-4:], sep=';', index=False)

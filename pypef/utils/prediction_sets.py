@@ -43,14 +43,14 @@ from tqdm import tqdm
 def make_fasta_ps(
         filename,
         wt,
-        substitution
+        substitutions
 ):
     """
     Creates prediction sets (.fasta style files, i.e. without fitness values)
     """
     myfile = open(filename, 'w')
     count = 0
-    for i, var in enumerate(substitution):
+    for i, var in enumerate(substitutions):
         temporary = list(wt)
         name = ''
         separation = 0
@@ -240,7 +240,7 @@ def create_split_files(
         no
 ):
     """
-    Creates split files from given variants for yielded recombined or diverse variants
+    Creates split files from given variants for yielded recombined or diverse variants.
     """
     if len(array) > 0:
         number_of_split_files = len(array) / (len(single_variants) * 20 ** 3)
@@ -256,6 +256,19 @@ def create_split_files(
         os.chdir(pwd)
 
         return ()
+
+
+def make_ssm_singles(wt_seq, aminoacids):
+    """
+    Making diverse single-saturation mutagenesis dataset, i.e., all
+    19 amino acid substitutions at each wild-type sequence position.
+    """
+    ssm_singles = []
+    for i, aa_wt in enumerate(wt_seq):
+        for aa in aminoacids:
+            if aa_wt != aa:
+                ssm_singles.append([f'{aa_wt}{i+1}{aa}'])
+    return ssm_singles
 
 
 def make_combinations_double_all_diverse(arr, aminoacids):

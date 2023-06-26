@@ -16,7 +16,6 @@
 # *Corresponding author
 # §Equal contribution
 
-
 import os
 import random
 import logging
@@ -126,11 +125,11 @@ def low_n(
             if hybrid_modeling:
                 x_wt = X[0]  # WT should be first CSV variant entry
                 hybrid_model = DCAHybridModel(
-                    X_train=X_train,
+                    x_train=X_train,
                     y_train=y_train,
-                    X_test=X_test,  # only used for adjusting +/- sign of y_dca, can also be None
+                    x_test=X_test,  # only used for adjusting +/- sign of y_dca, can also be None
                     y_test=y_test,  # only used for adjusting +/- sign of y_dca, can also be None
-                    X_wt=x_wt
+                    x_wt=x_wt
                 )
                 beta_1, beta_2, reg = hybrid_model.settings(
                     X_train, y_train, train_size_fit=train_size_train
@@ -271,11 +270,11 @@ def performance_mutation_extrapolation(
         if hybrid_modeling:
             x_wt = X_train[0]
             hybrid_model = DCAHybridModel(
-                X_train=X_train,
+                x_train=X_train,
                 y_train=y_train,
-                X_test=X_all_higher,  # only used for adjusting +/- of y_dca, can also be None but
+                x_test=X_all_higher,  # only used for adjusting +/- of y_dca, can also be None but
                 y_test=y_all_higher,  # higher risk of wrong sign assignment of beta_1 (y_dca)
-                X_wt=x_wt
+                x_wt=x_wt
             )
             beta_1, beta_2, reg = hybrid_model.settings(
                 X_train, y_train, train_size_fit=train_size)
@@ -428,5 +427,6 @@ def plot_extrapolation(
         name += '_train_lvl_1'
     plt.xticks(test_lvls, label_infos, fontsize=5)
     plt.ylabel(r"Spearman's $\rho$")
-    plt.savefig(name + '_extrapolation.png', dpi=500)
+    name = name.replace("\\", "").replace(".", "") + '_extrapolation.png'
+    plt.savefig(name, dpi=500)
     plt.clf()
