@@ -1,5 +1,10 @@
 build/
 dist/
-pypef.egg-info/
+*.egg-info/
+.installed.cfg
+*.egg
 workflow/.ipynb_checkpoints/
 .idea/
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
