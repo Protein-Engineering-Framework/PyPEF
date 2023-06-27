@@ -311,7 +311,7 @@ The following model hyperparameter ranges are tested during (*k*-fold) cross-val
 PyPEF was developed to be run from a command-line interface while `python3 ./pypef/main.py` (when using the downloaded version of this repository and setting the `PYTHONPATH`) is equal to `pypef` when installed with pip. 
 Downloading/cloning the repository files (manually or with `wget`/`git clone`):<br>
 ```
-wget wget https://github.com/Protein-Engineering-Framework/PyPEF/archive/refs/heads/master.zip
+wget https://github.com/Protein-Engineering-Framework/PyPEF/archive/refs/heads/master.zip
 ```
 
 Unzipping the zipped file (manually or e.g. with `unzip`):
