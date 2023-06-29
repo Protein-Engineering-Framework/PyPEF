@@ -44,6 +44,8 @@ threads=12                                                                      
 cd 'PyPEF-master/workflow/test_dataset_aneh'
 #######################################################################
 echo
+wget https://github.com/niklases/PyPEF/raw/main/workflow/test_dataset_aneh/ANEH_72.6.params
+echo
 
 $pypef --version
 echo
@@ -313,6 +315,8 @@ echo
 ### Hybrid model (and some pure ML and pure DCA) tests on avGFP dataset 
 cd '../test_dataset_avgfp'
 #######################################################################
+echo
+wget https://github.com/niklases/PyPEF/raw/main/workflow/test_dataset_avgfp/uref100_avgfp_jhmmer_119_plmc_42.6.params
 echo
 
 $pypef mklsts -i avGFP.csv -w P42212_F64L.fasta
