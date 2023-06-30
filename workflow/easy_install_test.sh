@@ -16,7 +16,7 @@ sudo apt-get install unzip
 
 unzip master.zip
 
-# Alternatively to conda you can use Python 3.10 and "python3 pip install -r requirements.txt"
+# Alternatively to using conda, you can use Python 3.10 and install packages via "python3 -m pip install -r requirements.txt"
 #conda update -n base -c defaults conda
 conda env remove -n pypef
 conda env create -f PyPEF-master/linux_env.yml
