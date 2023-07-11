@@ -8,6 +8,8 @@
 set -x  
 # Exit on errors
 set -e
+# echo script line numbers
+export PS4='+(Line ${LINENO}): '
 
 wget https://github.com/Protein-Engineering-Framework/PyPEF/archive/refs/heads/master.zip
 
@@ -44,7 +46,7 @@ threads=12                                                                      
 cd 'PyPEF-master/workflow/test_dataset_aneh'
 #######################################################################
 echo
-wget https://github.com/niklases/PyPEF/raw/main/workflow/test_dataset_aneh/ANEH_72.6.params
+wget https://github.com/niklases/PyPEF/raw/main/workflow/test_dataset_aneh/ANEH_72.6.params -O ANEH_72.6.params
 echo
 
 $pypef --version
@@ -316,7 +318,7 @@ echo
 cd '../test_dataset_avgfp'
 #######################################################################
 echo
-wget https://github.com/niklases/PyPEF/raw/main/workflow/test_dataset_avgfp/uref100_avgfp_jhmmer_119_plmc_42.6.params
+wget https://github.com/niklases/PyPEF/raw/main/workflow/test_dataset_avgfp/uref100_avgfp_jhmmer_119_plmc_42.6.params -O uref100_avgfp_jhmmer_119_plmc_42.6.params
 echo
 
 $pypef mklsts -i avGFP.csv -w P42212_F64L.fasta

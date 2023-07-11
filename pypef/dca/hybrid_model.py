@@ -48,8 +48,6 @@ from pypef.utils.plot import plot_y_true_vs_y_pred
 import pypef.dca.gremlin_inference
 from pypef.dca.gremlin_inference import GREMLIN
 
-# np.warnings.filterwarnings('error', category=np.VisibleDeprecationWarning)  # DEV
-
 
 class DCAHybridModel:
     alphas = np.logspace(-6, 6, 100)  # Grid for the parameter 'alpha'.
@@ -288,11 +286,7 @@ class DCAHybridModel:
             Encoded sequences of the variants in the training set.
         y_train : np.ndarray
             Fitness values of the variants in the training set.
-        x_test : np.ndarray
-            Encoded sequences of the variants in the testing set.
-        y_test : np.ndarray
-            Fitness values of the variants in the testing set.
-        train_size_train : float [0,1] (default 0.66)
+        train_size_fit : float [0,1] (default 0.66)
             Fraction to split training set into another
             training and testing set.
         random_state : int (default=224)

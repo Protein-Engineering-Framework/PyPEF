@@ -60,7 +60,7 @@ Tutorial section below).
 
 <a name="installation"></a>
 ## Quick Installation
-A quick installation of the PyPEF command line framework using PyPI for Linux and Windows for **Python 3.9** can be performed with:
+A quick installation of the PyPEF command line framework using PyPI for Linux and Windows for **Python 3.10** can be performed with:
 
 ```
 pip install -U pypef
@@ -203,16 +203,16 @@ As standard input files, PyPEF requires the target protein wild-type sequence in
 
 <a name="tutorial"></a>
 ## Tutorial
-Before starting running the tutorial, it is a good idea to set up a new Python environment using Anaconda, https://www.anaconda.com/, e.g. using [Anaconda](https://www.anaconda.com/products/individual) ([Anaconda3-2020.11-Linux-x86_64.sh installer download](https://repo.anaconda.com/archive/Anaconda3-2020.11-Linux-x86_64.sh)) or [Miniconda](https://docs.conda.io/en/latest/miniconda.html).
+Before starting running the tutorial, it is a good idea to set up a new Python environment using Anaconda, https://www.anaconda.com/, e.g. using [Anaconda](https://www.anaconda.com/download#downloads) ([Anaconda3-2023.03-1-Linux-x86_64.sh installer download](https://repo.anaconda.com/archive/Anaconda3-2023.03-1-Linux-x86_64.sh)) or [Miniconda](https://docs.conda.io/en/latest/miniconda.html).
 Change to the download directory and run the installation, e.g. in Linux:
 
 ```
-bash Anaconda3-2020.11-Linux-x86_64.sh
+bash Anaconda3-2023.03-1-Linux-x86_64.sh
 ```
 
 After accepting all steps, the conda setup should also be written to your `~/.bashrc`file, so that you can call anaconda typing `conda`.
 Next, to download this repository click Code > Download ZIP and unzip the zipped file, e.g. with `unzip PyPEF-master.zip`, or just clone this repository using your bash shell to your local machine `git clone https://github.com/niklases/PyPEF`.
-To setup a new environment with conda you can either create the conda environment from the provided YAML file inside the PyPEF directory (`cd PyPEF` or `cd PyPEF-master` dependent on the downloaded file name and chose YAML file for your operating system):
+To set up a new environment with conda you can either create the conda environment from the provided YAML file inside the PyPEF directory (`cd PyPEF` or `cd PyPEF-master` dependent on the downloaded file name and chose YAML file for your operating system):
 
 ```
 conda env create --file linux_env.yml
@@ -221,7 +221,7 @@ conda env create --file linux_env.yml
 or you can create a new environment yourself. You just need to specify the name of the environment and the Python version, e.g.:
 
 ```
-conda create --name pypef python=3.9
+conda create --name pypef python=3.10
 ```
 
 To activate the environment you can define:
@@ -230,7 +230,7 @@ To activate the environment you can define:
 conda activate pypef
 ```
 
-After activating the environment you can install required packages after changing the directory to the PyPEF directory (`cd PyPEF` or `cd PyPEF-master`) and install required packages with pip if you did not use the YAML file for creating the environment (if using conda, packages will be installed in anaconda3/envs/pypef/lib/python3.9/site-packages):
+After activating the environment you can install required packages after changing the directory to the PyPEF directory (`cd PyPEF` or `cd PyPEF-master`) and install required packages with pip if you did not use the YAML file for creating the environment (if using conda, packages will be installed in anaconda3/envs/pypef/lib/python3.10/site-packages):
 
 ```
 python3 -m pip install -r requirements.txt

@@ -56,9 +56,8 @@ import pickle
 
 from pypef.utils.variant_data import amino_acids
 
-
 _SLICE = np.s_[:]
-# np.warnings.filterwarnings('error', category=np.VisibleDeprecationWarning)
+
 
 class InvalidVariantError(Exception):
     """
@@ -246,7 +245,7 @@ class CouplingsModel:
             self.target_seq_mapped = np.array([self.alphabet_map[x] for x in self.target_seq])
             self.has_target_seq = (np.sum(self.target_seq_mapped) > 0)
         except KeyError:
-            self.target_seq_mapped = np.zeros((self.L), dtype=np.int32)
+            self.target_seq_mapped = np.zeros(shape=np.shape(self.l), dtype=np.int32)
             self.has_target_seq = False
 
     def __read_plmc_v2(self, filename, precision):
@@ -264,12 +263,12 @@ class CouplingsModel:
         with open(filename, "rb") as f:
             # model length, number of symbols, valid/invalid sequences
             # and iterations
-            self.L, self.num_symbols, self.N_valid, self.N_invalid, self.num_iter = (
+            self.l, self.num_symbols, self.n_valid, self.n_invalid, self.num_iter = (
                 np.fromfile(f, "int32", 5)
             )
 
             # theta, regularization weights, and effective number of samples
-            self.theta, self.lambda_h, self.lambda_J, self.lambda_group, self.N_eff = (
+            self.theta, self.lambda_h, self.lambda_j, self.lambda_group, self.n_eff = (
                 np.fromfile(f, precision, 5)
             )
 
@@ -280,12 +279,12 @@ class CouplingsModel:
 
             # weights of individual sequences (after clustering)
             self.weights = np.fromfile(
-                f, precision, self.N_valid + self.N_invalid
+                f, precision, self.n_valid + self.n_invalid
             )
 
             # target sequence and index mapping, again ensure unicode
-            self._target_seq = np.fromfile(f, "S1", self.L).astype("U1")
-            self.index_list = np.fromfile(f, "int32", self.L)
+            self._target_seq = np.fromfile(f, "S1", self.l).astype("U1")
+            self.index_list = np.fromfile(f, "int32", self.l)
 
             # Analyzing Positions included in the PLMC file (based on the MSA)
             not_valid, valid = [], []
@@ -310,38 +309,38 @@ class CouplingsModel:
 
             # single site frequencies f_i and fields h_i
             self.f_i, = np.fromfile(
-                f, dtype=(precision, (self.L, self.num_symbols)), count=1
+                f, dtype=(precision, (self.l, self.num_symbols)), count=1
             )
 
             self.h_i, = np.fromfile(
-                f, dtype=(precision, (self.L, self.num_symbols)), count=1
+                f, dtype=(precision, (self.l, self.num_symbols)), count=1
             )
 
             # pair frequencies f_ij and pair couplings J_ij / J_ij
             self.f_ij = np.zeros(
-                (self.L, self.L, self.num_symbols, self.num_symbols)
+                (self.l, self.l, self.num_symbols, self.num_symbols)
             )
 
-            self.J_ij = np.zeros(
-                (self.L, self.L, self.num_symbols, self.num_symbols)
+            self.j_ij = np.zeros(
+                (self.l, self.l, self.num_symbols, self.num_symbols)
             )
 
-            for i in range(self.L - 1):
-                for j in range(i + 1, self.L):
+            for i in range(self.l - 1):
+                for j in range(i + 1, self.l):
                     self.f_ij[i, j], = np.fromfile(
                         f, dtype=(precision, (self.num_symbols, self.num_symbols)),
                         count=1
                     )
                     self.f_ij[j, i] = self.f_ij[i, j].T
 
-            for i in range(self.L - 1):
-                for j in range(i + 1, self.L):
-                    self.J_ij[i, j], = np.fromfile(
+            for i in range(self.l - 1):
+                for j in range(i + 1, self.l):
+                    self.j_ij[i, j], = np.fromfile(
                         f, dtype=(precision, (self.num_symbols, self.num_symbols)),
                         count=1
                     )
 
-                    self.J_ij[j, i] = self.J_ij[i, j].T
+                    self.j_ij[j, i] = self.j_ij[i, j].T
 
     def get_target_seq_and_index(self):
         """
@@ -378,11 +377,10 @@ class CouplingsModel:
             Define a new default sequence for relative Hamiltonian
             calculations (e.g. energy difference relative to wild-type
             sequence).
-            Length of sequence must correspond to model length (self.L)
+            Length of sequence must correspond to model length (self.l)
         """
-        if len(sequence) != self.L:
-            raise ValueError(f"Sequence length inconsistent with model length: {len(sequence)} {self.L}")
-
+        if len(sequence) != self.l:
+            raise ValueError(f"Sequence length inconsistent with model length: {len(sequence)} != {self.l}")
 
         if isinstance(sequence, str):
             sequence = list(sequence)
@@ -408,10 +406,10 @@ class CouplingsModel:
         ----------
         mapping: list of int
             Sequence indices of the positions in the model.
-            Length of list must correspond to model length (self.L)
+            Length of list must correspond to model length (self.l)
         """
-        if len(mapping) != self.L:
-            raise ValueError(f"Mapping length inconsistent with model length: {len(mapping)} {self.L}")
+        if len(mapping) != self.l:
+            raise ValueError(f"Mapping length inconsistent with model length: {len(mapping)} != {self.l}")
 
         self._index_list = np.array(mapping)
         self.index_map = {b: a for a, b in enumerate(self.index_list)}
@@ -436,7 +434,7 @@ class CouplingsModel:
         else:
             return mapping[indices]
 
-    def __4d_access(self, matrix, i=None, j=None, A_i=None, A_j=None):
+    def __4d_access(self, matrix, i=None, j=None, a_i=None, a_j=None):
         """
         Provides shortcut access to column pair properties
         (e.g. J_ij or f_ij matrices)
@@ -447,24 +445,23 @@ class CouplingsModel:
             Position(s) on first matrix axis
         j : Iterable(int) or int
             Position(s) on second matrix axis
-        A_i : Iterable(str) or str
+        a_i : Iterable(str) or str
             Symbols corresponding to first matrix axis
-        A_j : Iterable(str) or str
+        a_j : Iterable(str) or str
             Symbols corresponding to second matrix axis
 
         Returns
         -------
         np.array
-            4D matrix "matrix" sliced according to values i, j, A_i and A_j
+            4D matrix "matrix" sliced according to values i, j, a_i and a_j
         """
         i = self.__map(i, self.index_map) if i is not None else _SLICE
         j = self.__map(j, self.index_map) if j is not None else _SLICE
-        A_i = self.__map(A_i, self.alphabet_map) if A_i is not None else _SLICE
-        A_j = self.__map(A_j, self.alphabet_map) if A_j is not None else _SLICE
+        a_i = self.__map(a_i, self.alphabet_map) if a_i is not None else _SLICE
+        a_j = self.__map(a_j, self.alphabet_map) if a_j is not None else _SLICE
+        return matrix[i, j, a_i, a_j]
 
-        return matrix[i, j, A_i, A_j]
-
-    def __2d_access(self, matrix, i=None, A_i=None):
+    def __2d_access(self, matrix, i=None, a_i=None):
         """
         Provides shortcut access to single-column properties
         (e.g. f_i or h_i matrices)
@@ -473,50 +470,48 @@ class CouplingsModel:
         -----------
         i : Iterable(int) or int
             Position(s) on first matrix axis
-        A_i : Iterable(str) or str
+        a_i : Iterable(str) or str
             Symbols corresponding to first matrix axis
 
         Returns
         -------
         np.array
-            2D matrix "matrix" sliced according to values i and A_i
+            2D matrix "matrix" sliced according to values i and a_i
         """
         i = self.__map(i, self.index_map) if i is not None else _SLICE
-        A_i = self.__map(A_i, self.alphabet_map) if A_i is not None else _SLICE
+        a_i = self.__map(a_i, self.alphabet_map) if a_i is not None else _SLICE
+        return matrix[i, a_i]
 
-        return matrix[i, A_i]
-
-    def Jij(self, i=None, j=None, A_i=None, A_j=None):
+    def get_jij(self, i=None, j=None, a_i=None, a_j=None):
         """
         Quick access to J_ij matrix with automatic index mapping.
         See __4d_access for explanation of parameters.
         """
-        return self.__4d_access(self.J_ij, i, j, A_i, A_j)
+        return self.__4d_access(self.j_ij, i, j, a_i, a_j)
 
-    def hi(self, i=None, A_i=None):
+    def get_hi(self, i=None, a_i=None):
         """
         Quick access to h_i matrix with automatic index mapping.
         See __2d_access for explanation of parameters.
         """
-        return self.__2d_access(self.h_i, i, A_i)
+        return self.__2d_access(self.h_i, i, a_i)
 
 
 class PLMC(CouplingsModel):
-    """
-    Class for performing the 'DCA encoding'.
-
-    Attributes
-    ----------
-    params_file: str
-        Binary parameter file outputted by PLMC.
-    """
-
     def __init__(
             self,
             params_file: str,
             separator: str = '/',
             verbose: bool = True
     ):
+        """
+        Class for performing the 'DCA encoding'.
+
+        Attributes
+        ----------
+        params_file: str
+            Binary parameter file outputted by PLMC.
+        """
         super().__init__(filename=params_file)  # inherit functions and variables from class CouplingsModel
         self.verbose = verbose
         self.separator = separator
@@ -551,31 +546,31 @@ class PLMC(CouplingsModel):
         else:
             return None
 
-    def Ji(self, i: int, A_i: str, sequence: np.ndarray) -> float:
+    def sum_ji(self, i: int, a_i: str, sequence: np.ndarray) -> float:
         """
         Description
         -----------
-        Caluclates the sum of all site-site interaction terms when site 'i' is occupied with amino acid 'A_i'.
+        Calculates the sum of all site-site interaction terms when site 'i' is occupied with amino acid 'a_i'.
 
         Parameters
         ----------
         i : int
             "Internal position" see '_get_position_internal' for an explanation.
-        A_i : str
-            Introduced amino acid at 'i' in one letter code representation.
+        a_i : str
+            Introduced amino acid at 'i' in one-letter code representation.
         sequence: np.ndarray
             Sequence of the variant as numpy array.
 
         Returns
         -------
-        Ji : float
-            Sum of all site-site interaction terms acting on position 'i' when occupied with 'A_i'.
+        j_i : float
+            Sum J(i) of all site-site interaction terms acting on position 'i' when occupied with 'a_i'.
         """
-        Ji = 0.0
-        for j, A_j in zip(self.index_list, sequence):
-            Ji += self.Jij(i=i, A_i=A_i, j=j, A_j=A_j)
+        j_i_sum = 0.0
+        for j, a_j in zip(self.index_list, sequence):
+            j_i_sum += self.get_jij(i=i, a_i=a_i, j=j, a_j=a_j)
 
-        return Ji
+        return j_i_sum
 
     @staticmethod
     def _unpack_substitution(substitution: str) -> tuple:
@@ -603,7 +598,7 @@ class PLMC(CouplingsModel):
         the amino acid of the wild type at this position.
         """
         if substitution[:-1] not in self.wt_aa_pos:
-            wild_type_aa, position, A_i = self._unpack_substitution(substitution)
+            wild_type_aa, position, a_i = self._unpack_substitution(substitution)
             raise SystemError(
                 f"The variant naming scheme is not fitting to the PLMC "
                 f"scheme. Substitution {substitution} of variant {variant} has "
@@ -634,7 +629,7 @@ class PLMC(CouplingsModel):
         """
         sequence = self.target_seq.copy()
         for substitution in get_single_substitutions(variant, self.separator):  # e.g. A123C/D234E --> A123C, D234C
-            wild_type_aa, position, A_i = self._unpack_substitution(substitution)
+            wild_type_aa, position, a_i = self._unpack_substitution(substitution)
 
             i = self._get_position_internal(position)
             if not i:
@@ -642,11 +637,11 @@ class PLMC(CouplingsModel):
 
             self.check_substitution_naming_against_wt(substitution, variant)
             i_mapped = self.index_map[i]
-            sequence[i_mapped] = A_i
+            sequence[i_mapped] = a_i
 
         x_var = np.zeros(sequence.size, dtype=float)
-        for idx, (i, A_i) in enumerate(zip(self.index_list, sequence)):
-            x_var[idx] = self.hi(i, A_i) + 0.5 * self.Ji(i, A_i, sequence)
+        for idx, (i, a_i) in enumerate(zip(self.index_list, sequence)):
+            x_var[idx] = self.get_hi(i, a_i) + 0.5 * self.sum_ji(i, a_i, sequence)
 
         return x_var
 
@@ -806,6 +801,8 @@ def get_dca_data_parallel(
     ----------
     variants: list (or np.ndarray)
         Variant names.
+    sequences: list (or np.ndarray)
+        Variant-associated protein sequences.
     fitnesses: list (or np.ndarray)
         Variant-associated fitness values.
     dca_encode : object
@@ -813,6 +810,8 @@ def get_dca_data_parallel(
     threads : int
         Number of processes to be used for parallel execution.
         n_cores = 1 defines no threading (not using Ray).
+    verbose: bool
+        Logging message on/off.
 
     Returns
     -------

@@ -19,19 +19,16 @@
 import os
 from os import listdir
 from os.path import isfile, join
-
+import ray
 import logging
 logger = logging.getLogger('pypef.ml.ml_run')
-import ray
-from pypef.ml.parallelization import aaindex_performance_parallel
 
-# importing own modules
+from pypef.ml.parallelization import aaindex_performance_parallel
 from pypef.ml.regression import (
     read_models, formatted_output, performance_list, save_model, predict, predict_ts
 )
 from pypef.utils.to_file import predictions_out
 from pypef.utils.low_n_mutation_extrapolation import low_n, performance_mutation_extrapolation
-
 
 
 def run_pypef_pure_ml(arguments):

@@ -82,18 +82,21 @@ class GREMLIN:
         self.a2n = self.a2n_dict()
         self.seqs, _, _ = get_sequences_from_file(alignment)
         self.msa_ori = self.get_msa_ori()
+        self.n_col_ori = self.msa_ori.shape[1]
         if wt_seq is not None:
             self.wt_seq = wt_seq
         else:  # Taking the first sequence in the MSA as wild type sequence
             logger.info("No wild-type sequence provided: The first sequence "
                         "in the MSA is considered the wild-type sequence.")
             self.wt_seq = "".join([self.char_alphabet[i] for i in self.msa_ori[0]])
+        if len(self.wt_seq) != self.n_col_ori:
+            raise SystemError("Length of (provided) wild-type sequence does not match "
+                              "number of MSA columns, i.e., common MSA sequence length.")
         self.msa_trimmed, self.v_idx, self.w_idx, self.w_rel_idx, self.gaps = self.filt_gaps(self.msa_ori)
         self.msa_weights = self.get_eff_msa_weights(self.msa_trimmed)
         self.n_eff = np.sum(self.msa_weights)
         self.n_row = self.msa_trimmed.shape[0]
         self.n_col = self.msa_trimmed.shape[1]
-        self.n_col_ori = self.msa_ori.shape[1]
         self.v_ini, self.w_ini = self.initialize_v_w(remove_gap_entries=False)
         self.optimize = optimize
         if self.optimize:
@@ -210,7 +213,6 @@ class GREMLIN:
         Furthermore, we find that disabling the bias correction
         (b_fix=False) speeds up convergence for our case.
         """
-
         if var_list is None:
             var_list = tf.compat.v1.trainable_variables()
         gradients = tf.gradients(loss, var_list)

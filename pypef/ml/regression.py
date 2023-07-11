@@ -316,10 +316,12 @@ class OneHotEncoding:
     """
     def __init__(
             self,
-            sequences: list
+            sequences: list,
+            verbose=True
     ):
         self.sequences = sequences
         self.amino_acids = amino_acids  # imported, 20 standard AAs
+        self.verbose = verbose
 
     def encoding_dict(self) -> dict[str, np.ndarray]:
         encoding_dict = {}
@@ -335,9 +337,15 @@ class OneHotEncoding:
             encoded_sequence.append(self.encoding_dict()[aminoacid])
         return np.concatenate(encoded_sequence)
 
-    def collect_encoded_sequences(self, silence=False) -> list:
+    def collect_encoded_sequences(self, verbose: bool = None) -> np.ndarray:
+        if verbose is None:
+            disable = not self.verbose
+        else:
+            disable = not verbose
+        if len(np.atleast_1d(self.sequences)) == 1:  # always silence for single (wt) sequence
+            disable = True
         encoded_sequences = []
-        for sequence in tqdm(self.sequences, disable=silence):
+        for sequence in tqdm(self.sequences, disable=disable):
             encoded_sequences.append(self.one_hot_encode_sequence(sequence))
         return np.array(encoded_sequences)
 
@@ -795,8 +803,12 @@ def encode_based_on_type(
         encoder = OneHotEncoding(sequences)
         x = encoder.collect_encoded_sequences()
     elif encoding == 'dca':  # PLMC or GREMLIN-based encoding
+        if len(sequences) == 1:
+            use_global_model = True
+        else:
+            use_global_model = False
         x, variants, sequences, y_true, x_wt, model, model_type = plmc_or_gremlin_encoding(
-            variants, sequences, y_true, couplings_file, substitution_sep, threads, verbose
+            variants, sequences, y_true, couplings_file, substitution_sep, threads, verbose, use_global_model
         )
     else:
         raise SystemError("Unknown encoding option.")

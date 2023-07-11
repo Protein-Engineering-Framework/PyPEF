@@ -67,10 +67,11 @@ def plot_low_n(
         np.array(avg_spearmanr) - np.array(stddev_spearmanr),
         alpha=0.5
     )
-    plt.ylim(0, max(np.array(avg_spearmanr) + np.array(stddev_spearmanr)))
+    plt.ylim(0, max(np.array(avg_spearmanr) * 1.1 + np.array(stddev_spearmanr)))
     plt.xlabel('Train sizes')
     plt.ylabel(r"Spearman's $\rho$")
-    plt.savefig(plt_name + '.png', dpi=500)
+
+    plt.savefig(plt_name.split(os.sep)[-1] + '.png', dpi=500)
     plt.clf()
 
 
@@ -105,7 +106,12 @@ def low_n(
         name = 'hybrid_ridge'
     n_variants = df.shape[0]
     train_sizes = get_train_sizes(n_variants).tolist()
-    variants, X, y = process_df_encoding(df)
+    variants, x, y = process_df_encoding(df)
+    if not x.any():
+        raise SystemError("Provided CSV file seems to have no encoding columns "
+                          "(required input CSV format: column 1: variant, column 2: "
+                          "variant fitness value, column 3 and ongoing columns: "
+                          "encoding feature values).")
 
     avg_spearmanr, stddev_spearmanr = [], []
     # test_sizes = [n_variants - size for size in train_sizes]
@@ -119,34 +125,34 @@ def low_n(
             for n in range(n_variants - 1):
                 if n not in train_idxs:
                     test_idxs.append(n)
-            X_train, y_train = X[train_idxs], y[train_idxs]
-            X_test, y_test = X[test_idxs], y[test_idxs]
+            x_train, y_train = x[train_idxs], y[train_idxs]
+            x_test, y_test = x[test_idxs], y[test_idxs]
 
             if hybrid_modeling:
-                x_wt = X[0]  # WT should be first CSV variant entry
+                x_wt = x[0]  # WT should be first CSV variant entry
                 hybrid_model = DCAHybridModel(
-                    x_train=X_train,
+                    x_train=x_train,
                     y_train=y_train,
-                    x_test=X_test,  # only used for adjusting +/- sign of y_dca, can also be None
+                    x_test=x_test,  # only used for adjusting +/- sign of y_dca, can also be None
                     y_test=y_test,  # only used for adjusting +/- sign of y_dca, can also be None
                     x_wt=x_wt
                 )
                 beta_1, beta_2, reg = hybrid_model.settings(
-                    X_train, y_train, train_size_fit=train_size_train
+                    x_train, y_train, train_size_fit=train_size_train
                 )
                 spearmanr_nruns.append(
                     hybrid_model.spearmanr(
                         y_test,
                         hybrid_model.hybrid_prediction(
-                            X_test, reg, beta_1, beta_2
+                            x_test, reg, beta_1, beta_2
                         )
                     )
                 )
 
             else:  # ML
-                regressor.fit(X_train, y_train)
+                regressor.fit(x_train, y_train)
                 # Best CV params: best_params = regressor.best_params_
-                y_pred = regressor.predict(X_test)
+                y_pred = regressor.predict(x_test)
                 spearmanr_nruns.append(stats.spearmanr(y_test, y_pred)[0])
         avg_spearmanr.append(np.mean(spearmanr_nruns))
         stddev_spearmanr.append(np.std(spearmanr_nruns, ddof=1))
@@ -155,7 +161,7 @@ def low_n(
         train_sizes,
         avg_spearmanr,
         stddev_spearmanr,
-        'low_N_' + str(encoded_csv[:-4] + '_' + name)
+        'low_N_' + str(encoded_csv).split('.')[0] + '_' + name
     )
 
     return train_sizes, avg_spearmanr, stddev_spearmanr
@@ -264,20 +270,20 @@ def performance_mutation_extrapolation(
     if len(collected_levels) > 1:
         train_idx = collected_levels[0]
         train_df = df_mut_lvl[train_idx]
-        train_variants, X_train, y_train = process_df_encoding(train_df)
+        train_variants, x_train, y_train = process_df_encoding(train_df)
         all_higher_df = df_mut_lvl[-1]  # only used for adjusting +/- of y_dca
-        all_higher_variants, X_all_higher, y_all_higher = process_df_encoding(all_higher_df)
+        all_higher_variants, x_all_higher, y_all_higher = process_df_encoding(all_higher_df)
         if hybrid_modeling:
-            x_wt = X_train[0]
+            x_wt = x_train[0]
             hybrid_model = DCAHybridModel(
-                x_train=X_train,
+                x_train=x_train,
                 y_train=y_train,
-                x_test=X_all_higher,  # only used for adjusting +/- of y_dca, can also be None but
+                x_test=x_all_higher,  # only used for adjusting +/- of y_dca, can also be None but
                 y_test=y_all_higher,  # higher risk of wrong sign assignment of beta_1 (y_dca)
                 x_wt=x_wt
             )
             beta_1, beta_2, reg = hybrid_model.settings(
-                X_train, y_train, train_size_fit=train_size)
+                x_train, y_train, train_size_fit=train_size)
             pickle.dump(
                 {'hybrid_model': hybrid_model, 'beta_1': beta_1, 'beta_2': beta_2,
                  'spearman_rho': float('nan'), 'regressor': reg},
@@ -285,7 +291,7 @@ def performance_mutation_extrapolation(
             )
         elif cv_regressor:
             logger.info('Fitting regressor on lvl 1 substitution data...')
-            regressor.fit(X_train, y_train)
+            regressor.fit(x_train, y_train)
             if save_model:
                 logger.info(f'Saving model as Pickle file: ML_LVL_1')
                 pickle.dump(regressor, open(os.path.join('Pickles', 'ML_LVL_1'), 'wb'))
@@ -293,12 +299,12 @@ def performance_mutation_extrapolation(
             if i < len(collected_levels) - 1:  # not last i else error, last entry is: lvl 1 --> all higher variants
                 test_idx = collected_levels[i + 1]
                 test_df = df_mut_lvl[test_idx]
-                test_variants, X_test, y_test = process_df_encoding(test_df)
+                test_variants, x_test, y_test = process_df_encoding(test_df)
                 if not conc:
                     # For training on distinct iterated level i, uncomment lines below:
                     # train_idx = collected_levels[i]
                     # train_df = self.mutation_level_dfs[train_idx]
-                    # train_variants, X_train, y_train = self._process_df_encoding(train_df)
+                    # train_variants, x_train, y_train = self._process_df_encoding(train_df)
                     if hybrid_modeling:
                         data.update({
                             test_idx + 1:
@@ -311,7 +317,7 @@ def performance_mutation_extrapolation(
                                     'spearman_rho': hybrid_model.spearmanr(
                                         y_test,
                                         hybrid_model.hybrid_prediction(
-                                            X_test, reg, beta_1, beta_2
+                                            x_test, reg, beta_1, beta_2
                                         )
                                     ),
                                     'beta_1': beta_1,
@@ -330,7 +336,7 @@ def performance_mutation_extrapolation(
                                     'n_y_test': len(y_test),
                                     'spearman_rho': stats.spearmanr(
                                         y_test,                    # Call predict on the BaseSearchCV estimator
-                                        regressor.predict(X_test)  # with the best found parameters
+                                        regressor.predict(x_test)  # with the best found parameters
                                     )[0]
                                 }
                         })
@@ -342,11 +348,11 @@ def performance_mutation_extrapolation(
                         for idx in train_idx_appended:
                             train_df_appended_conc = pd.concat(
                                 [train_df_appended_conc, df_mut_lvl[idx]])
-                        train_variants_conc, X_train_conc, y_train_conc = \
+                        train_variants_conc, x_train_conc, y_train_conc = \
                             process_df_encoding(train_df_appended_conc)
                         if hybrid_modeling:  # updating hybrid model params with newly inputted concatenated train data
                             beta_1_conc, beta_2_conc, reg_conc = hybrid_model.settings(
-                                X_train_conc,
+                                x_train_conc,
                                 y_train_conc,
                                 train_size_fit=train_size
                             )
@@ -361,7 +367,7 @@ def performance_mutation_extrapolation(
                                         'spearman_rho': hybrid_model.spearmanr(
                                             y_test,
                                             hybrid_model.hybrid_prediction(
-                                                X_test, reg_conc, beta_1_conc, beta_2_conc
+                                                x_test, reg_conc, beta_1_conc, beta_2_conc
                                             )
                                         ),
                                         'beta_1': beta_1_conc,
@@ -371,7 +377,7 @@ def performance_mutation_extrapolation(
                             })
                         else:  # ML updating pureML regression model params with newly inputted concatenated train data
                             # Fitting regressor on concatenated substitution data
-                            regressor.fit(X_train_conc, y_train_conc)
+                            regressor.fit(x_train_conc, y_train_conc)
                             data.update({
                                 test_idx + 1:
                                 {
@@ -381,7 +387,7 @@ def performance_mutation_extrapolation(
                                     'n_y_test': len(y_test),
                                     'spearman_rho': stats.spearmanr(
                                         y_test,  # Call predict on the BaseSearchCV estimator
-                                        regressor.predict(X_test)  # with the best found parameters
+                                        regressor.predict(x_test)  # with the best found parameters
                                         )[0],
                                     'regressor': regressor
                                 }
@@ -427,6 +433,6 @@ def plot_extrapolation(
         name += '_train_lvl_1'
     plt.xticks(test_lvls, label_infos, fontsize=5)
     plt.ylabel(r"Spearman's $\rho$")
-    name = name.replace("\\", "").replace(".", "") + '_extrapolation.png'
+    name = name.split(os.sep)[-1] + '_extrapolation.png'
     plt.savefig(name, dpi=500)
     plt.clf()

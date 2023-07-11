@@ -4,6 +4,7 @@
 
 
 from setuptools import setup, find_packages
+from pypef import __version__
 
 
 with open("requirements.txt", "r", encoding="utf-8") as install_requirements:
@@ -11,7 +12,7 @@ with open("requirements.txt", "r", encoding="utf-8") as install_requirements:
 
 setup(
     name='pypef',
-    version='0.3',
+    version=__version__.split('-')[0],
     author='Niklas Siedhoff & Alexander-Maurice Illig',
     author_email='n.siedhoff@biotec.rwth-aachen.de',
     license='CC BY-NC-SA 4.0',
@@ -23,7 +24,7 @@ setup(
     long_description='For detailed description including a short Jupyter Notebook-based '
                      'tutorial please refer to the GitHub page.',
     long_description_content_type='text/markdown',
-    url='https://github.com/niklases/PyPEF',
+    url='https://github.com/Protein-Engineering-Framework/PyPEF',
     py_modules=['pypef'],
     packages=find_packages(include=['pypef', 'pypef.*']),
     package_data={'pypef': ['ml/AAindex/*', 'ml/AAindex/Refined_cluster_indices_r0.93_r0.97/*']},
