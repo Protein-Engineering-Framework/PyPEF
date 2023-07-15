@@ -73,7 +73,7 @@ pypef --help
 ```
 
 The detailed routine for setting up a new virtual environment with Anaconda, installing the necessary Python packages for that environment, and running the Jupyter notebook tutorial can be found below in the Tutorial section.
-For Linux users, a quick file setup and CLI run test can be performed running [/workflow/easy_install_test.sh](/workflow/easy_install_test.sh) in Bash (requires conda, i.e. Miniconda3 or Anaconda3).
+A quick file setup and run test can be performed running files in [/easy_setup](/easy_setup) containing a Batch script for Windows and Bash script for Linux (the latter requires conda, i.e. Miniconda3 or Anaconda3, already being installed).
 
 <a name="requirements"></a>
 ## Requirements
