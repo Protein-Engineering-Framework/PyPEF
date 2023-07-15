@@ -159,7 +159,7 @@ spearmans_rhos_aaidx, aa_index = [], []
 # which can be seen as a AAindex hyperparameter search on the test set, i.e.,
 # not totally fair comparison to onehot- and DCA-based encoding techniques.
 # Limiting indices for testing to N = n_aaindices_to_test...
-aa_indices = [file for file in os.listdir(path_aaindex_dir()) if file.endswith('.txt')][:n_aaindices_to_test]
+aa_indices = sorted([file for file in os.listdir(path_aaindex_dir()) if file.endswith('.txt')])[:n_aaindices_to_test]
 mean_performances, ten_split_performance_std_dev, aa_indices_collected = [], [], []
 for index, aaindex in enumerate(aa_indices):
     aaidx_encoder = AAIndexEncoding(full_aaidx_txt_path(aaindex), sequences)
