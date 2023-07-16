@@ -34,7 +34,7 @@ while true; do
     read -p "Test PyPEF installation (runs sudo apt-get update && sudo apt-get install unzip, downloads PyPEF repository, and runs a PyPEF-Python script, ~ 1 h run time) [Y/N]? " yn
     case $yn in
         [Yy]* ) 
-			wget https://github.com/niklases/PyPEF/archive/refs/heads/master.zip;
+			wget https://github.com/Protein-Engineering-Framework/PyPEF/archive/refs/heads/master.zip;
 			sudo apt-get update
 			sudo apt-get install unzip
 			unzip master.zip
