@@ -17,13 +17,6 @@ set -e
 # echo script line numbers
 export PS4='+(Line ${LINENO}): '
 
-wget https://github.com/Protein-Engineering-Framework/PyPEF/archive/refs/heads/master.zip
-
-sudo apt-get update
-sudo apt-get install unzip
-
-unzip master.zip
-
 # Alternatively to using conda, you can use Python 3.10 and install packages via "python3 -m pip install -r requirements.txt"
 #conda update -n base -c defaults conda
 conda env remove -n pypef
@@ -34,9 +27,28 @@ conda activate pypef
 python3 -m pip install -U pypef
 
 #export PYTHONPATH=${PYTHONPATH}:${PWD}/PyPEF-master
-#pypef='python3 '${PWD}'/PyPEF-master/pypef/main.py'
+#pypef='python3 '${PWD}'/PyPEF-master/pypef/master.py'
 pypef --version
 
-cd 'PyPEF-master/workflow'
+while true; do
+    read -p "Test PyPEF installation (runs sudo apt-get update && sudo apt-get install unzip, downloads PyPEF repository, and runs a PyPEF-Python script, ~ 1 h run time) [Y/N]? " yn
+    case $yn in
+        [Yy]* ) 
+			wget https://github.com/niklases/PyPEF/archive/refs/heads/master.zip;
+			sudo apt-get update
+			sudo apt-get install unzip
+			unzip master.zip
+			cd 'PyPEF-master/workflow'
+			python3 ./api_encoding_train_test.py
+			break;;
+        [Nn]* ) 
+			break;;
+        * ) 
+			echo "Please answer yes or no.";;
+    esac
+done
 
-python3 ./api_encoding_train_test.py
+echo 'Done!';
+
+
+
