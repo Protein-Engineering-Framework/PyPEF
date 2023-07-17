@@ -1,9 +1,9 @@
 #!/bin/bash
 
-# Run we with ./easy_install_test.sh
+# Run we with ./conda_install_test.sh
 
 # Easy "installer" for downloading repository and running local Python files (not pip-installed).
-# Testing a few PyPEF commands on downloaded example files.
+# Testing a few PyPEF commands on downloaded test data.
 # Requires conda, i.e. Anaconda3 or Miniconda3 [https://docs.conda.io/en/latest/miniconda.html].
 
 # 1. wget https://repo.anaconda.com/miniconda/Miniconda3-py310_23.5.2-0-Linux-x86_64.sh
@@ -20,25 +20,22 @@ export PS4='+(Line ${LINENO}): '
 # Alternatively to using conda, you can use Python 3.10 and install packages via "python3 -m pip install -r requirements.txt"
 #conda update -n base -c defaults conda
 conda env remove -n pypef
-#conda env create -f PyPEF-master/linux_env.yml
 conda create -n pypef python=3.10 -y
 eval "$(conda shell.bash hook)"
 conda activate pypef
 python3 -m pip install -U pypef
-
-#export PYTHONPATH=${PYTHONPATH}:${PWD}/PyPEF-master
-#pypef='python3 '${PWD}'/PyPEF-master/pypef/master.py'
 pypef --version
 
 while true; do
-    read -p "Test PyPEF installation (runs sudo apt-get update && sudo apt-get install unzip, downloads PyPEF repository, and runs a PyPEF-Python script, ~ 1 h run time) [Y/N]? " yn
+    read -p "Test PyPEF installation (downloads PyPEF example test set files and runs a Python test script, ~ 1 h run time) [Y/N]? " yn
     case $yn in
         [Yy]* ) 
-			wget https://github.com/Protein-Engineering-Framework/PyPEF/archive/refs/heads/master.zip;
-			sudo apt-get update
-			sudo apt-get install unzip
-			unzip master.zip
-			cd 'PyPEF-master/workflow'
+			mkdir test_dataset_avgfp
+			wget https://raw.githubusercontent.com/Protein-Engineering-Framework/PyPEF/master/workflow/test_dataset_avgfp/avGFP.csv
+			wget https://raw.githubusercontent.com/Protein-Engineering-Framework/PyPEF/master/workflow/test_dataset_avgfp/uref100_avgfp_jhmmer_119.a2m
+			wget https://raw.githubusercontent.com/Protein-Engineering-Framework/PyPEF/master/workflow/api_encoding_train_test.py
+			mv avGFP.csv ./test_dataset_avgfp/avGFP.csv
+			mv uref100_avgfp_jhmmer_119.a2m ./test_dataset_avgfp/uref100_avgfp_jhmmer_119.a2m
 			python3 ./api_encoding_train_test.py
 			break;;
         [Nn]* ) 

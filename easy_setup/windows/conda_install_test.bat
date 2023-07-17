@@ -1,7 +1,7 @@
 REM Run me via mouse double-click or in CMD.
 REM Installing Miniconda3 locally in folder, creating Python 3.10 environment using Miniconda3, 
 REM installing PyPEF in conda environment and running low N test api_encoding_train_test.py file. 
-REM Requires files 'download_install_miniconda.ps1' and 'download_unzip_pypef_files.ps1'.
+REM Requires files 'download_install_miniconda.ps1' and 'download_pypef_test_files.ps1'.
 powershell.exe -ExecutionPolicy Bypass -File "download_install_miniconda.ps1"
 call .\Miniconda3\Scripts\activate.bat .\Miniconda3
 call conda create -n pypef python=3.10 -y
@@ -13,10 +13,9 @@ pypef --version
 @echo off
 setlocal
 :PROMPT
-SET /P AREYOUSURE=Test PyPEF installation (Y/[N]) (downloads PyPEF repository and runs a PyPEF-Python script, ~ 1 h run time)?
+SET /P AREYOUSURE=Test PyPEF installation (Y/[N]) (downloads PyPEF example test set files and runs a Python test script, ~ 1 h run time)?
 IF /I "%AREYOUSURE%" NEQ "Y" GOTO END
-powershell.exe -ExecutionPolicy Bypass -File "download_unzip_pypef_files.ps1"
-cd .\PyPEF-master\workflow
+powershell.exe -ExecutionPolicy Bypass -File "download_pypef_test_files.ps1"
 python .\api_encoding_train_test.py
 echo Done!
 cmd /k
