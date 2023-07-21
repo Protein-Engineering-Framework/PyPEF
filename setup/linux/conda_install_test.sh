@@ -1,13 +1,13 @@
 #!/bin/bash
 
-# Run we with ./conda_install_test.sh
 
-# Easy "installer" for downloading repository and running local Python files (not pip-installed).
+# Easy "installer" for downloading repository and running pip-installed PyPEF version.
 # Testing a few PyPEF commands on downloaded test data.
 # Requires conda, i.e. Anaconda3 or Miniconda3 [https://docs.conda.io/en/latest/miniconda.html].
 
 # 1. wget https://repo.anaconda.com/miniconda/Miniconda3-py310_23.5.2-0-Linux-x86_64.sh
 # 2. bash Miniconda3-py310_23.5.2-0-Linux-x86_64.sh
+# 3. Run this file with ./conda_install_test.sh
 
 
 # Echo on
@@ -30,18 +30,18 @@ while true; do
     read -p "Test PyPEF installation (downloads PyPEF example test set files and runs a Python test script, ~ 1 h run time) [Y/N]? " yn
     case $yn in
         [Yy]* ) 
-			mkdir test_dataset_avgfp
-			wget https://raw.githubusercontent.com/Protein-Engineering-Framework/PyPEF/master/workflow/test_dataset_avgfp/avGFP.csv
-			wget https://raw.githubusercontent.com/Protein-Engineering-Framework/PyPEF/master/workflow/test_dataset_avgfp/uref100_avgfp_jhmmer_119.a2m
-			wget https://raw.githubusercontent.com/Protein-Engineering-Framework/PyPEF/master/workflow/api_encoding_train_test.py
-			mv avGFP.csv ./test_dataset_avgfp/avGFP.csv
-			mv uref100_avgfp_jhmmer_119.a2m ./test_dataset_avgfp/uref100_avgfp_jhmmer_119.a2m
-			python3 ./api_encoding_train_test.py
-			break;;
+      mkdir test_dataset_avgfp
+      wget https://raw.githubusercontent.com/Protein-Engineering-Framework/PyPEF/master/workflow/test_dataset_avgfp/avGFP.csv
+      wget https://raw.githubusercontent.com/Protein-Engineering-Framework/PyPEF/master/workflow/test_dataset_avgfp/uref100_avgfp_jhmmer_119.a2m
+      wget https://raw.githubusercontent.com/Protein-Engineering-Framework/PyPEF/master/workflow/api_encoding_train_test.py
+      mv avGFP.csv ./test_dataset_avgfp/avGFP.csv
+      mv uref100_avgfp_jhmmer_119.a2m ./test_dataset_avgfp/uref100_avgfp_jhmmer_119.a2m
+      python3 ./api_encoding_train_test.py
+      break;;
         [Nn]* ) 
-			break;;
+      break;;
         * ) 
-			echo "Please answer yes or no.";;
+      echo "Please answer yes or no.";;
     esac
 done
 
