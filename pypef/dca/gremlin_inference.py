@@ -79,7 +79,6 @@ class GREMLIN:
         self.eff_cutoff = eff_cutoff
         self.opt_iter = opt_iter
         self.states = len(self.char_alphabet)
-        self.a2n = self.a2n_dict()
         self.seqs, _, _ = get_sequences_from_file(alignment)
         self.msa_ori = self.get_msa_ori()
         self.n_col_ori = self.msa_ori.shape[1]
@@ -97,7 +96,7 @@ class GREMLIN:
         self.n_eff = np.sum(self.msa_weights)
         self.n_row = self.msa_trimmed.shape[0]
         self.n_col = self.msa_trimmed.shape[1]
-        self.v_ini, self.w_ini = self.initialize_v_w(remove_gap_entries=False)
+        self.v_ini, self.w_ini, self.aa_counts = self.initialize_v_w(remove_gap_entries=False)
         self.optimize = optimize
         if self.optimize:
             self.v_opt, self.w_opt = self.run_opt_tf()
@@ -110,27 +109,30 @@ class GREMLIN:
         return a2n
 
     def aa2int(self, aa):
-        """convert single aa into numerical integer value, e.g.
+        """convert single aa into numerical integer value, e.g.:
         "A" -> 0 or "-" to 21 dependent on char_alphabet"""
-        if aa in self.a2n:
-            return self.a2n[aa]
+        a2n = self.a2n_dict()
+        if aa in a2n:
+            return a2n[aa]
         else:  # for unknown characters insert Gap character
-            return self.a2n['-']
+            return a2n['-']
 
-    def str2int(self, x):
+    def seq2int(self, aa_seqs):
         """
-        convert a list of strings into list of integers
-        Example: ["ACD","EFG"] -> [[0,4,3], [6,13,7]]
+        convert a single sequence or a list of sequences into a list of integer sequences, e.g.:
+        ["ACD","EFG"] -> [[0,4,3], [6,13,7]]
         """
-        if type(x) == list:
-            x = np.array(x)
-        if x.dtype.type is np.str_:
-            if x.ndim == 0:  # single seq
-                return np.array([self.aa2int(aa) for aa in str(x)])
+        if type(aa_seqs) == str:
+            aa_seqs = np.array(aa_seqs)
+        if type(aa_seqs) == list:
+            aa_seqs = np.array(aa_seqs)
+        if aa_seqs.dtype.type is np.str_:
+            if aa_seqs.ndim == 0:  # single seq
+                return np.array([self.aa2int(aa) for aa in str(aa_seqs)])
             else:  # list of seqs
-                return np.array([[self.aa2int(aa) for aa in seq] for seq in x])
+                return np.array([[self.aa2int(aa) for aa in seq] for seq in aa_seqs])
         else:
-            return x
+            return aa_seqs
 
     @property
     def get_v_idx_w_idx(self):
@@ -150,7 +152,7 @@ class GREMLIN:
         non_gaps = np.where(np.sum(tmp.T, -1).T / msa_ori.shape[0] < self.gap_cutoff)[0]
 
         gaps = np.where(np.sum(tmp.T, -1).T / msa_ori.shape[0] >= self.gap_cutoff)[0]
-        logger.info(f'Gap positions (removed from msa):\n{gaps}')
+        logger.info(f'Gap positions (removed from MSA; 0-indexed):\n{gaps}')
         ncol_trimmed = len(non_gaps)
         v_idx = non_gaps
         w_idx = v_idx[np.stack(np.triu_indices(ncol_trimmed, 1), -1)]
@@ -362,17 +364,19 @@ class GREMLIN:
         """
         w_ini = np.zeros((self.n_col, self.states, self.n_col, self.states))
         onehot_cat_msa = np.eye(self.states)[self.msa_trimmed]
+        aa_counts = np.sum(onehot_cat_msa, axis=0)
         pseudo_count = 0.01 * np.log(self.n_eff)
         v_ini = np.log(np.sum(onehot_cat_msa.T * self.msa_weights, -1).T + pseudo_count)
         v_ini = v_ini - np.mean(v_ini, -1, keepdims=True)
-        # loss_score_ini = self.objective(v_ini, w_ini, flattened=False)  # * self.n_eff
+        # loss_score_ini = self.objective(v_ini, w_ini, flattened=False)
 
         if remove_gap_entries:
             no_gap_states = self.states - 1
             v_ini = v_ini[:, :no_gap_states]
             w_ini = w_ini[:, :no_gap_states, :, :no_gap_states]
+            aa_counts = aa_counts[:, :no_gap_states]
 
-        return v_ini, w_ini
+        return v_ini, w_ini, aa_counts
 
     @property
     def get_v_w_opt(self):
@@ -390,10 +394,10 @@ class GREMLIN:
             if self.optimize:
                 v, w = self.v_opt, self.w_opt
             else:
-                v, w = self.v_ini, self.w_ini
+                v, w, _ = self.initialize_v_w(remove_gap_entries=True)
         if v_idx is None:
             v_idx = self.v_idx
-        seqs_int = self.str2int(seqs)
+        seqs_int = self.seq2int(seqs)
         # if length of sequence != length of model use only
         # valid positions (v_idx) from the trimmed alignment
         try:
@@ -439,7 +443,7 @@ class GREMLIN:
         else:
             return np.sum(h, axis=-1) - h_wt_seq
 
-    def get_wt_score(self, wt_seq=None, v=None, w=None):
+    def get_wt_score(self, wt_seq=None, v=None, w=None, encode=False):
         if wt_seq is None:
             wt_seq = self.wt_seq
         if v is None or w is None:
@@ -448,7 +452,7 @@ class GREMLIN:
             else:
                 v, w = self.v_ini, self.w_ini
         wt_seq = np.array(wt_seq, dtype=str)
-        return self.get_score(wt_seq, v, w)
+        return self.get_score(wt_seq, v, w, encode=encode)
 
     def collect_encoded_sequences(self, seqs, v=None, w=None, v_idx=None):
         """
@@ -541,17 +545,22 @@ class GREMLIN:
         else:
             ax.imshow(matrix, cmap='Blues')
         tick_pos = ax.get_xticks()
+        tick_pos = np.array([int(t) for t in tick_pos])
         tick_pos[-1] = matrix.shape[0]
-        tick_pos[2:] -= 1
+        if tick_pos[2] > 1:
+            tick_pos[2:] -= 1
         ax.set_xticks(tick_pos)
         ax.set_yticks(tick_pos)
         labels = [item.get_text() for item in ax.get_xticklabels()]
-        labels = [labels[0]] + [str(int(label) + 1) for label in labels[1:]]
+        try:
+            labels = [labels[0]] + [str(int(label) + 1) for label in labels[1:]]
+        except ValueError:
+            pass
         ax.set_xticklabels(labels)
         ax.set_yticklabels(labels)
         ax.set_xlim(-1, matrix.shape[0])
         ax.set_ylim(-1, matrix.shape[0])
-        plt.title(matrix_type)
+        plt.title(matrix_type.upper())
         plt.savefig(f'{matrix_type}.png', dpi=500)
         plt.close('all')
 

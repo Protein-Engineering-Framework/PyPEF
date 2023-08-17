@@ -1,4 +1,6 @@
+### PowerShell script for testing some PyPEF CLI commands 
 ### based on the two datasets provided (ANEH and avGFP)
+### REQUIRES MINICONDA OR ANACONDA BEING INSTALLED
 Write-Host "For successful running, following files are required:`n`nin test_dataset_aneh/
 `tSequence_WT_ANEH.fasta`n`t37_ANEH_variants.csv`n`tANEH_jhmmer.a2m
 `tANEH_72.6.params (generated using PLMC or dowloaded from https://github.com/niklases/PyPEF/blob/main/workflow/test_dataset_aneh/ANEH_72.6.params)
@@ -19,14 +21,20 @@ function ExitOnExitCode { if ($LastExitCode) { Write-Host "PyPEF command error; 
 ### $ .\run_cli_tests_win.ps1                      # printing STDOUT and STDERR to terminal
 
 ### if using downloaded/locally stored pypef .py files:
-############### CHANGE THIS PATHS AND USED THREADS, REQUIRES PYTHON ENVIRONMENT WITH PRE-INSTALLED MODULES ###############
-$env:PYTHONPATH="C:\path\to\pypef-main"                                                                                  #
-function pypef { python C:\path\to\pypef-main\pypef\main.py @args }                                                      #
+##########################################################################################################################
+conda env remove -n pypef                                                                                                #
+conda create -n pypef python=3.10 -y                                                                                     #
+conda activate pypef                                                                                                     #
+$path=Get-Location                                                                                                       #
+$path=Split-Path -Path $path -Parent                                                                                     #
+python -m pip install -r $path\requirements.txt                                                                          #
+$env:PYTHONPATH=$path                                                                                                    #
+function pypef { python $path\pypef\main.py @args }                                                                      #
 ##########################################################################################################################
 ### else just use pip-installed pypef version (uncomment):                                                               #
 #pypef = pypef                                                                                                           #
 ##########################################################################################################################
-$threads = 16                                                                                                            #
+$threads = 12                                                                                                            #
 ##########################################################################################################################
 
 ### threads=1 shows progress bar where possible

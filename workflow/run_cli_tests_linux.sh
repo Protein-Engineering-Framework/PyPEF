@@ -2,6 +2,7 @@
 
 ### Bash script for testing some PyPEF CLI commands 
 ### based on the two datasets provided (ANEH and avGFP)
+### REQUIRES MINICONDA OR ANACONDA BEING INSTALLED
 printf 'For successful running, following files are required:\n\nin test_dataset_aneh/\n\tSequence_WT_ANEH.fasta\n\t37_ANEH_variants.csv
 \tANEH_jhmmer.a2m\n\tANEH_72.6.params (generated using PLMC or dowloaded from https://github.com/niklases/PyPEF/blob/main/workflow/test_dataset_aneh/ANEH_72.6.params)\n
 in test_dataset_avgfp/\n\tP42212_F64L.fasta\n\tavGFP.csv\n\turef100_avgfp_jhmmer_119.a2m
@@ -16,14 +17,20 @@ export PS4='+(Line ${LINENO}): '  # echo script line numbers
 ### $ ./run_cli_tests_linux.sh &> test_cli_run.log  # writing STDOUT and STDERR to log file
 
 ### if using downloaded/locally stored pypef .py files:
-############### CHANGE THIS PATHS AND USED THREADS, REQUIRES PYTHON ENVIRONMENT WITH PRE-INSTALLED MODULES ###############
-export PYTHONPATH=${PYTHONPATH}:/path/to/pypef-main                                                                      #
-pypef='python3 /path/to/pypef-main/pypef/main.py'                                                                        #                                                                                                                   #
+##########################################################################################################################
+conda env remove -n pypef                                                                                                #
+conda create -n pypef python=3.10 -y                                                                                     #
+eval "$(conda shell.bash hook)"                                                                                          #
+conda activate pypef                                                                                                     #
+python -m pip install -r ../requirements.txt                                                                             #
+path=$( echo ${PWD%/*} )                                                                                                 #
+export PYTHONPATH=${PYTHONPATH}:$path                                                                                    #
+pypef='python3 '$path'/pypef/main.py'                                                                                    #                                                                                                                   #
 ##########################################################################################################################
 ### else just use pip-installed pypef version (uncomment):                                                               #
 #pypef=pypef                                                                                                             #
 ##########################################################################################################################
-threads=16                                                                                                               #
+threads=12                                                                                                               #
 ##########################################################################################################################
 
 ### threads=1 shows progress bar where possible
