@@ -22,10 +22,9 @@ jobs:
       uses: actions/setup-python@v3
       with:
         python-version: ${{ matrix.python-version }}
-    - name: Export Pythonpath and display Path and Python version
+    - name: Display Path and Python version
       run: |
-        export PYTHONPATH="${PYTHONPATH}:${PWD}"
-        python -c "import sys, platform; print(sys.version, platform.system(), '\n', sys.path)"
+        python -c "import sys, platform; print(sys.version, platform.system())"
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
@@ -35,6 +34,6 @@ jobs:
       run: |
         # stop the build if there are Python syntax errors or undefined names
         flake8 ./pypef --count --select=E9,F63,F7,F82 --show-source --statistics
-    - name: CLI PyPEF version test with pytest
+    - name: Export Pythonpath and run CLI PyPEF version test with pytest
       run: |
-        pytest tests/cli/
+        export PYTHONPATH="${PYTHONPATH}:${PWD}" && python -m pytest tests/cli/
