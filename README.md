@@ -37,7 +37,7 @@ Preprint available at bioRxiv: https://doi.org/10.1101/2022.06.07.495081.
 # PyPEF: Pythonic Protein Engineering Framework
 [![PyPI version](https://img.shields.io/pypi/v/PyPEF?color=blue)](https://pypi.org/project/pypef/)
 [![Python version](https://img.shields.io/pypi/pyversions/PyPEF)](https://www.python.org/downloads/)
-![Build](https://github.com/Protein-Engineering-Framework/PyPEF/actions/workflows/build.yml/badge.svg)
+[![Build](https://github.com/Protein-Engineering-Framework/PyPEF/actions/workflows/build.yml/badge.svg)](https://github.com/Protein-Engineering-Framework/PyPEF/actions?query=workflow:build)
 
 a framework written in Python 3 for performing sequence-based machine learning-assisted protein engineering to predict a protein's fitness from its sequence using different forms of sequence encoding:
 - One-hot encoding
