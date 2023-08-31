@@ -1,4 +1,7 @@
-# Gremlin in Python
+# GREMLIN in Python using numba
+# 16.08.2023, Niklas Siedhoff
+# Python-port of GREMLIN_CPP; 
+# GREMLIN_CPP is licensed as:
 
 """
 ------------------------------------------------------------

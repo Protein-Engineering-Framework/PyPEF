@@ -1,0 +1,3 @@
+Double clicking the Batch (BAT) file Installs Miniconda3 locally in working/download directory, adds a Python 3.10 environment, and installs the latest PyPEF version for that environment (requires the two PowerShell (PS1) scripts in the same directory as the BAT script).
+Note that invoking the PS scripts requires setting the PowerShell [execution policy](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_execution_policies?view=powershell-7.3) with Administrator rights to Bypass  
+(`powershell.exe -ExecutionPolicy Bypass -File`) for running the Batch file successfully.

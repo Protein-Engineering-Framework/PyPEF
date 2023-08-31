@@ -47,17 +47,17 @@ a framework written in Python 3 for performing sequence-based machine learning-a
 Written by Niklas Siedhoff and Alexander-Maurice Illig.
 
 <p align="center">
-    <img src="workflow/test_dataset_aneh/exemplary_validation_color_plot.png" alt="drawing" width="500"/>
+    <img src=".github/imgs/exemplary_validation_color_plot.png" alt="drawing" width="500"/>
 </p>
 
 Protein engineering by rational or random approaches generates data that can aid the construction of self-learned sequence-function landscapes to predict beneficial variants by using probabilistic methods that can screen the unexplored sequence space with uncertainty *in silico*. Such predictive methods can be applied for increasing the success/effectivity of an engineering campaign while partly offering the prospect to reveal (higher-order) epistatic effects. Here we present an engineering framework termed PyPEF for assisting the supervised training and testing of regression models for predicting beneficial combinations of (identified) amino acid substitutions using machine learning algorithms from the [Scikit-learn](https://github.com/scikit-learn/scikit-learn) package. As training input, the developed framework requires the variant sequences and the corresponding screening results (fitness labels) of the identified variants as CSV (or FASTA-Like (FASL) datasets following a self-defined convention). Using linear or nonlinear regression methods (partial least squares (PLS), Ridge, Lasso, Elastic net, support vector machines (SVR), random forest (RF), and multilayer perceptron (MLP)-based regression), PyPEF trains on the given learning data while optimizing model hyperparameters (default: five-fold cross-validation) and can compute model performances on left-out test data. As sequences are encoded using amino acid descriptor sets taken from the [AAindex database](https://www.genome.jp/aaindex/), finding the best index-dependent encoding for a specific test set can be seen as a hyperparameter search on the test set. In addition, one-hot and [direct coupling analysis](https://en.wikipedia.org/wiki/Direct_coupling_analysis)-based feature generation are implemented as sequence encoding techniques, which often outperform AAindex-based encoding techniques. Finally, the selected or best identified encoding technique and regression model can be used to perform directed evolution walks *in silico* (see [Church-lab implementation](https://github.com/churchlab/UniRep) or the [reimplementation](https://github.com/ivanjayapurna/low-n-protein-engineering)) or to predict natural diverse or recombinant variant sequences that subsequently are to be designed and validated in the wet-lab.
 
 For detailed information, please refer to the above-mentioned publications and related Supporting Information.
 
-The workflow procedure is explained in the [Jupyter notebook](/workflow/Workflow_PyPEF.ipynb) (.ipynb) protocol (see
+The workflow procedure is explained in the [Jupyter notebook](scripts/CLI/Workflow_PyPEF.ipynb) (.ipynb) protocol (see
 Tutorial section below).
 
-<img src="workflow/Splitting_Workflow.png" alt="drawing" width="1000"/>
+<img src=".github/imgs/splitting_workflow.png" alt="drawing" width="1000"/>
 
 <a name="installation"></a>
 ## Quick Installation
@@ -74,7 +74,7 @@ pypef --help
 ```
 
 The detailed routine for setting up a new virtual environment with Anaconda, installing the necessary Python packages for that environment, and running the Jupyter notebook tutorial can be found below in the Tutorial section.
-A quick file setup and run test can be performed running files in [/setup](/setup) containing a Batch script for Windows and a Bash script for Linux (the latter requires conda, i.e. Miniconda3 or Anaconda3, already being installed).
+A quick file setup and run test can be performed running files in [scripts/Setup](scripts/Setup) containing a Batch script for Windows and a Bash script for Linux (the latter requires conda, i.e. Miniconda3 or Anaconda3, already being installed).
 
 <a name="requirements"></a>
 ## Requirements
@@ -198,9 +198,9 @@ pypef hybrid -l LEARNING_SET.FASL -t TEST_SET.FASL --params GREMLIN
 
 
 Sample files for testing PyPEF routines are provided in the workflow directory, which are also used when running the notebook tutorial. PyPEF's package dependencies are linked [here](https://github.com/niklases/PyPEF/network/dependencies).
-Further, for designing your own API based on the PyPEF workflow, modules can be adapted from the [source code](/pypef).
+Further, for designing your own API based on the PyPEF workflow, modules can be adapted from the [source code](pypef).
 
-As standard input files, PyPEF requires the target protein wild-type sequence in [FASTA](https://en.wikipedia.org/wiki/FASTA) format and variant-fitness data in [CSV](https://en.wikipedia.org/wiki/Comma-separated_values) format to split the collected variant-fitness data in learning and test sets that resemble the aligned FASTA format and additionally contain lines indicating the fitness of each corresponding variant (see [ANEH sample files](workflow/test_dataset_aneh), [avGFP sample files](workflow/test_dataset_avgfp), and [MERGE SSM & DMS files](https://github.com/Protein-Engineering-Framework/MERGE/tree/main/Data/_variant_fitness_wtseq)).
+As standard input files, PyPEF requires the target protein wild-type sequence in [FASTA](https://en.wikipedia.org/wiki/FASTA) format and variant-fitness data in [CSV](https://en.wikipedia.org/wiki/Comma-separated_values) format to split the collected variant-fitness data in learning and test sets that resemble the aligned FASTA format and additionally contain lines indicating the fitness of each corresponding variant (see [ANEH sample files](datasets/ANEH), [avGFP sample files](datasets/AVGFP), and [MERGE SSM & DMS files](https://github.com/Protein-Engineering-Framework/MERGE/tree/main/Data/_variant_fitness_wtseq)).
 
 <a name="tutorial"></a>
 ## Tutorial
@@ -407,8 +407,8 @@ python3 ./pypef/main.py
 
 <a name="api-usage"></a>
 ## API Usage for Sequence Encoding
-For script-based encoding of sequences using PyPEF and the available AAindex-, OneHot- or DCA-based techniques, the classes and corresponding functions can be imported, i.e. `OneHotEncoding`, `AAIndexEncoding`, `GREMLIN` (DCA),  `PLMC` (DCA), and `DCAHybridModel`. In addition, implemented functions for CV-based tuning of regression models can be used to train and validate models, eventually deriving them to obtain performances on retained data for testing. An exemplary script and a Jupyter notebook for CV-based (low-*N*) tuning of models and using them for testing is provided at [workflow/api_encoding_train_test.py](workflow/api_encoding_train_test.py) and [workflow/api_encoding_train_test.ipynb](workflow/api_encoding_train_test.ipynb), respectively.
+For script-based encoding of sequences using PyPEF and the available AAindex-, OneHot- or DCA-based techniques, the classes and corresponding functions can be imported, i.e. `OneHotEncoding`, `AAIndexEncoding`, `GREMLIN` (DCA),  `PLMC` (DCA), and `DCAHybridModel`. In addition, implemented functions for CV-based tuning of regression models can be used to train and validate models, eventually deriving them to obtain performances on retained data for testing. An exemplary script and a Jupyter notebook for CV-based (low-*N*) tuning of models and using them for testing is provided at [scripts/Encoding_low_N/api_encoding_train_test.py]( scripts/Encoding_low_N/api_encoding_train_test.py) and [scripts/Encoding_low_N/api_encoding_train_test.ipynb](scripts/Encoding_low_N/api_encoding_train_test.ipynb), respectively.
 
 <p align="center">
-    <img src="workflow/low_N_avGFP_extrapolation.png" alt="drawing" width="500"/>
+    <img src=".github/imgs/low_N_avGFP_extrapolation.png" alt="drawing" width="500"/>
 </p>
