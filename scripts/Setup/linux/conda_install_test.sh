@@ -46,6 +46,3 @@ while true; do
 done
 
 echo 'Done!';
-
-
-
