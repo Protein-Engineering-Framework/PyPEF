@@ -248,7 +248,7 @@ python3 -m pip install ipykernel jupyter
 python3 -m ipykernel install --user --name=pypef
 ```
 
-Now change the directory to ./workflow (`cd workflow`) and run the .ipynb file:
+Now change the directory to ./scripts/CLI (`cd scripts/CLI`) and run the .ipynb file (after downloading the files it might be necessary to make the script executable first: `chmod +x Workflow_PyPEF.ipynb`):
 
 ```
 jupyter-notebook
