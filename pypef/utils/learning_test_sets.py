@@ -347,7 +347,7 @@ def make_sub_ls_ts_randomly(
             if subs == subs2:
                 logger.warning(f'\n<Warning> LS and TS overlap for: {subs} - '
                                f'You might want to consider checking the provided '
-                               f'datasets for multiple entries')
+                               f'datasets for multiple entries.')
 
     tot_sub_ls.append(sub_ls)
     tot_values_ls.append(values_ls)

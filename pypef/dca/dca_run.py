@@ -61,7 +61,7 @@ def run_pypef_hybrid_modeling(arguments):
             label=arguments['--label']
         )
 
-    elif arguments['--params'] and arguments['--model']:
+    elif arguments['--params'] and arguments['--model'] or arguments['--ps']:
         prediction_dict = {}
         prediction_dict.update({
             'drecomb': arguments['--drecomb'],

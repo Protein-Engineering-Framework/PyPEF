@@ -359,6 +359,7 @@ def pls_loocv(
     https://doi.org/10.1186/s12859-018-2407-8
     https://doi.org/10.1038/s41598-018-35033-y
     Hyperparameter (N component) tuning of PLS regressor, can achieve slightly better
+    results than e.g. 5-fold CV.
     """
     mean_squared_error_list = []
     for n_comp in range(1, 10):  # n_comp = 1, 2,..., 9
@@ -384,7 +385,8 @@ def pls_loocv(
                     pls.fit(x_learn_loo, y_learn_loo)
                 except ValueError:  # scipy/linalg/decomp_svd.py ValueError:
                     continue        # illegal value in %dth argument of internal gesdd
-                y_pred_loo.append(pls.predict(x_test_loo)[0][0])
+                y_pred___ = pls.predict(x_test_loo)[0]
+                y_pred_loo.append(pls.predict(x_test_loo)[0])
         except np.linalg.LinAlgError:  # numpy.linalg.LinAlgError: SVD did not converge
             continue
         try:
@@ -507,7 +509,9 @@ def get_regressor_performances(
 
     When using other regressors the parameters are tuned using GridSearchCV.
 
-    This function returnes performance (R2, (N)RMSE, Pearson's r) and model parameters.
+    Returns
+    -------
+    Performances (R2, RMSE, NRSME, Pearson's r, Spearman's rho) regressor type, and model parameters.
     """
     regressor = regressor.lower()
     best_params = None

@@ -145,7 +145,8 @@ Usage:
     pypef shift_pos --input CSV_FILE --offset OFFSET
         [--sep CSV_COLUMN_SEPARATOR] [--mutation_sep MUTATION_SEPARATOR] [--fitness_key FITNESS_KEY]
     pypef sto2a2m --sto STO_MSA_FILE [--inter_gap INTER_GAP] [--intra_gap INTRA_GAP]
-    pypef hybrid --ts TEST_SET
+    pypef hybrid 
+        [--ts TEST_SET] [--ps PREDICTION_SET]
         [--model MODEL] [--params PARAM_FILE]
         [--ls LEARNING_SET] [--label] [--threads THREADS]
     pypef hybrid --model MODEL --params PARAM_FILE
@@ -290,8 +291,8 @@ Options:
 
 from os import environ
 try:
-    environ['TF_CPP_MIN_LOG_LEVEL'] = '2'  # only print TensorFlow errors, set to '0' or comment
-except KeyError:                           # lines for seeing TensorFlow infos and warnings
+    environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # 3 = TensorFlow INFO, WARNING, and ERROR messages are not printed
+except KeyError:                           
     pass
 
 from sys import argv, version_info
@@ -323,7 +324,6 @@ formatter = logging.Formatter(
 )
 ch.setFormatter(formatter)
 logger.addHandler(ch)
-
 
 schema = Schema({
     Optional('--all'): bool,
@@ -398,6 +398,22 @@ schema = Schema({
 
 
 def validate(args):
+    """
+    Validate (docopt) arguments.
+    
+    Parameters
+    ----------
+    args: dict
+        Key-value pairs of arguments,
+        e.g.,
+        {'mklsts': True,
+         '--wt': 'WT_Seq.fasta',
+         '--input': 'Variant-Fitness.csv'}
+
+    Returns
+    -------
+    None
+    """
     try:
         args = schema.validate(args)
         return args
@@ -408,6 +424,8 @@ def validate(args):
 def run_main():
     """
     Entry point for pip-installed version.
+    Arguments are created from Docstring using docopt that 
+    creates an argument dict.
     """
     arguments = docopt(__doc__, version=__version__)
     start_time = time.time()
@@ -424,7 +442,7 @@ def run_main():
     else:
         run_pypef_utils(arguments)
 
-    elapsed = str(timedelta(seconds=time.time()-start_time)).split(".")[0]
+    elapsed = str(timedelta(seconds=time.time() - start_time)).split(".")[0]
     elapsed = f'{elapsed.split(":")[0]} h {elapsed.split(":")[1]} min {elapsed.split(":")[2]} s'
     logger.info(f'Done! (Run time: {elapsed})')
 

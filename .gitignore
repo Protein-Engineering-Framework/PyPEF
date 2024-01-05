@@ -386,3 +386,7 @@ scripts/Setup/linux/AVGFP/uref100_avgfp_jhmmer_119.a2m
 scripts/Setup/linux/AVGFP/avGFP.csv
 scripts/Setup/linux/api_encoding_train_test.py
 scripts/Setup/linux/apc.png
+datasets/ANEH/KARS160122_PLS_LOOCV_ML_Model_Performance.png
+datasets/ANEH/CV_performance/KARS160122_PLS_LOOCV_5-fold-CV.png
+datasets/ANEH/CV_performance/KARS160122_PLS_LOOCV_CV_Results.txt
+datasets/AVGFP/Predictions_Hybrid_TopTS.txt

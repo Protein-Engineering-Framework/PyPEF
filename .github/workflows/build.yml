@@ -34,6 +34,6 @@ jobs:
       run: |
         # stop the build if there are Python syntax errors or undefined names
         flake8 ./pypef --count --select=E9,F63,F7,F82 --show-source --statistics
-    - name: Export Pythonpath and run CLI PyPEF version test with pytest
+    - name: Export Pythonpath and run PyPEF API and CLI version test with pytest
       run: |
-        export PYTHONPATH="${PYTHONPATH}:${PWD}" && python -m pytest tests/cli/
+        export PYTHONPATH="${PYTHONPATH}:${PWD}" && python -m pytest tests/

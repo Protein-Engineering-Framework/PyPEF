@@ -32,7 +32,7 @@ amino_acids = [
 
 def get_wt_sequence(sequence_fasta):
     """
-    Gets wild-type sequence from defined input file (can be pure sequence or fasta style)
+    Gets wild-type sequence from defined input file (can be pure sequence or fasta style).
     """
     if sequence_fasta is None:
         return None
@@ -52,7 +52,7 @@ def get_wt_sequence(sequence_fasta):
 
 def read_models(number):
     """
-    reads the models found in the file Model_Results.txt.
+    Reads the models found in the file Model_Results.txt.
     If no model was trained, the .txt file does not exist.
     """
     try:
@@ -71,7 +71,7 @@ def read_models(number):
 
 def absolute_path_cwd_file(file):
     """
-    Get the current working directory
+    Gets the current working directory.
     """
     if file is None:
         return None
@@ -80,7 +80,7 @@ def absolute_path_cwd_file(file):
 
 def path_aaidx_txt_path_from_utils(filename):
     """
-    returns the relative path to the /AAindex folder from the utils directory,
+    Returns the relative path to the /AAindex folder from the utils directory,
     e.g. path/to/pypef/utils/../aaidx/AAindex/FAUJ880104.txt.
     """
     modules_path = os.path.dirname(os.path.abspath(__file__))
@@ -92,13 +92,16 @@ def get_sequences_from_file(
         mult_path: str | None = None
 ) -> (np.ndarray, np.ndarray, np.ndarray):
     """
-    "Get_Sequences" reads (learning and test) .fasta and
-    .fasta-like ".fasl" format files and extracts the name,
-    the target value and the sequence of the protein.
+    Reads (learning and test) .fasta and .fasta-like ".fasl" 
+    format files and extracts the name, the target value and 
+    the sequence of the protein.
     Only takes one-liner sequences for correct input.
-    See example directory for required fasta file format.
     Make sure every marker (> and ;) is seperated by a
     space ' ' from the value respectively name.
+
+    Returns
+    ----------
+    np.array(sequences), np.array(names_of_mutations), np.array(values)
     """
     if mult_path is not None:
         os.chdir(mult_path)
@@ -106,6 +109,9 @@ def get_sequences_from_file(
     sequences = []
     values = []
     names_of_mutations = []
+
+    allowed_chars = "ABCDEFGHIKLMNPQRSTVWYX-."
+    allowed_chars += allowed_chars.lower()
 
     with open(fasta, 'r') as f:
         words = ""
@@ -129,9 +135,17 @@ def get_sequences_from_file(
 
             else:
                 try:
-                    words += line.strip()
+                    line = line.strip()
+                    if any(not c in line for c in allowed_chars):
+                        for c in line:
+                            if c not in allowed_chars:
+                                raise SystemError(
+                                    f"The input file(s) (MSA or train/test sets) contain(s) unknown protein sequence characters "
+                                    f"(e.g.: \"{c}\"). Note that an MSA has to be provided in FASTA or A2M format (or formatted as "
+                                    F"pure linebreak-separated sequences).")
+                    words += line
                 except IndexError:
-                    raise IndexError("Learning or Validation sets (.fasta) likely "
+                    raise IndexError("Sequences in input file(s) likely "
                                      "have emtpy lines (e.g. at end of file)")
         if words != "":
             sequences.append(words)
@@ -146,6 +160,51 @@ def get_sequences_from_file(
         os.chdir('..')
 
     return np.array(sequences), np.array(names_of_mutations), np.array(values)
+
+
+def get_seqs_from_var_name(
+        wt_seq: str,
+        substitutions: list,
+        fitness_values: list
+) -> tuple[list, list, list]:
+    """
+    Similar to function "get_sequences_from_file" but instead of getting 
+    sequences from fasta file it directly gets them from wt sequence and
+    variant specifiers.
+
+    wt_seq: str
+        Wild-type sequence as string
+    substitutions: list
+        List of amino acid substittuions of a single variant of the format:
+            - Single substitution variant, e.g. variant A123C: ['A123C']
+            - Higher variants, e.g. variant A123C/D234E/F345G: ['A123C', 'D234E, 'F345G']
+            --> Full substitutions list, e.g.: [['A123C'], ['A123C', 'D234E, 'F345G']]
+    fitness_values: list
+        List of ints/floats of the variant fitness values, e.g. for two variants: [1.4, 0.8]
+    """
+    variant, values, sequences = [], [], []
+    for i, var in enumerate(substitutions):  # var are lists of (single or multiple) substitutions
+        temp = list(wt_seq)
+        name = ''
+        separation = 0
+        if var == ['WT']:
+            name = 'WT'
+        else:
+            for single_var in var:  # single entries of substitution list
+                position_index = int(str(single_var)[1:-1]) - 1
+                new_amino_acid = str(single_var)[-1]
+                temp[position_index] = new_amino_acid
+                # checking if multiple entries are inside list
+                if separation == 0:
+                    name += single_var
+                else:
+                    name += '/' + single_var
+                separation += 1
+        variant.append(name)
+        values.append(fitness_values[i])
+        sequences.append(''.join(temp))
+
+    return variant, values, sequences
 
 
 def remove_nan_encoded_positions(
@@ -228,49 +287,6 @@ def get_basename(filename: str) -> str:
         os.path.basename (filename) string without filename extension
     """
     return os.path.basename(filename).split('.')[0]
-
-
-def get_seqs_from_var_name(
-        wt_seq,
-        substitutions,
-        fitness_values
-) -> tuple[list, list, list]:
-    """
-    Similar to function above but just returns sequences
-
-    wt: str
-        Wild-type sequence as string
-    substitutions: list
-        List of substiutuions of a single variant of the format:
-            - Single substitution variant, e.g. variant A123C: ['A123C']
-            - Higher variants, e.g. variant A123C/D234E/F345G: ['A123C', 'D234E, 'F345G']
-            --> Full substitutions list, e.g.: [['A123C'], ['A123C', 'D234E, 'F345G']]
-    fitness_values: list
-        List of ints/floats of the variant fitness values, e.g. for two variants: [1.4, 0.8]
-    """
-    variant, values, sequences = [], [], []
-    for i, var in enumerate(substitutions):  # var are lists of (single or multiple) substitutions
-        temp = list(wt_seq)
-        name = ''
-        separation = 0
-        if var == ['WT']:
-            name = 'WT'
-        else:
-            for single_var in var:  # single entries of substitution list
-                position_index = int(str(single_var)[1:-1]) - 1
-                new_amino_acid = str(single_var)[-1]
-                temp[position_index] = new_amino_acid
-                # checking if multiple entries are inside list
-                if separation == 0:
-                    name += single_var
-                else:
-                    name += '/' + single_var
-                separation += 1
-        variant.append(name)
-        values.append(fitness_values[i])
-        sequences.append(''.join(temp))
-
-    return variant, values, sequences
 
 
 def split_variants(variants, sep='/'):

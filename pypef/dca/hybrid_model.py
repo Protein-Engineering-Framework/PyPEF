@@ -570,20 +570,35 @@ def check_model_type(model: dict | DCAHybridModel | PLMC | GREMLIN):
 
 
 def get_model_path(model: str):
+    """
+    Checks if model Pickle files exits in CWD 
+    and then in ./Pickles directory.
+    """
     try:
         if isfile(model):
             model_path = model
         elif isfile(f'Pickles/{model}'):
             model_path = f'Pickles/{model}'
         else:
-            raise SystemError("Did not find specified model file.")
+            raise SystemError("Did not find specified model file in current working directory "
+                              " or /Pickles subdirectory. Make sure to train/save a model first "
+                              "(e.g., for saving a GREMLIN model, type \"pypef param_inference --msa TARGET_MSA.a2m\" "
+                              "or, for saving a plmc model, type \"pypef param_inference --params TARGET_PLMC.params\").")
         return model_path
     except TypeError:
         raise SystemError("No provided model. "
                           "Specify a model for DCA-based encoding.")
 
 
-def get_model_and_type(params_file: str, substitution_sep: str = '/'):
+def get_model_and_type(
+        params_file: str, 
+        substitution_sep: str = '/'
+):
+    """
+    Tries to load/unpickle model to identify the model type 
+    and to load the model from the identified plmc pickle file 
+    or from the loaded pickle dictionary.
+    """
     file_path = get_model_path(params_file)
     try:
         with open(file_path, 'rb') as read_pkl_file:
@@ -621,8 +636,7 @@ def save_model_to_dict_pickle(
 
     if model_type is None:
         model_type = 'MODEL'
-    # else:
-    #    model_type += '_MODEL'
+    
     logger.info(f'Save model as Pickle file... {model_type}')
     pickle.dump(
         {
@@ -697,9 +711,9 @@ def plmc_or_gremlin_encoding(
 
 def gremlin_encoding(gremlin: GREMLIN, variants, sequences, ys_true, shift_pos=1, substitution_sep='/'):
     """
-     Gets X and x_wt for DCA prediction: delta_Hamiltonian respectively
-     delta_E = np.subtract(X, x_wt), with X = encoded sequences of variants.
-     Also removes variants, sequences, and y_trues at MSA gap positions.
+    Gets X and x_wt for DCA prediction: delta_Hamiltonian respectively
+    delta_E = np.subtract(X, x_wt), with X = encoded sequences of variants.
+    Also removes variants, sequences, and y_trues at MSA gap positions.
     """
     variants, sequences, ys_true = np.atleast_1d(variants), np.atleast_1d(sequences), np.atleast_1d(ys_true)
     variants, sequences, ys_true = remove_gap_pos(
@@ -1080,11 +1094,14 @@ def predict_ps(  # also predicting "pmult" dict directories
         in the respective created folders).
 
     """
-    logger.info(f'Taking model from saved model (Pickle file): {model_pickle_file}...')
-
+    if model_pickle_file is None:
+        model_pickle_file = params_file
+        logger.info(f'Trying to load model from saved parameters (Pickle file): {model_pickle_file}...')
+    else:
+        logger.info(f'Loading model from saved model (Pickle file): {model_pickle_file}...')
     model, model_type = get_model_and_type(model_pickle_file)
 
-    if model_type == 'PLMC':
+    if model_type == 'PLMC' or model_type == 'GREMLIN':
         logger.info(f'No hybrid model provided – falling back to a statistical DCA model.')
     elif model_type == 'Hybrid':
         beta_1, beta_2, reg = model.beta_1, model.beta_2, model.regressor

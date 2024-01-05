@@ -511,11 +511,25 @@ pypef hybrid -m PLMC -t TS.fasl --params PLMC --threads $threads
 ExitOnExitCode
 Write-Host
 
-# pure statistical
+# Hybrid: pure statistical
 pypef hybrid -t TS.fasl --params PLMC --threads $threads
 ExitOnExitCode
 Write-Host
+pypef hybrid -p TS.fasl --params PLMC --threads $threads
+ExitOnExitCode
+Write-Host
+# Same as above command
+pypef hybrid -p TS.fasl -m PLMC --params PLMC --threads $threads
+ExitOnExitCode
+Write-Host
 pypef hybrid -t TS.fasl --params GREMLIN
+ExitOnExitCode
+Write-Host
+pypef hybrid -p TS.fasl --params GREMLIN
+ExitOnExitCode
+Write-Host
+# Same as above command
+pypef hybrid -p TS.fasl -m GREMLIN --params GREMLIN
 ExitOnExitCode
 Write-Host
 pypef hybrid -m GREMLIN -t TS.fasl --params GREMLIN

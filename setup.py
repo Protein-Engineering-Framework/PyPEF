@@ -1,11 +1,16 @@
 #!/usr/bin/env python3
-# for installation run me with: pip install .
-#                      or with: pip install -e .
+# for installation run me with:      pip install .
+# or for editable/develop mode with: pip install -e .
 
 
 from setuptools import setup, find_packages
+from pathlib import Path
+
 from pypef import __version__
 
+
+this_directory = Path(__file__).parent
+long_description = Path.joinpath(this_directory, "README.md").read_text()
 
 with open("requirements.txt", "r", encoding="utf-8") as install_requirements:
     requirements = install_requirements.read()
@@ -19,10 +24,9 @@ setup(
     description='A command-line interface (CLI) tool for performing data-driven protein engineering '
                 'by building machine learning (ML)-trained regression models from sequence variant '
                 'fitness data (in CSV format) based on different techniques for protein sequence encoding. '
-                'Next to building pure ML models, \'hybrid modeling\' is also possible using a blended '
+                'Next to building pure ML models, \"hybrid modeling\" is also possible using a blended '
                 'model optimized for predictive contributions of a statistical and an ML-based prediction.',
-    long_description='For detailed description including a short Jupyter Notebook-based '
-                     'tutorial please refer to the GitHub page.',
+    long_description=long_description,
     long_description_content_type='text/markdown',
     url='https://github.com/Protein-Engineering-Framework/PyPEF',
     py_modules=['pypef'],
