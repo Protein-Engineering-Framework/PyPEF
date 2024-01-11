@@ -446,6 +446,7 @@ Other well-performing zero-shot prediction methods with available source code ar
 - EVcouplings (plmc-DCA, https://github.com/debbiemarkslab/EVcouplings)
 - EVE (https://github.com/OATML/EVE)
 - Tranception (https://github.com/OATML-Markslab/Tranception)
+- VESPA (https://github.com/Rostlab/VESPA)
   
 This list is by no means complete, see ProteinGym [repository](https://github.com/OATML-Markslab/ProteinGym) and [website](https://proteingym.org/) for a more detailed overview of available methods and achieved performances (as well as for getting many benchmark data sets).
 
