@@ -24,6 +24,7 @@ from pypef.dca.hybrid_model import DCAHybridModel, remove_gap_pos, get_delta_e_s
 from pypef.dca.plmc_encoding import PLMC
 from pypef.dca.gremlin_inference import GREMLIN
 
+
 use_gremlin = True  # if False uses plmc (requires plmc-generated .params file)
 
 n_aaindices_to_test = 10  # all would be 566 AAindex indices, only testing 10 here for shorter run time
@@ -256,17 +257,19 @@ x_onehot = OneHotEncoding(sequences).collect_encoded_sequences()
 
 assert len(x_dca) == len(x_aaindex_no_fft) == len(x_onehot) == len(fitnesses) == len(variants) == len(sequences)
 
-all_mean_performances_dca, all_mean_performances_hybrid, \
-    all_mean_performances_aaidx, all_mean_performances_onehot = [], [], [], []
-all_stddevs_dca, all_stddevs_hybrid, all_stddevs_aaidx, all_stddevs_onehot = [], [], [], []
+all_mean_performances_dca_statistical, all_mean_performances_dca_ml, all_mean_performances_hybrid, \
+    all_mean_performances_aaidx, all_mean_performances_onehot = [], [], [], [], []
+all_stddevs_dca_statistical, all_stddevs_dca_ml, all_stddevs_hybrid, all_stddevs_aaidx, all_stddevs_onehot = [], [], [], [], []
 low_n_train = np.arange(50, 1001, 50)
 print(f'\n(4/4) Testing low N performance (with N_train = {list(low_n_train)})...\n' + "=" * 50)
 for n_train in tqdm(low_n_train):
-    performances_dca, performances_hybrid, performances_aaidx, performances_onehot = [], [], [], []
+    performances_dca_statistical, performances_dca_ml, performances_hybrid, performances_aaidx, performances_onehot = [], [], [], [], []
     for rnd_state in [42, 213, 573, 917, 823]:
         x_dca_train, x_dca_test, y_train, y_test = train_test_split(
             x_dca, fitnesses, train_size=n_train, random_state=rnd_state)
-        performances_dca.append(get_regressor_performances(
+        # Delta E is just the sum of the encoding (embedding) relative to the WT sum
+        performances_dca_statistical.append(spearmanr(y_test, np.sum(x_dca_test, axis=1) - np.sum(x_wt))[0])
+        performances_dca_ml.append(get_regressor_performances(
             x_dca_train, x_dca_test, y_train, y_test, regressor='ridge')[4])  # [4] defines spearmanr correlation
 
         hybrid_model = DCAHybridModel(x_train=x_dca_train, y_train=y_train, x_wt=x_wt)
@@ -284,9 +287,11 @@ for n_train in tqdm(low_n_train):
             x_onehot, fitnesses, train_size=n_train, random_state=rnd_state)
         performances_onehot.append(get_regressor_performances(
             x_onehot_train, x_onehot_test, y_train, y_test, regressor='ridge')[4])
-
-    all_mean_performances_dca.append(np.mean(performances_dca))
-    all_stddevs_dca.append(np.std(performances_dca, ddof=1))
+        
+    all_mean_performances_dca_statistical.append(np.mean(performances_dca_statistical))
+    all_stddevs_dca_statistical.append(np.std(performances_dca_statistical, ddof=1))
+    all_mean_performances_dca_ml.append(np.mean(performances_dca_ml))
+    all_stddevs_dca_ml.append(np.std(performances_dca_ml, ddof=1))
     all_mean_performances_hybrid.append(np.mean(performances_hybrid))
     all_stddevs_hybrid.append(np.std(performances_hybrid, ddof=1))
     all_mean_performances_aaidx.append(np.mean(performances_aaidx))
@@ -295,10 +300,15 @@ for n_train in tqdm(low_n_train):
     all_stddevs_onehot.append(np.std(performances_onehot, ddof=1))
 
 # Plotting all the achieved "low-N" performances
-plt.plot(low_n_train, all_mean_performances_dca, 'o--', color='tab:orange', label='DCA encoding (pure ML)')
+plt.plot(low_n_train, all_mean_performances_dca_statistical, 'o--', color='tab:cyan', label='DCA (statistical model)')
 plt.fill_between(low_n_train,
-                 np.array(all_mean_performances_dca) - np.array(all_stddevs_dca),
-                 np.array(all_mean_performances_dca) + np.array(all_stddevs_dca),
+                 np.array(all_mean_performances_dca_statistical) - np.array(all_stddevs_dca_statistical),
+                 np.array(all_mean_performances_dca_statistical) + np.array(all_stddevs_dca_statistical),
+                 color='tab:cyan', alpha=0.2)
+plt.plot(low_n_train, all_mean_performances_dca_ml, 'o--', color='tab:orange', label='DCA encoding (pure ML)')
+plt.fill_between(low_n_train,
+                 np.array(all_mean_performances_dca_ml) - np.array(all_stddevs_dca_ml),
+                 np.array(all_mean_performances_dca_ml) + np.array(all_stddevs_dca_ml),
                  color='tab:orange', alpha=0.2)
 plt.plot(low_n_train, all_mean_performances_hybrid, 'o--', color='tab:blue', label='Hybrid DCA model (MERGE)')
 plt.fill_between(low_n_train,

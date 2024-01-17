@@ -5,10 +5,10 @@ dist/
 *.egg
 workflow/.ipynb_checkpoints/
 .idea/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
-
 
 # Created test/output files
 datasets/ANEH/ANEH_72.6.params
@@ -390,3 +390,7 @@ datasets/ANEH/KARS160122_PLS_LOOCV_ML_Model_Performance.png
 datasets/ANEH/CV_performance/KARS160122_PLS_LOOCV_5-fold-CV.png
 datasets/ANEH/CV_performance/KARS160122_PLS_LOOCV_CV_Results.txt
 datasets/AVGFP/Predictions_Hybrid_TopTS.txt
+AVGFP/avGFP.csv
+AVGFP/uref100_avgfp_jhmmer_119.a2m
+apc.png
+AVGFP/low_N_avGFP_extrapolation.png
