@@ -262,7 +262,9 @@ all_mean_performances_dca_statistical, all_mean_performances_dca_ml, all_mean_pe
 all_stddevs_dca_statistical, all_stddevs_dca_ml, all_stddevs_hybrid, all_stddevs_aaidx, all_stddevs_onehot = [], [], [], [], []
 low_n_train = np.arange(50, 1001, 50)
 print(f'\n(4/4) Testing low N performance (with N_train = {list(low_n_train)})...\n' + "=" * 50)
-for n_train in tqdm(low_n_train):
+pbar = tqdm(low_n_train)
+for n_train in pbar:
+    pbar.set_description(f'N_train = {n_train}, N_test = {len(variants) - n_train}')
     performances_dca_statistical, performances_dca_ml, performances_hybrid, performances_aaidx, performances_onehot = [], [], [], [], []
     for rnd_state in [42, 213, 573, 917, 823]:
         x_dca_train, x_dca_test, y_train, y_test = train_test_split(
