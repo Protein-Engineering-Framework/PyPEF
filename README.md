@@ -49,7 +49,7 @@ a framework written in Python 3 for performing sequence-based machine learning-a
 Written by Niklas Siedhoff and Alexander-Maurice Illig.
 
 <p align="center">
-    <img src=".github/imgs/exemplary_validation_color_plot.png" alt="drawing" width="500"/>
+    <img src=".github/imgs/ML_Model_Performance_DCA_GREMLIN.png" alt="drawing" width="500"/>
 </p>
 
 Protein engineering by rational or random approaches generates data that can aid the construction of self-learned sequence-function landscapes to predict beneficial variants by using probabilistic methods that can screen the unexplored sequence space with uncertainty *in silico*. Such predictive methods can be applied for increasing the success/effectivity of an engineering campaign while partly offering the prospect to reveal (higher-order) epistatic effects. Here we present an engineering framework termed PyPEF for assisting the supervised training and testing of regression models for predicting beneficial combinations of (identified) amino acid substitutions using machine learning algorithms from the [Scikit-learn](https://github.com/scikit-learn/scikit-learn) package. As training input, the developed framework requires the variant sequences and the corresponding screening results (fitness labels) of the identified variants as CSV (or FASTA-Like (FASL) datasets following a self-defined convention). Using linear or nonlinear regression methods (partial least squares (PLS), Ridge, Lasso, Elastic net, support vector machines (SVR), random forest (RF), and multilayer perceptron (MLP)-based regression), PyPEF trains on the given learning data while optimizing model hyperparameters (default: five-fold cross-validation) and can compute model performances on left-out test data. As sequences are encoded using amino acid descriptor sets taken from the [AAindex database](https://www.genome.jp/aaindex/), finding the best index-dependent encoding for a specific test set can be seen as a hyperparameter search on the test set. In addition, one-hot and [direct coupling analysis](https://en.wikipedia.org/wiki/Direct_coupling_analysis)-based feature generation are implemented as sequence encoding techniques, which often outperform AAindex-based encoding techniques. Finally, the selected or best identified encoding technique and regression model can be used to perform directed evolution walks *in silico* (see [Church-lab implementation](https://github.com/churchlab/UniRep) or the [reimplementation](https://github.com/ivanjayapurna/low-n-protein-engineering)) or to predict natural diverse or recombinant variant sequences that subsequently are to be designed and validated in the wet-lab.
@@ -81,11 +81,12 @@ A quick file setup and run test can be performed running files in [scripts/Setup
 <a name="requirements"></a>
 ## Requirements
 - Python >=3.9
-    - numpy 
+    - numpy
     - scipy
     - pandas
     - scikit-learn
-    - tensorflow 
+    - scikit-learn-intelex
+    - tensorflow
     - ray[default]
     - matplotlib
     - tqdm
@@ -100,6 +101,7 @@ If errors occur with third-party packages, you can check the required Python ver
 [![Python version](https://img.shields.io/pypi/pyversions/scipy?label=scipy%3A%20python)](https://github.com/scipy/scipy)
 [![Python version](https://img.shields.io/pypi/pyversions/pandas?label=pandas%3A%20python)](https://github.com/pandas-dev/pandas)
 [![Python version](https://img.shields.io/pypi/pyversions/scikit-learn?label=scikit-learn%3A%20python)](https://github.com/scikit-learn/scikit-learn)
+[![Python version](https://img.shields.io/pypi/pyversions/scikit-learn-intelex?label=scikit-learn-intelex%3A%20python)](https://github.com/intel/scikit-learn-intelex)
 [![Python version](https://img.shields.io/pypi/pyversions/tensorflow?label=tensorflow%3A%20python)](https://github.com/tensorflow/tensorflow)
 [![Python version](https://img.shields.io/pypi/pyversions/ray?label=ray%3A%20python)](https://github.com/ray-project/ray)
 [![Python version](https://img.shields.io/pypi/pyversions/matplotlib?label=matplotlib%3A%20python)](https://github.com/matplotlib/matplotlib)
@@ -109,10 +111,9 @@ If errors occur with third-party packages, you can check the required Python ver
 [![Python version](https://img.shields.io/pypi/pyversions/docopt?label=docopt%3A%20python)](https://github.com/docopt/docopt)
 [![Python version](https://img.shields.io/pypi/pyversions/adjusttext?label=adjusttext%3A%20python)](https://github.com/Phlya/adjustText)
 
-
 <a name="examples"></a>
 ## Running Examples
-Printing the help function:   
+Printing the help function:
 ```
 pypef --help
 ```
@@ -179,13 +180,13 @@ The use of the hybrid model (`pypef hybrid`) - instead of a pure ML model (`pype
 
 ```
 pypef hybrid -l LEARNING_SET.FASL -t TEST_SET.FASL --params PLMC_FILE.params
-``` 
+```
 
 Also, it is now possible to infer DCA model parameters using [GREMLIN](https://www.pnas.org/doi/10.1073/pnas.1314045110)'s [TensorFlow implementation](https://github.com/sokrypton/GREMLIN_CPP/blob/master/GREMLIN_TF.ipynb) and a generated MSA in FASTA or A2M format:
 
 ```
 pypef param_inference --msa MSA.fasta -w WT_SEQUENCE.FASTA --opt_iter 250
-``` 
+```
 
 For getting coupling information and highly evolved amino acids:
 ```
@@ -196,8 +197,7 @@ Using saved GREMLIN model for testing:
 
 ```
 pypef hybrid -l LEARNING_SET.FASL -t TEST_SET.FASL --params GREMLIN
-``` 
-
+```
 
 Sample files for testing PyPEF routines are provided in the workflow directory, which are also used when running the notebook tutorial. PyPEF's package dependencies are linked [here](https://github.com/niklases/PyPEF/network/dependencies).
 Further, for designing your own API based on the PyPEF workflow, modules can be adapted from the [source code](pypef).
@@ -214,7 +214,7 @@ bash Anaconda3-2023.03-1-Linux-x86_64.sh
 ```
 
 After accepting all steps, the conda setup should also be written to your `~/.bashrc`file, so that you can call anaconda typing `conda`.
-Next, to download this repository click Code > Download ZIP and unzip the zipped file, e.g. with `unzip PyPEF-master.zip`, or just clone this repository using your bash shell to your local machine `git clone https://github.com/niklases/PyPEF`.
+Next, to download this repository click Code > Download ZIP and unzip the zipped file, e.g. with `unzip PyPEF-master.zip`, or just clone this repository using your bash shell to your local machine `git clone https://github.com/Protein-Engineering-Framework/PyPEF`.
 To set up a new environment with conda you can either create the conda environment from the provided YAML file inside the PyPEF directory (`cd PyPEF` or `cd PyPEF-master` dependent on the downloaded file name and chose YAML file for your operating system):
 
 ```
@@ -256,33 +256,37 @@ Now change the directory to ./scripts/CLI (`cd scripts/CLI`) and run the .ipynb 
 jupyter-notebook
 ```
 
-Copy the notebook URL in your internet browser and select the Workflow_PyPEF.ipynb file to open it. Now you can select the pypef Python environment at the top notebook menu: Kernel > Change kernel > pypef (otherwise you would use your default Python version as environment, i.e. you would have to install the required packages for this interpreter as well; for this case the installation of the prerequisite packages can also be done within the notebook in provided code fields). 
+Copy the notebook URL in your internet browser and select the Workflow_PyPEF.ipynb file to open it. Now you can select the pypef Python environment at the top notebook menu: Kernel > Change kernel > pypef (otherwise you would use your default Python version as environment, i.e. you would have to install the required packages for this interpreter as well; for this case the installation of the prerequisite packages can also be done within the notebook in provided code fields).
 
 <a name="encoding-options"></a>
 ## Encoding Technique Options
+
 - AAindex: Sequence encoding based on AAindex descriptor sets; e.g. using AAindex https://www.genome.jp/entry/aaindex:ARGP820101 for encoding and without subsequent fast Fourier transform (FFT) of the encoded sequence:<br> 
-    &nbsp;&nbsp;sequence 'MKLLF' --> [1.18, 1.15,	1.53,	1.53,	2.02]<br>
-    and with FFT of the encoded sequence:<br> 
-    &nbsp;&nbsp;sequence 'MKLLF' --> [0.0000,	1.0000,	0.1435,	0.3010]<br>
-- OneHot: Occurence of a specific amino acid at a specific residue position indicated as a 1 and elso as a 0:<br> 
+    &nbsp;&nbsp;sequence 'MKLLF' --> [1.18, 1.15, 1.53, 1.53, 2.02]<br>
+    and with FFT of the encoded sequence:<br>
+    &nbsp;&nbsp;sequence 'MKLLF' --> [0.0000, 1.0000, 0.1435, 0.3010]<br>
+- OneHot: Occurence of a specific amino acid at a specific residue position indicated as a 1 and else as a 0:<br>
     &nbsp;&nbsp;sequence 'MKLLF' --><br>
     &nbsp;&nbsp;[&nbsp;0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, <br>
      &nbsp;&nbsp;&nbsp;&nbsp;0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, <br>
      &nbsp;&nbsp;&nbsp;&nbsp;0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, <br>
      &nbsp;&nbsp;&nbsp;&nbsp;0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, <br>
      &nbsp;&nbsp;&nbsp;&nbsp;0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0&nbsp;]<br>
-    
-- DCA: Direct coupling analysis of multiple sequence alignments to extract evolutionary query-specific features. DCA-based features will be generated from the local and coupling terms of the parameter file (paramfile) output by [plmc](https://github.com/debbiemarkslab/plmc) for each target variant sequence. This encoding technique generally outperforms the other encoding techniques described here, but depends on finding and aligning a minimum set of evolutionarily related/homologous sequences - which is not possible for every target sequence. Preprocessing steps for generating the paramfile based on a target sequence are described in the [hybrid model repository](https://github.com/Protein-Engineering-Framework/Hybrid_Model/blob/main/Examples/example_pabp.ipynb). Unlike the other encoding techniques presented, this evolution-based encoding technique is system-specific rather than amino acid-specific, i.e. it does not treat each amino acid the same, but according to its evolutionary position- and coupling-specific history. The DCA-based encoding technique is further also provided for constructing a pure ML model:<br> 
+
+- DCA: Direct coupling analysis of multiple sequence alignments to extract evolutionary query-specific features. DCA-based features will be generated from the local and coupling terms of the parameter file (paramfile) output by [plmc](https://github.com/debbiemarkslab/plmc) for each target variant sequence. This encoding technique generally outperforms the other encoding techniques described here, but depends on finding and aligning a minimum set of evolutionarily related/homologous sequences - which is not possible for every target sequence. Preprocessing steps for generating the paramfile based on a target sequence are described in the [hybrid model repository](https://github.com/Protein-Engineering-Framework/Hybrid_Model/blob/main/Examples/example_pabp.ipynb). Unlike the other encoding techniques presented, this evolution-based encoding technique is system-specific rather than amino acid-specific, i.e. it does not treat each amino acid the same, but according to its evolutionary position- and coupling-specific history. The DCA-based encoding technique is further also provided for constructing a pure ML model:<br>
   &nbsp;&nbsp;sequence 'MKLLF' --> [2.3445, 1.3294, 1.6245, 0.8901, 3.2317]&nbsp;&nbsp;, while<br>
   &nbsp;&nbsp;sequence 'MKLKF' --> [2.3472, 1.3601, 1.5431, 1.3749, 3.0186]&nbsp;&nbsp;.  
 
 <a name="modeling-techniques"></a>
 ## Modeling Techniques
+
 <a name="pure-ml"></a>
 ### Pure Machine Learning (ML)-based Modeling
+
 Several linear and non-linear modeling options are available by default to construct supervised regression models based on the generated sequence features, i.e. encoded sequences.
 Regression models are trained, i.e. model hyperparameters are optimized, by *k*- fold (by default, fivefold) cross-validation on training samples. Here, the model aims to map the encoded variant sequences that are the features (***X***) for predicting the corresponding fitness labels (***y***) such that *f(***X***)* --> ***y*** – while cross-validation and/or using a model implementing a penalty will be necessary for better model generalization behavior.
 Following regression options from [Scikit-learn](https://scikit-learn.org/stable/) are implemented (for optimized hyperparameters, see Model Hyperparameters section below):
+
 - [Partial Least Squares Regression (linear model)](https://scikit-learn.org/stable/modules/generated/sklearn.cross_decomposition.PLSRegression.html)
 - [Lasso Regression (fit with Least Angle Regression, L1-penalty regularized linear model)](https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.LassoLars.html)
 - [Ridge Regression (L2-penalty regularized linear model)](https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.Ridge.html)
@@ -293,12 +297,15 @@ Following regression options from [Scikit-learn](https://scikit-learn.org/stable
 
 <a name="hybrid-modeling"></a>
 ### Hybrid Modeling Using the MERGE Method
+
 Optimization of the two model contributions to the final hybrid model using the [differential evolution](https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.differential_evolution.html) algorithm (see the [hybrid model preprint](https://www.biorxiv.org/content/10.1101/2022.06.07.495081v1) and the corresponding repository of the method termed [MERGE](https://github.com/Protein-Engineering-Framework/MERGE)); only based on DCA-derived features (therefore no definition of the flag `-e`, `--encoding` necessary for hybrid modeling):
+
 - DCA-based statistical prediction of the evolutionary energy, i.e., probability, of a variant relative to the wild type (see [EVmutation](https://marks.hms.harvard.edu/evmutation/); [EVmutation repository](https://github.com/debbiemarkslab/EVmutation)/[EVcouplings repository](https://github.com/debbiemarkslab/EVcouplings)).
 - ML-based supervised training with Ridge regression on training subsets of DCA-encoded sequences and the corresponding fitness values (similar to the pure ML approach using the DCA-based encoding technique in combination with Ridge regression)
 
 <a name="grids"></a>
 ## Model Hyperparameter Grids for Training
+
 The following model hyperparameter ranges are tested during (*k*-fold) cross-validation for optimized model generalization:
 |Regression model|Hyperparameter grid|
 |:--------------:|:-----------------:|
@@ -312,6 +319,7 @@ The following model hyperparameter ranges are tested during (*k*-fold) cross-val
 
 <a name="set-up"></a>
 ## Setting Up the Scripts Yourself
+
 PyPEF was developed to be run from a command-line interface while `python3 ./pypef/main.py` (when using the downloaded version of this repository and setting the `PYTHONPATH`) is equal to `pypef` when installed with pip. 
 Downloading/cloning the repository files (manually or with `wget`/`git clone`):<br>
 ```
@@ -374,10 +382,11 @@ python3 ./pypef/main.py
    ```
 
 4. Convert the created MSA from [Stockholm](https://en.wikipedia.org/wiki/Stockholm_format) (.sto) format to [A2M](https://en.wikipedia.org/wiki/FASTA_format#Extensions) format:
+
    ```
    pypef sto2a2m --sto ANEH_jhmmer.sto
    ```
-   
+
 5. Now you can follow approaches 5.1 (using GREMLIN; implemented in TensorFlow) or 5.2 (using plmc; extern parameter generation in C).
 
     5.1. Running GREMLIN on the generated MSA (in FASTA or A2M format):
@@ -403,7 +412,7 @@ python3 ./pypef/main.py
     ```
     plmc -o ANEH_72.6.params -le 72.6 -m 100 -g -f WT_ANEH ANEH_jhmmer.a2m
     ```
-    
+
     The output parameter (.params) file can be used for encoding sequences with the DCA-based encoding technique (`-e dca`) by providing it to PyPEF; e.g. for pure ML modeling:
 
     ```
@@ -418,6 +427,7 @@ python3 ./pypef/main.py
 
 <a name="zero-shot-prediction"></a>
 ## Unsupervised/zero-shot prediction
+
 Several developed methods allow unsupervised prediction of a proteins fitness based on its sequence (and/or structure).
 These methods have the advantage that no initial knowledge about a proteins fitness is required for prediction, while a correlation of the predicted score and a protein's natural fitness is assumed.
 DCA itself is a statistical/unsupervised method based on MSA information that outperforms simpler MSA-based methods (such as (un)coupled raw MSA sequence frequencies or BLOSUM scores), e.g., see [scripts/GREMLIN_numba/using_gremlin_functionalities.ipynb](scripts/GREMLIN_numba/using_gremlin_functionalities.ipynb).
@@ -442,6 +452,7 @@ using the plmc parameters.
 Other well-performing zero-shot prediction methods with available source code are:
 
 - ESM-1v/ESM-2 (https://github.com/facebookresearch/esm)
+- ProteinMPNN (https://github.com/dauparas/ProteinMPNN)
 - DeepSequence (https://github.com/debbiemarkslab/DeepSequence)
 - EVcouplings (plmc-DCA, https://github.com/debbiemarkslab/EVcouplings)
 - EVE (https://github.com/OATML/EVE)
@@ -449,6 +460,31 @@ Other well-performing zero-shot prediction methods with available source code ar
 - VESPA (https://github.com/Rostlab/VESPA)
   
 This list is by no means complete, see ProteinGym [repository](https://github.com/OATML-Markslab/ProteinGym) and [website](https://proteingym.org/) for a more detailed overview of available methods and achieved performances (as well as for getting many benchmark data sets).
+
+The performance of the GREMLIN model used is shown in the following for predicting
+
+(I) single substitution effects
+<p align="center">
+    <img src=".github/imgs/single_point_mut_performance_PGyM_DCA.png" alt="drawing" width="500"/>
+</p>
+
+(including Hybrid model performances with N_Train = {25, 50, 75, 100, 200})
+
+<p align="center">
+    <img src=".github/imgs/single_point_mut_performance_PGym_Hybrid.png" alt="drawing" width="500"/>
+</p>
+
+(II) multi-substitution effects
+<p align="center">
+    <img src=".github/imgs/multi_point_mut_performance_PGym_DCA.png" alt="drawing" width="500"/>
+</p>
+
+(including Hybrid model performances with N_Train = {25, 50, 75, 100, 200})
+<p align="center">
+    <img src=".github/imgs/multi_point_mut_performance_PGym_Hybrid.png" alt="drawing" width="500"/>
+</p>
+
+for ProteinGym datasets computed using the scripts located at [scripts/ProteinGym_runs](scripts/ProteinGym_runs).
 
 <a name="api-usage"></a>
 ## API Usage for Sequence Encoding

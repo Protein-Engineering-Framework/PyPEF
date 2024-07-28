@@ -76,9 +76,9 @@ class InvalidVariantError(Exception):
 
     def __init__(self, variant: str):
         self.variant = variant
-        message = "The entered variant '%s' does not follow the required scheme " \
-                  "(integer enclosed by two one letter code representations of amino acids). " \
-                  "Check separator or variant." % self.variant
+        message = f"The entered variant '{self.variant}' does not follow the required scheme " \
+                  f"(integer enclosed by two one letter code representations of amino acids). " \
+                  f"Check separator or variant."
         self.message = message
         super().__init__(self.message)
 

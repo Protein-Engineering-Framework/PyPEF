@@ -33,6 +33,8 @@ logger = logging.getLogger('pypef.dca.hybrid_model')
 import numpy as np
 import sklearn.base
 from scipy.stats import spearmanr
+from sklearnex import patch_sklearn
+patch_sklearn(verbose=False)
 from sklearn.linear_model import Ridge
 from sklearn.model_selection import GridSearchCV, train_test_split
 from scipy.optimize import differential_evolution
@@ -50,24 +52,23 @@ from pypef.dca.gremlin_inference import GREMLIN
 
 
 class DCAHybridModel:
-    alphas = np.logspace(-6, 6, 100)  # Grid for the parameter 'alpha'.
-    parameter_range = [(0, 1), (0, 1)]  # Parameter range of 'beta_1' and 'beta_2' with lb <= x <= ub
     # TODO: Implementation of other regression techniques (CVRegression models)
-
     def __init__(
             self,
-            alphas=alphas,
-            parameter_range=None,
             x_train: np.ndarray = None,
             y_train: np.ndarray = None,
             x_test: np.ndarray = None,  # not necessary for training
             y_test: np.ndarray = None,  # not necessary for training
-            x_wt=None
+            x_wt=None,
+            alphas=None,     # Ridge regression grid for the parameter 'alpha'
+            parameter_range=None,  # Parameter range of 'beta_1' and 'beta_2' with lower bound <= x <= upper bound
     ):
         if parameter_range is None:
-            parameter_range = parameter_range
-        self._alphas = alphas
-        self._parameter_range = parameter_range
+            parameter_range = [(0, 1), (0, 1)] 
+        if alphas is None:
+            alphas = np.logspace(-6, 6, 100)
+        self.alphas = alphas
+        self.parameter_range = parameter_range
         self.x_train = x_train
         self.y_train = y_train
         self.x_test = x_test
@@ -148,7 +149,7 @@ class DCAHybridModel:
         of the variant and wild-type sequence.
 
         dE = E (variant) - E (wild-type)
-        with E = \sum_{i} h_i (o_i) + \sum_{i<j} J_{ij} (o_i, o_j)
+        with E = sum_{i} h_i (o_i) + sum_{i<j} J_{ij} (o_i, o_j)
 
         Parameters
         ----------
@@ -198,7 +199,7 @@ class DCAHybridModel:
         Ridge object trained on 'x_train' and 'y_train' (cv=5)
         with optimized 'alpha'. 
         """
-        grid = GridSearchCV(Ridge(), {'alpha': self._alphas}, cv=5)
+        grid = GridSearchCV(Ridge(), {'alpha': self.alphas}, cv=5)
         grid.fit(x_train, y_train)
         return Ridge(**grid.best_params_).fit(x_train, y_train)
 
@@ -637,7 +638,8 @@ def save_model_to_dict_pickle(
     if model_type is None:
         model_type = 'MODEL'
     
-    logger.info(f'Save model as Pickle file... {model_type}')
+    pkl_path = os.path.abspath(f'Pickles/{model_type}')
+    logger.info(f'Saving model as Pickle file ({pkl_path})...')
     pickle.dump(
         {
             'model': model,
@@ -693,7 +695,7 @@ def plmc_or_gremlin_encoding(
             logger.info(f"Following positions are frequent gap positions in the MSA "
                         f"and cannot be considered for effective modeling, i.e., "
                         f"substitutions at these positions are removed as these would be "
-                        f"predicted as wild type:\n{[gap + 1 for gap in model.gaps]}.\n"
+                        f"predicted with wild-type fitness:\n{[gap + 1 for gap in model.gaps]}.\n"
                         f"Effective positions (N={len(model.v_idx)}) are:\n"
                         f"{[v_pos + 1 for v_pos in model.v_idx]}")
         xs, x_wt, variants, sequences, ys_true = gremlin_encoding(
@@ -1025,6 +1027,8 @@ def performance_ls_ts(
 
         save_model_to_dict_pickle(model, model_type, None, None, spearmanr(y_test, ys_pred)[0], None)
 
+        model_type = f'{model_type}_no_ML'
+
     else:
         raise SystemError('No Test Set given for performance estimation.')
 
@@ -1032,7 +1036,8 @@ def performance_ls_ts(
     logger.info(f'Spearman Rho = {spearman_rho[0]:.3f}')
 
     plot_y_true_vs_y_pred(
-        np.array(y_test), np.array(ys_pred), np.array(test_variants), label=label, hybrid=True
+        np.array(y_test), np.array(ys_pred), np.array(test_variants), 
+        label=label, hybrid=True, name=model_type
     )
 
 

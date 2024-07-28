@@ -90,7 +90,7 @@ def path_aaidx_txt_path_from_utils(filename):
 def get_sequences_from_file(
         fasta: str,
         mult_path: str | None = None
-) -> (np.ndarray, np.ndarray, np.ndarray):
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
     Reads (learning and test) .fasta and .fasta-like ".fasl" 
     format files and extracts the name, the target value and 
@@ -139,10 +139,11 @@ def get_sequences_from_file(
                     if any(not c in line for c in allowed_chars):
                         for c in line:
                             if c not in allowed_chars:
-                                raise SystemError(
-                                    f"The input file(s) (MSA or train/test sets) contain(s) unknown protein sequence characters "
-                                    f"(e.g.: \"{c}\"). Note that an MSA has to be provided in FASTA or A2M format (or formatted as "
-                                    F"pure linebreak-separated sequences).")
+                                pass
+                                #raise SystemError(
+                                #    f"The input file(s) (MSA or train/test sets) contain(s) unknown protein sequence characters "
+                                #    f"(e.g.: \"{c}\"). Note that an MSA has to be provided in FASTA or A2M format (or formatted as "
+                                #    F"pure linebreak-separated sequences).")
                     words += line
                 except IndexError:
                     raise IndexError("Sequences in input file(s) likely "
@@ -165,7 +166,8 @@ def get_sequences_from_file(
 def get_seqs_from_var_name(
         wt_seq: str,
         substitutions: list,
-        fitness_values: list
+        fitness_values: list,
+        shift_pos: int = 0
 ) -> tuple[list, list, list]:
     """
     Similar to function "get_sequences_from_file" but instead of getting 
@@ -191,8 +193,12 @@ def get_seqs_from_var_name(
             name = 'WT'
         else:
             for single_var in var:  # single entries of substitution list
-                position_index = int(str(single_var)[1:-1]) - 1
+                position_index = int(str(single_var)[1:-1]) - 1 - shift_pos
                 new_amino_acid = str(single_var)[-1]
+                if str(single_var)[0].isalpha(): # Assertion only possible for format AaPosAa, e.g. A123C
+                    assert str(single_var)[0] == temp[position_index], f"Input variant: "\
+                        f"{str(single_var)[0]}{position_index}{new_amino_acid}, WT amino "\
+                        f"acid variant {temp[position_index]}{position_index}{new_amino_acid}"
                 temp[position_index] = new_amino_acid
                 # checking if multiple entries are inside list
                 if separation == 0:

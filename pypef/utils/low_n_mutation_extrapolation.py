@@ -299,7 +299,7 @@ def performance_mutation_extrapolation(
             if i < len(collected_levels) - 1:  # not last i else error, last entry is: lvl 1 --> all higher variants
                 test_idx = collected_levels[i + 1]
                 test_df = df_mut_lvl[test_idx]
-                test_variants, x_test, y_test = process_df_encoding(test_df)
+                _test_variants, x_test, y_test = process_df_encoding(test_df)
                 if not conc:
                     # For training on distinct iterated level i, uncomment lines below:
                     # train_idx = collected_levels[i]

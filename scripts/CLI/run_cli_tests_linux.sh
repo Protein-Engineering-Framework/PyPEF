@@ -19,15 +19,15 @@ export PS4='+(Line ${LINENO}): '  # echo script line numbers
 ### if using downloaded/locally stored pypef .py files:
 ##########################################################################################################################
 conda env remove -n pypef                                                                                                #
-conda create -n pypef python=3.10 -y                                                                                     #
+conda create -n pypef python=3.11 -y                                                                                     #
 eval "$(conda shell.bash hook)"                                                                                          #
-conda activate pypef                                                                                                     #                                                                             #
+conda activate pypef                                                                                                     #
 cd '../'                                                                                                                 #
 path=$( echo ${PWD%/*} )                                                                                                 #
 cd 'CLI'                                                                                                                 #
 python -m pip install -r "$path/requirements.txt"                                                                        #
 export PYTHONPATH=${PYTHONPATH}:$path                                                                                    #
-pypef="python3 $path/pypef/main.py"                                                                                      #                                                                                                                   #
+pypef="python3 $path/pypef/main.py"                                                                                      #
 ##########################################################################################################################
 ### else just use pip-installed pypef version (uncomment):                                                               #
 #pypef=pypef                                                                                                             #
@@ -36,7 +36,7 @@ threads=12                                                                      
 ##########################################################################################################################
 
 ### threads=1 shows progress bar where possible
-### CV-based mlp and rf regression option optimization take a long time and related testing commands are commented out/not included herein
+### CV-based mlp and rf regression option take a long time and related testing commands are commented out/not included herein
 
 ### Pure ML (and some hybrid model) tests on ANEH dataset
 cd "$path/datasets/ANEH"
@@ -50,7 +50,7 @@ echo
 $pypef mklsts -i 37_ANEH_variants.csv -w Sequence_WT_ANEH.fasta
 echo
 
-$pypef ml -e onehot -l LS.fasl -t TS.fasl --regressor pls
+$pypef ml -e onehot -l LS.fasl -t TS.fasl --regressor pls --label
 echo
 $pypef ml --show
 echo
@@ -368,7 +368,7 @@ echo
 $pypef hybrid -m PLMC -t TS.fasl --params PLMC --threads $threads
 echo
 
-# Hybrid: pure statistical
+# ## No training set given: Statistical prediction, Hybrid: pure statistical
 $pypef hybrid -t TS.fasl --params PLMC --threads $threads
 echo
 $pypef hybrid -p TS.fasl --params PLMC --threads $threads
@@ -380,6 +380,9 @@ $pypef hybrid -t TS.fasl --params GREMLIN
 echo
 $pypef hybrid -p TS.fasl --params GREMLIN
 echo
+$pypef hybrid -t TS.fasl --params uref100_avgfp_jhmmer_119_plmc_42.6.params --threads $threads
+echo
+
 # Same as above command
 $pypef hybrid -p TS.fasl -m GREMLIN --params GREMLIN
 echo
@@ -419,12 +422,11 @@ echo
 $pypef hybrid directevo --wt P42212_F64L.fasta --params PLMC
 echo
 
+# Hybrid prediction using GREMLIN parameters
 $pypef hybrid -l LS.fasl -t TS.fasl --params GREMLIN
 echo 
 $pypef hybrid -m HYBRIDgremlin -t TS.fasl --params GREMLIN
 echo 
-
-### Similar to old CLI run test from here
 
 $pypef encode -i avGFP.csv -e dca -w P42212_F64L.fasta --params uref100_avgfp_jhmmer_119_plmc_42.6.params --threads $threads
 echo
@@ -444,9 +446,6 @@ echo
 $pypef hybrid -m HYBRIDplmc -t TS.fasl --params uref100_avgfp_jhmmer_119_plmc_42.6.params --threads $threads
 echo
 
-# No training set given
-$pypef hybrid -t TS.fasl --params uref100_avgfp_jhmmer_119_plmc_42.6.params --threads $threads
-echo
 $pypef ml -e dca -m MLplmc -t TS.fasl --params uref100_avgfp_jhmmer_119_plmc_42.6.params --label --threads $threads
 echo
 
@@ -492,4 +491,4 @@ echo
 $pypef ml extrapolation -i avGFP_aaidx_encoded.csv --conc --regressor ridge
 echo
 
-echo 'All tests finished without error!'
+echo 'All runs finished without error!'

@@ -15,7 +15,10 @@ $PSDefaultParameterValues = @{
 }
 
 # exit on (PyPEF) errors
-function ExitOnExitCode { if ($LastExitCode) { Write-Host "PyPEF command error; terminating execution."; exit } }
+function ExitOnExitCode { if ($LastExitCode) { 
+    Write-Host "PyPEF command error; terminating execution."; 
+    Set-Location -Path $path'/scripts/CLI'; 
+    exit } }
 
 ### RUN ME IN POWERSHELL WITH
 ### $ .\run_cli_tests_win.ps1                      # printing STDOUT and STDERR to terminal
@@ -23,7 +26,7 @@ function ExitOnExitCode { if ($LastExitCode) { Write-Host "PyPEF command error; 
 ### if using downloaded/locally stored pypef .py files:
 ##########################################################################################################################
 conda env remove -n pypef                                                                                                #
-conda create -n pypef python=3.10 -y                                                                                     #
+conda create -n pypef python=3.11 -y                                                                                     #
 conda activate pypef                                                                                                     #
 $path=Get-Location                                                                                                       #
 $path=Split-Path -Path $path -Parent                                                                                     #
@@ -39,7 +42,7 @@ $threads = 12                                                                   
 ##########################################################################################################################
 
 ### threads=1 shows progress bar where possible
-### CV-based mlp and rf regression option optimization take a long time and related testing commands are commented out/not included herein
+### CV-based mlp and rf regression option take a long time and related testing commands are commented out/not included herein
 
 ### Pure ML (and some hybrid model) tests on ANEH dataset
 Set-Location -Path $path'/datasets/ANEH'
@@ -685,4 +688,4 @@ ExitOnExitCode
 Write-Host
 
 ExitOnExitCode
-Write-Host 'All tests finished without error!'
+Write-Host 'All runs finished without error!'

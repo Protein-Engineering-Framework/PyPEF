@@ -3,14 +3,17 @@
 # or for editable/develop mode with: pip install -e .
 
 
+import os
 from setuptools import setup, find_packages
-from pathlib import Path
 
 from pypef import __version__
 
 
-this_directory = Path(__file__).parent
-long_description = Path.joinpath(this_directory, "README.md").read_text()
+directory_readme = os.path.join(os.path.dirname(__file__), "README.md")
+with open(directory_readme, 'r') as readme:
+    long_description = readme.read()
+
+long_description = long_description.replace(".github/imgs/", "https://github.com/niklases/PyPEF/raw/main/.github/imgs/")
 
 with open("requirements.txt", "r", encoding="utf-8") as install_requirements:
     requirements = install_requirements.read()
@@ -28,7 +31,7 @@ setup(
                 'model optimized for predictive contributions of a statistical and an ML-based prediction.',
     long_description=long_description,
     long_description_content_type='text/markdown',
-    url='https://github.com/Protein-Engineering-Framework/PyPEF',
+    url='https://github.com/niklases/PyPEF',
     py_modules=['pypef'],
     packages=find_packages(include=['pypef', 'pypef.*']),
     package_data={'pypef': ['ml/AAindex/*', 'ml/AAindex/Refined_cluster_indices_r0.93_r0.97/*']},
