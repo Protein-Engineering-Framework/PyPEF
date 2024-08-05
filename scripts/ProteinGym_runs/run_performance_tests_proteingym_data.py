@@ -111,7 +111,7 @@ def plot_performance(mut_data, plot_name, mut_sep=':'):
             f'0' + r'$\rightarrow$' + f'{len(fitnesses)}', 
             color='tab:blue', size=4, ha='right'
         ))
-        assert len(x_dca) == len(fitnesses) == len(variants) == len(sequences)
+        assert len(x_dca) == len(fitnesses) == len(variants) == len(sequences) == len(y_pred)
         hybrid_perfs = []
         for i_t, train_size in enumerate([25, 50, 75, 100, 200]):
             try:
