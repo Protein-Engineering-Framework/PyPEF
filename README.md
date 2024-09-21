@@ -1,14 +1,19 @@
 This repository contains the source files and supplementary information for the PyPEF framework, which is described in<br>
 
 Niklas E. Siedhoff<sup>*1,§*</sup>, Alexander-Maurice Illig<sup>*1,§*</sup>, Ulrich Schwaneberg<sup>*1,2*</sup>, Mehdi D. Davari<sup>*3,\**</sup>, <br>
-PyPEF – An Integrated Framework for Data-Driven Protein Engineering, *J. Chem. Inf. Model.* 2021, 61, 3463-3476 <br>
+PyPEF – An Integrated Framework for Data-Driven Protein Engineering,<br>
+*J. Chem. Inf. Model.* 2021, 61, 3463-3476 <br>
 https://doi.org/10.1021/acs.jcim.1c00099 <br>
 
 as well as additional framework features described in the preprint<br>
 
 Alexander-Maurice Illig<sup>*1,§*</sup>, Niklas E. Siedhoff<sup>*1,§*</sup>, Ulrich Schwaneberg<sup>*1,2*</sup>, Mehdi D. Davari<sup>*3,\**</sup>, <br>
-A hybrid model combining evolutionary probability and machine learning leverages data-driven protein engineering, *To be published*<br>
-Preprint available at bioRxiv: https://doi.org/10.1101/2022.06.07.495081.
+A hybrid model combining evolutionary probability and machine learning leverages data-driven protein engineering,<br>
+preprint available at bioRxiv: https://doi.org/10.1101/2022.06.07.495081<br>
+*now published as*<br>
+Evolutionary Probability and Stacked Regressions Enable Data-Driven Protein Engineering with Minimized Experimental Effort,<br>
+*J. Chem. Inf. Model.* 2024, 64, 16, 6350–6360<br>
+https://doi.org/10.1021/acs.jcim.4c00704
 
 <sup>*1*</sup><sub>Institute of Biotechnology, RWTH Aachen University, Worringer Weg 3, 52074 Aachen, Germany</sub> <br>
 <sup>*2*</sup><sub>DWI-Leibniz Institute for Interactive Materials, Forckenbeckstraße 50, 52074 Aachen, Germany</sub> <br>
@@ -463,14 +468,20 @@ This list is by no means complete, see ProteinGym [repository](https://github.co
 
 The performance of the GREMLIN model used is shown in the following for predicting
 
-(I) single substitution effects (blue), including Hybrid model performances with N_Train = {25, 50, 75, 100, 200} (orange, green, red, purple, brown)
+(I) single substitution effects (blue), including Hybrid model performances with N_Train = {100, 200, 1000} (orange, green, and red, respectively)
 <p align="center">
-    <img src=".github/imgs/single_point_mut_performance_PGyM_DCA.png" alt="drawing" width="500"/>
+    <img src=".github/imgs/single_point_mut_performance.png" alt="drawing" width="500"/>
+</p>
+<p align="center">
+    <img src=".github/imgs/single_point_mut_performance_violin.png" alt="drawing" width="250"/>
 </p>
 
-(II) multi-substitution effects (blue), including Hybrid model performances with N_Train = {25, 50, 75, 100, 200} (orange, green, red, purple, brown)
+(II) multi-substitution effects (blue), including Hybrid model performances with N_Train = {100, 200, 1000} (orange, green, and red, respectively)
 <p align="center">
-    <img src=".github/imgs/multi_point_mut_performance_PGym_DCA.png" alt="drawing" width="500"/>
+    <img src=".github/imgs/multi_point_mut_performance.png" alt="drawing" width="500"/>
+</p>
+<p align="center">
+    <img src=".github/imgs/multi_point_mut_performance_violin.png" alt="drawing" width="250"/>
 </p>
 
 for ProteinGym datasets computed using the scripts located at [scripts/ProteinGym_runs](scripts/ProteinGym_runs).

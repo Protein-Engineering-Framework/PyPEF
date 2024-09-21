@@ -388,3 +388,6 @@ avGFP_shortened_dca_encoded.csv
 datasets/AVGFP/avGFP_shortened.csv
 avGFP_dca_encoded.csv
 scripts/Runtime_tests/runtimes.png
+datasets/AVGFP/Recomb_Double_Split/Predictions_Hybrid_TopRecomb_Double_Split.txt
+scripts/ProteinGym_runs/single_point_mut_performance_violin.png
+scripts/ProteinGym_runs/multi_point_mut_performance_violin.png

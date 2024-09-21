@@ -2,19 +2,15 @@
 # -*- coding: utf-8 -*-
 # Created on 05 October 2020
 # @authors: Niklas Siedhoff, Alexander-Maurice Illig
-# @contact: <n.siedhoff@biotec.rwth-aachen.de>
+# @contact: <niklas.siedhoff@rwth-aachen.de>
 # PyPEF - Pythonic Protein Engineering Framework
-# Released under Creative Commons Attribution-NonCommercial 4.0 International Public License (CC BY-NC 4.0)
+# https://github.com/niklases/PyPEF
+# Licensed under Creative Commons Attribution-ShareAlike 4.0 International Public License (CC BY-SA 4.0)
 # For more information about the license see https://creativecommons.org/licenses/by-nc/4.0/legalcode
 
 # PyPEF – An Integrated Framework for Data-Driven Protein Engineering
 # Journal of Chemical Information and Modeling, 2021, 61, 3463-3476
 # https://doi.org/10.1021/acs.jcim.1c00099
-# Niklas E. Siedhoff1,§, Alexander-Maurice Illig1,§, Ulrich Schwaneberg1,2, Mehdi D. Davari1,*
-# 1Institute of Biotechnology, RWTH Aachen University, Worringer Weg 3, 52074 Aachen, Germany
-# 2DWI-Leibniz Institute for Interactive Materials, Forckenbeckstraße 50, 52074 Aachen, Germany
-# *Corresponding author
-# §Equal contribution
 
 from __future__ import annotations
 import os
@@ -166,7 +162,7 @@ def get_sequences_from_file(
 def get_seqs_from_var_name(
         wt_seq: str,
         substitutions: list,
-        fitness_values: list,
+        fitness_values: None | list = None,
         shift_pos: int = 0
 ) -> tuple[list, list, list]:
     """
@@ -177,14 +173,16 @@ def get_seqs_from_var_name(
     wt_seq: str
         Wild-type sequence as string
     substitutions: list
-        List of amino acid substittuions of a single variant of the format:
+        List of amino acid substitutions of a single variant of the format:
             - Single substitution variant, e.g. variant A123C: ['A123C']
             - Higher variants, e.g. variant A123C/D234E/F345G: ['A123C', 'D234E, 'F345G']
             --> Full substitutions list, e.g.: [['A123C'], ['A123C', 'D234E, 'F345G']]
     fitness_values: list
         List of ints/floats of the variant fitness values, e.g. for two variants: [1.4, 0.8]
     """
-    variant, values, sequences = [], [], []
+    if fitness_values is None:
+        fitness_values = np.zeros(len(substitutions)).tolist()
+    variants, values, sequences = [], [], []
     for i, var in enumerate(substitutions):  # var are lists of (single or multiple) substitutions
         temp = list(wt_seq)
         name = ''
@@ -197,8 +195,8 @@ def get_seqs_from_var_name(
                 new_amino_acid = str(single_var)[-1]
                 if str(single_var)[0].isalpha(): # Assertion only possible for format AaPosAa, e.g. A123C
                     assert str(single_var)[0] == temp[position_index], f"Input variant: "\
-                        f"{str(single_var)[0]}{position_index}{new_amino_acid}, WT amino "\
-                        f"acid variant {temp[position_index]}{position_index}{new_amino_acid}"
+                        f"{str(single_var)[0]}{position_index + 1}{new_amino_acid}, WT amino "\
+                        f"acid variant {temp[position_index]}{position_index + 1}{new_amino_acid}"
                 temp[position_index] = new_amino_acid
                 # checking if multiple entries are inside list
                 if separation == 0:
@@ -206,11 +204,11 @@ def get_seqs_from_var_name(
                 else:
                     name += '/' + single_var
                 separation += 1
-        variant.append(name)
+        variants.append(name)
         values.append(fitness_values[i])
         sequences.append(''.join(temp))
 
-    return variant, values, sequences
+    return variants, values, sequences
 
 
 def remove_nan_encoded_positions(

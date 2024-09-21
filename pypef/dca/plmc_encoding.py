@@ -2,19 +2,15 @@
 # -*- coding: utf-8 -*-
 # Created on 05 October 2020
 # @authors: Niklas Siedhoff, Alexander-Maurice Illig
-# @contact: <n.siedhoff@biotec.rwth-aachen.de>
+# @contact: <niklas.siedhoff@rwth-aachen.de>
 # PyPEF - Pythonic Protein Engineering Framework
-# Released under Creative Commons Attribution-NonCommercial 4.0 International Public License (CC BY-NC 4.0)
+# https://github.com/niklases/PyPEF
+# Licensed under Creative Commons Attribution-ShareAlike 4.0 International Public License (CC BY-SA 4.0)
 # For more information about the license see https://creativecommons.org/licenses/by-nc/4.0/legalcode
 
 # PyPEF – An Integrated Framework for Data-Driven Protein Engineering
 # Journal of Chemical Information and Modeling, 2021, 61, 3463-3476
 # https://doi.org/10.1021/acs.jcim.1c00099
-# Niklas E. Siedhoff1,§, Alexander-Maurice Illig1,§, Ulrich Schwaneberg1,2, Mehdi D. Davari1,*
-# 1Institute of Biotechnology, RWTH Aachen University, Worringer Weg 3, 52074 Aachen, Germany
-# 2DWI-Leibniz Institute for Interactive Materials, Forckenbeckstraße 50, 52074 Aachen, Germany
-# *Corresponding author
-# §Equal contribution
 
 """
 Contains Python code used for the approach presented in our 'hybrid modeling' paper
@@ -31,11 +27,11 @@ Mutation effects predicted from sequence co-variation. Nature Biotechnology, in 
 References:
 [1] Hopf, T. A., Ingraham, J. B., Poelwijk, F.J., Schärfe, C.P.I., Springer, M., Sander, C., & Marks, D. S.
     Mutation effects predicted from sequence co-variation.
-    Nature Biotechnology, 35, 2017, 128–135
+    Nature Biotechnology, 35, 2017, 128-135
     https://doi.org/10.1038/nbt.3769
 [2] Hopf T. A., Green A. G., Schubert B., et al.
     The EVcouplings Python framework for coevolutionary sequence analysis.
-    Bioinformatics 35, 2019, 1582–1584
+    Bioinformatics 35, 2019, 1582-1584
     https://doi.org/10.1093/bioinformatics/bty862
 [3] Ekeberg, M., Lövkvist, C., Lan, Y., Weigt, M., & Aurell, E.
     Improved contact prediction in proteins: Using pseudolikelihoods to infer Potts models.

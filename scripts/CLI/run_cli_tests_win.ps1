@@ -26,7 +26,7 @@ function ExitOnExitCode { if ($LastExitCode) {
 ### if using downloaded/locally stored pypef .py files:
 ##########################################################################################################################
 conda env remove -n pypef                                                                                                #
-conda create -n pypef python=3.11 -y                                                                                     #
+conda create -n pypef python=3.12 -y                                                                                     #
 conda activate pypef                                                                                                     #
 $path=Get-Location                                                                                                       #
 $path=Split-Path -Path $path -Parent                                                                                     #
@@ -432,6 +432,13 @@ pypef hybrid extrapolation -i 37_ANEH_variants_dca_encoded.csv --conc
 ExitOnExitCode
 Write-Host
 
+Remove-Item 37_ANEH_variants_plmc_dca_encoded.csv
+ExitOnExitCode
+Write-Host
+Remove-Item 37_ANEH_variants_gremlin_dca_encoded.csv
+ExitOnExitCode
+Write-Host
+
 
 ### Hybrid model (and some pure ML and pure DCA) tests on avGFP dataset 
 Set-Location -Path '../AVGFP'
@@ -635,7 +642,13 @@ pypef hybrid -m HYBRIDplmc -p avGFP_prediction_set.fasta --params uref100_avgfp_
 ExitOnExitCode
 Write-Host
 pypef mkps -i avGFP.csv -w P42212_F64L.fasta --drecomb
-#pypef hybrid -m HYBRID --params uref100_avgfp_jhmmer_119_plmc_42.6.params --pmult --drecomb --threads $threads  # many single variants for recombination, takes too long
+ExitOnExitCode
+Write-Host
+# many single variants for recombination, takes too long
+#pypef hybrid -m HYBRIDplmc --params uref100_avgfp_jhmmer_119_plmc_42.6.params --pmult --drecomb --threads $threads  
+#ExitOnExitCode
+#Write-Host
+pypef hybrid -m HYBRIDgremlin --params GREMLIN --pmult --drecomb
 ExitOnExitCode
 Write-Host
 

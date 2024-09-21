@@ -6,7 +6,7 @@
     "configurations": [
         {
             "name": "Python: PyPEF Help",
-            "type": "python",
+            "type": "debugpy",
             "request": "launch",
             "env": {"PYTHONPATH": "${workspaceFolder}"},
             "program": "${workspaceFolder}/pypef/main.py",
@@ -19,7 +19,7 @@
 
         {
             "name": "Python: PyPEF MKLSTS ANEH",
-            "type": "python",
+            "type": "debugpy",
             "request": "launch",
             "env": {"PYTHONPATH": "${workspaceFolder}"},
             "program": "${workspaceFolder}/pypef/main.py",
@@ -35,7 +35,7 @@
 
         {
             "name": "Python: PyPEF MKLSTS avGFP",
-            "type": "python",
+            "type": "debugpy",
             "request": "launch",
             "env": {"PYTHONPATH": "${workspaceFolder}"},
             "program": "${workspaceFolder}/pypef/main.py",
@@ -50,8 +50,25 @@
         },
 
         {
+            "name": "Python: PyPEF MKPS avGFP drecomb",
+            "type": "debugpy",
+            "request": "launch",
+            "env": {"PYTHONPATH": "${workspaceFolder}"},
+            "program": "${workspaceFolder}/pypef/main.py",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "cwd": "${workspaceFolder}/datasets/AVGFP/",
+            "args": [
+                "mkps", 
+                "--wt", "P42212_F64L.fasta", 
+                "--input", "avGFP.csv",
+                "--drecomb"
+            ]
+        },
+
+        {
             "name": "Python: PyPEF ml -e onehot pls_loocv",
-            "type": "python",
+            "type": "debugpy",
             "request": "launch",
             "env": {"PYTHONPATH": "${workspaceFolder}"},
             "program": "${workspaceFolder}/pypef/main.py",
@@ -73,7 +90,7 @@
             // or
             // 2. $pypef hybrid -m GREMLIN -t TS.fasl --params GREMLIN
             "name": "Python: PyPEF save GREMLIN avGFP model",
-            "type": "python",
+            "type": "debugpy",
             "request": "launch",
             "env": {"PYTHONPATH": "${workspaceFolder}"},
             "program": "${workspaceFolder}/pypef/main.py",
@@ -88,8 +105,26 @@
         },
 
         {
+            "name": "Python: PyPEF hybrid LS-TS GREMLIN-DCA avGFP",
+            "type": "debugpy",
+            "request": "launch",
+            "env": {"PYTHONPATH": "${workspaceFolder}"},
+            "program": "${workspaceFolder}/pypef/main.py",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "cwd": "${workspaceFolder}/datasets/AVGFP/",
+            "args": [
+                "hybrid", 
+                //"-m", "GREMLIN",   // optional, not required  
+                "--ls", "LS.fasl",
+                "--ts", "TS.fasl", 
+                "--params", "GREMLIN"
+            ]
+        },
+
+        {
             "name": "Python: PyPEF hybrid/only-TS-zero-shot GREMLIN-DCA avGFP",
-            "type": "python",
+            "type": "debugpy",
             "request": "launch",
             "env": {"PYTHONPATH": "${workspaceFolder}"},
             "program": "${workspaceFolder}/pypef/main.py",
@@ -106,7 +141,7 @@
 
         {
             "name": "Python: PyPEF hybrid/only-PS-zero-shot GREMLIN-DCA avGFP",
-            "type": "python",
+            "type": "debugpy",
             "request": "launch",
             "env": {"PYTHONPATH": "${workspaceFolder}"},
             "program": "${workspaceFolder}/pypef/main.py",
@@ -121,11 +156,45 @@
             ]
         },
 
+        {
+            "name": "Python: PyPEF hybrid/only-PS-zero-shot GREMLIN-DCA avGFP drecomb II",
+            "type": "debugpy",
+            "request": "launch",
+            "env": {"PYTHONPATH": "${workspaceFolder}"},
+            "program": "${workspaceFolder}/pypef/main.py",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "cwd": "${workspaceFolder}/datasets/AVGFP/",
+            "args": [
+                "hybrid", 
+                "-m", "HYBRIDgremlin", 
+                "--pmult", "--drecomb", 
+                "--params", "GREMLIN"
+            ]
+        },
+
+        {
+            "name": "Python: PyPEF hybrid/only-PS-zero-shot GREMLIN-DCA avGFP drecomb",
+            "type": "debugpy",
+            "request": "launch",
+            "env": {"PYTHONPATH": "${workspaceFolder}"},
+            "program": "${workspaceFolder}/pypef/main.py",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "cwd": "${workspaceFolder}/datasets/AVGFP/",
+            "args": [
+                "hybrid", 
+                "-m", "GREMLIN", 
+                "--pmult", "--drecomb", 
+                "--params", "GREMLIN"
+            ]
+        },
+
         {   // PLMC zero-shot steps:
             // 1. $pypef param_inference --params uref100_avgfp_jhmmer_119_plmc_42.6.params
             // 2. $pypef hybrid -t TS.fasl --params PLMC
             "name": "Python: PyPEF save PLMC avGFP model",
-            "type": "python",
+            "type": "debugpy",
             "request": "launch",
             "env": {"PYTHONPATH": "${workspaceFolder}"},
             "program": "${workspaceFolder}/pypef/main.py",
@@ -140,7 +209,7 @@
 
         {   
             "name": "Python: PyPEF hybrid/only-TS-zero-shot PLMC-DCA avGFP",
-            "type": "python",
+            "type": "debugpy",
             "request": "launch",
             "env": {"PYTHONPATH": "${workspaceFolder}"},
             "program": "${workspaceFolder}/pypef/main.py",
@@ -157,7 +226,7 @@
 
         {
             "name": "Python: PyPEF hybrid/only-PS-zero-shot PLMC-DCA avGFP",
-            "type": "python",
+            "type": "debugpy",
             "request": "launch",
             "env": {"PYTHONPATH": "${workspaceFolder}"},
             "program": "${workspaceFolder}/pypef/main.py",
@@ -175,7 +244,7 @@
 
         {
             "name": "Python: PyPEF hybrid/only-PS-zero-shot PLMC-DCA variant 2 avGFP",
-            "type": "python",
+            "type": "debugpy",
             "request": "launch",
             "env": {"PYTHONPATH": "${workspaceFolder}"},
             "program": "${workspaceFolder}/pypef/main.py",
@@ -193,7 +262,7 @@
 
         {
             "name": "Python: PyPEF !wrong! MSA input format (STO)",
-            "type": "python",
+            "type": "debugpy",
             "request": "launch",
             "env": {"PYTHONPATH": "${workspaceFolder}"},
             "program": "${workspaceFolder}/pypef/main.py",

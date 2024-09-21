@@ -2,19 +2,15 @@
 # -*- coding: utf-8 -*-
 # Created on 05 October 2020
 # @authors: Niklas Siedhoff, Alexander-Maurice Illig
-# @contact: <n.siedhoff@biotec.rwth-aachen.de>
+# @contact: <niklas.siedhoff@rwth-aachen.de>
 # PyPEF - Pythonic Protein Engineering Framework
-# Released under Creative Commons Attribution-NonCommercial 4.0 International Public License (CC BY-NC 4.0)
+# https://github.com/niklases/PyPEF
+# Licensed under Creative Commons Attribution-ShareAlike 4.0 International Public License (CC BY-SA 4.0)
 # For more information about the license see https://creativecommons.org/licenses/by-nc/4.0/legalcode
 
 # PyPEF – An Integrated Framework for Data-Driven Protein Engineering
 # Journal of Chemical Information and Modeling, 2021, 61, 3463-3476
 # https://doi.org/10.1021/acs.jcim.1c00099
-# Niklas E. Siedhoff1,§, Alexander-Maurice Illig1,§, Ulrich Schwaneberg1,2, Mehdi D. Davari1,*
-# 1Institute of Biotechnology, RWTH Aachen University, Worringer Weg 3, 52074 Aachen, Germany
-# 2DWI-Leibniz Institute for Interactive Materials, Forckenbeckstraße 50, 52074 Aachen, Germany
-# *Corresponding author
-# §Equal contribution
 
 # Contains Python code used for the approach presented in our 'hybrid modeling' paper
 # Preprint available at: https://doi.org/10.1101/2022.06.07.495081
@@ -28,11 +24,14 @@ from os import listdir
 from os.path import isfile, join
 from typing import Union
 import logging
+
+import pypef.dca.plmc_encoding
 logger = logging.getLogger('pypef.dca.hybrid_model')
 
 import numpy as np
 import sklearn.base
 from scipy.stats import spearmanr
+from scipy.optimize import curve_fit
 from sklearnex import patch_sklearn
 patch_sklearn(verbose=False)
 from sklearn.linear_model import Ridge
@@ -44,7 +43,7 @@ from pypef.utils.variant_data import (
     remove_nan_encoded_positions, get_wt_sequence, split_variants
 )
 
-from pypef.dca.plmc_encoding import PLMC, get_dca_data_parallel, get_encoded_sequence, EffectiveSiteError
+from pypef.dca.plmc_encoding import PLMC, get_dca_data_parallel, get_encoded_sequence
 from pypef.utils.to_file import predictions_out
 from pypef.utils.plot import plot_y_true_vs_y_pred
 import pypef.dca.gremlin_inference
@@ -55,20 +54,24 @@ class DCAHybridModel:
     # TODO: Implementation of other regression techniques (CVRegression models)
     def __init__(
             self,
-            x_train: np.ndarray = None,
-            y_train: np.ndarray = None,
-            x_test: np.ndarray = None,  # not necessary for training
-            y_test: np.ndarray = None,  # not necessary for training
-            x_wt=None,
-            alphas=None,     # Ridge regression grid for the parameter 'alpha'
-            parameter_range=None,  # Parameter range of 'beta_1' and 'beta_2' with lower bound <= x <= upper bound
+            x_train: np.ndarray | None = None,   # DCA-encoded sequences
+            y_train: np.ndarray | None  = None,  # true labels
+            x_test: np.ndarray | None = None,    # not necessary for training
+            y_test: np.ndarray | None = None,    # not necessary for training
+            x_wt: np.ndarray | None = None,      # Wild type encoding
+            alphas: np.ndarray | None = None,    # Ridge regression grid for the parameter 'alpha'
+            parameter_range: list | None = None,   # Parameter range of 'beta_1' and 'beta_2' with lower bound <= x <= upper bound
+            logistic: bool | None = None
     ):
         if parameter_range is None:
             parameter_range = [(0, 1), (0, 1)] 
         if alphas is None:
             alphas = np.logspace(-6, 6, 100)
-        self.alphas = alphas
+        if logistic is None:
+            logistic = False
         self.parameter_range = parameter_range
+        self.alphas = alphas
+        self.logistic = logistic
         self.x_train = x_train
         self.y_train = y_train
         self.x_test = x_test
@@ -140,6 +143,10 @@ class DCAHybridModel:
         """
         return np.subtract(x, self.x_wild_type)
 
+    @staticmethod
+    def logistic_func(delta_e, *args):
+        return args[0] / (1 + np.exp(-args[1] * (delta_e - args[2]))) + args[3]
+
     def _delta_e(
             self,
             x: np.ndarray
@@ -162,6 +169,25 @@ class DCAHybridModel:
         and wild-type.
         """
         return np.sum(self._delta_x(x), axis=1)
+    
+    def _logistic_delta_e(
+            self,
+            ys,
+            delta_es
+    ):
+        popt, _pcov = curve_fit(
+            self.logistic_func, 
+            delta_es, 
+            ys,
+            maxfev=10000, 
+            p0=(1, 1, -7, 1), 
+            bounds=[(-5, -5, -20, -20), (5, 5, 0, 20)]
+        )
+        y_dca_logistic = self.logistic_func(ys, delta_es, *popt)
+        #import matplotlib.pyplot as plt
+        #plt.scatter(np.array(delta_es).argsort().argsort(), delta_es);plt.savefig('delta_es.png', dpi=300);plt.clf()
+        #plt.scatter(np.array(y_dca_logistic).argsort().argsort(), y_dca_logistic);plt.savefig('delta_es_logistic.png', dpi=300);plt.clf()
+        return y_dca_logistic
 
     def _spearmanr_dca(self) -> float:
         """
@@ -175,8 +201,8 @@ class DCAHybridModel:
         or
             beta_1 * y_dca - beta_2 * y_ridge.
         """
-        y_dca = self._delta_e(self.X)
-        return self.spearmanr(self.y, y_dca)
+        y_dca = self._delta_e(self.x_train)
+        return self.spearmanr(self.y_train, y_dca)
 
     def ridge_predictor(
             self,
@@ -234,7 +260,7 @@ class DCAHybridModel:
         """
         # Uncomment lines below to see if correlation between
         # y_true and y_dca is positive or negative:
-        # logger.info(f'Positive or negative correlation of (all data) y_true '
+        # logger.info(f'Positive or negative correlation of (train data) y_true '
         #             f'and y_dca (+/-?): {self._spearmanr_dca:.3f}')
         if self._spearmanr_dca >= 0:
             return beta_1 * y_dca + beta_2 * y_ridge
@@ -245,7 +271,8 @@ class DCAHybridModel:
             self,
             y: np.ndarray,
             y_dca: np.ndarray,
-            y_ridge: np.ndarray
+            y_ridge: np.ndarray,
+            rank_based: bool = False
     ) -> np.ndarray:
         """
         Find parameters that maximize the absolut Spearman rank
@@ -266,16 +293,20 @@ class DCAHybridModel:
         'beta_1' and 'beta_2' that maximize the absolut Spearman rank correlation
         coefficient.
         """
-        loss = lambda b: -np.abs(self.spearmanr(y, b[0] * y_dca + b[1] * y_ridge))
-        minimizer = differential_evolution(loss, bounds=self.parameter_range, tol=1e-4)
+        if rank_based:
+            loss = lambda params: np.sum(np.power(y - params[0] * y_dca - params[1] * y_ridge, 2))
+            minimizer = differential_evolution(loss, bounds=[(0, 10), (0, 10)], tol=1e-4)  
+        else:
+            loss = lambda params: -np.abs(self.spearmanr(y, params[0] * y_dca + params[1] * y_ridge))
+            minimizer = differential_evolution(loss, bounds=self.parameter_range, tol=1e-4)
         return minimizer.x
 
     def settings(
             self,
             x_train: np.ndarray,
             y_train: np.ndarray,
-            train_size_fit=0.66,
-            random_state=42
+            train_size_fit: float = 0.66,
+            random_state: int = 42
     ) -> tuple:
         """
         Get the adjusted parameters 'beta_1', 'beta_2', and the
@@ -322,16 +353,23 @@ class DCAHybridModel:
 
         If this is not given -> return parameter setting for 'EVmutation' model.
         """
-        y_ttrain_min_cv = int(0.2 * len(y_ttrain))  # 0.2 because of five-fold cross validation (1/5)
+        # int(0.2 * len(y_ttrain)) due to 5-fold-CV for adjusting the (Ridge) regressor
+        y_ttrain_min_cv = int(0.2 * len(y_ttrain))
         if y_ttrain_min_cv < 2:
             return 1.0, 0.0, None
 
-        y_dca_ttest = self._delta_e(X_ttest)
+        if self.logistic:
+            y_dca_ttest = self._logistic_delta_e(ys=y_ttest, delta_es=self._delta_e(X_ttest))
+        else:
+            y_dca_ttest = self._delta_e(X_ttest)
+
+
 
         ridge = self.ridge_predictor(X_ttrain, y_ttrain)
         y_ridge_ttest = ridge.predict(X_ttest)
 
-        beta1, beta2 = self._adjust_betas(y_ttest, y_dca_ttest, y_ridge_ttest)
+        beta1, beta2 = self._adjust_betas(
+            y_ttest, y_dca_ttest, y_ridge_ttest, rank_based=self.logistic)
         return beta1, beta2, ridge
 
     def hybrid_prediction(
@@ -367,7 +405,7 @@ class DCAHybridModel:
             y_ridge = np.random.random(len(y_dca))  # in order to suppress error
         else:
             y_ridge = reg.predict(x)
-        # adjusting: + or - on all data --> +-beta_1 * y_dca + beta_2 * y_ridge
+        # adjusting: + or - on train data --> +-beta_1 * y_dca + beta_2 * y_ridge
         return self._y_hybrid(y_dca, y_ridge, beta_1, beta_2)
 
     def split_performance(
@@ -441,6 +479,7 @@ class DCAHybridModel:
             self.y_test,
             self.hybrid_prediction(self.x_test, reg, beta_1, beta_2)
         )
+        self.beta_1, self.beta_2, self.regressor = beta_1, beta_2, reg
         return spearman_r, reg, beta_1, beta_2
 
     def train_and_test(
@@ -581,10 +620,12 @@ def get_model_path(model: str):
         elif isfile(f'Pickles/{model}'):
             model_path = f'Pickles/{model}'
         else:
-            raise SystemError("Did not find specified model file in current working directory "
-                              " or /Pickles subdirectory. Make sure to train/save a model first "
-                              "(e.g., for saving a GREMLIN model, type \"pypef param_inference --msa TARGET_MSA.a2m\" "
-                              "or, for saving a plmc model, type \"pypef param_inference --params TARGET_PLMC.params\").")
+            raise SystemError(
+                "Did not find specified model file in current working directory "
+                " or /Pickles subdirectory. Make sure to train/save a model first "
+                "(e.g., for saving a GREMLIN model, type \"pypef param_inference --msa TARGET_MSA.a2m\" "
+                "or, for saving a plmc model, type \"pypef param_inference --params TARGET_PLMC.params\")."
+            )
         return model_path
     except TypeError:
         raise SystemError("No provided model. "
@@ -600,6 +641,10 @@ def get_model_and_type(
     and to load the model from the identified plmc pickle file 
     or from the loaded pickle dictionary.
     """
+    if type(params_file) == pypef.dca.gremlin_inference.GREMLIN:
+        return params_file, 'GREMLIN'
+    if type(params_file) == pypef.dca.plmc_encoding.PLMC:
+        return params_file, 'PLMC'
     file_path = get_model_path(params_file)
     try:
         with open(file_path, 'rb') as read_pkl_file:
@@ -1103,11 +1148,11 @@ def predict_ps(  # also predicting "pmult" dict directories
         model_pickle_file = params_file
         logger.info(f'Trying to load model from saved parameters (Pickle file): {model_pickle_file}...')
     else:
-        logger.info(f'Loading model from saved model (Pickle file): {model_pickle_file}...')
+        logger.info(f'Loading model from saved model (Pickle file {os.path.abspath(model_pickle_file)})...')
     model, model_type = get_model_and_type(model_pickle_file)
 
     if model_type == 'PLMC' or model_type == 'GREMLIN':
-        logger.info(f'No hybrid model provided – falling back to a statistical DCA model.')
+        logger.info(f'No hybrid model provided - falling back to a statistical DCA model.')
     elif model_type == 'Hybrid':
         beta_1, beta_2, reg = model.beta_1, model.beta_2, model.regressor
         if reg is None:
@@ -1136,13 +1181,13 @@ def predict_ps(  # also predicting "pmult" dict directories
                     file_path = os.path.join(path, file)
                     sequences, variants, _ = get_sequences_from_file(file_path)
                     if model_type != 'Hybrid':
-                        x_test, test_variants, x_wt, *_ = plmc_or_gremlin_encoding(
+                        x_test, _, _, _, x_wt, *_ = plmc_or_gremlin_encoding(
                             variants, sequences, None, model, threads=threads, verbose=False,
                             substitution_sep=separator)
                         ys_pred = get_delta_e_statistical_model(x_test, x_wt)
                     else:  # Hybrid model input requires params from plmc or GREMLIN model
                         ##encoding_model, encoding_model_type = get_model_and_type(params_file)
-                        x_test, test_variants, *_ = plmc_or_gremlin_encoding(
+                        x_test, _test_variants, *_ = plmc_or_gremlin_encoding(
                             variants, sequences, None, params_file,
                             threads=threads, verbose=False, substitution_sep=separator
                         )
