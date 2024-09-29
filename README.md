@@ -36,7 +36,7 @@ https://doi.org/10.1021/acs.jcim.4c00704
   - [Model Hyperparameter Grids for Training](#model-hyperparameter-grids-for-training)
   - [Setting Up the Scripts Yourself](#setting-up-the-scripts-yourself)
   - [Preprocessing for DCA-based Sequence Encoding](#preprocessing-for-dca-based-sequence-encoding)
-  - [Unsupervised/zero-shot prediction](#unsupervisedzero-shot-prediction)
+  - [Unsupervised/zero-shot prediction vs. supervised few-shot prediction](#unsupervisedzero-shot-prediction-vs-supervised-few-shot-prediction)
   - [API Usage for Sequence Encoding](#api-usage-for-sequence-encoding)
 ---
 
@@ -431,7 +431,7 @@ python3 ./pypef/main.py
     ```
 
 <a name="zero-shot-prediction"></a>
-## Unsupervised/zero-shot prediction
+## Unsupervised/zero-shot prediction vs. supervised few-shot prediction
 
 Several developed methods allow unsupervised prediction of a proteins fitness based on its sequence (and/or structure).
 These methods have the advantage that no initial knowledge about a proteins fitness is required for prediction, while a correlation of the predicted score and a protein's natural fitness is assumed.
