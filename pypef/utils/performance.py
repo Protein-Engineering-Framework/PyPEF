@@ -18,7 +18,7 @@ from scipy import stats
 from sklearnex import patch_sklearn
 patch_sklearn(verbose=False)
 from sklearn.metrics import (
-    mean_squared_error, r2_score,
+    root_mean_squared_error, r2_score,
     precision_score, accuracy_score, recall_score, 
     balanced_accuracy_score, f1_score, matthews_corrcoef,
     average_precision_score, roc_curve, auc
@@ -54,7 +54,7 @@ def get_performances(
     y_true = list(y_true)
     y_pred = list(y_pred)
     r_squared = r2_score(y_true, y_pred)
-    rmse = np.sqrt(mean_squared_error(y_true, y_pred))
+    rmse = root_mean_squared_error(y_true, y_pred)
     stddev = np.std(y_true, ddof=1)
     nrmse = rmse / stddev
     with warnings.catch_warnings():  # catching RunTime warning when there's no variance in an array,

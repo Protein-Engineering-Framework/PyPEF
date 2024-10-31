@@ -50,16 +50,18 @@ import pypef.dca.gremlin_inference
 from pypef.dca.gremlin_inference import GREMLIN
 
 
-class DCAHybridModel:
     # TODO: Implementation of other regression techniques (CVRegression models)
+    # TODO: Differential evolution of multiple Zero Shot predictors
+    #       (and supervised model predictions thereof) and y_true
+class DCAHybridModel:
     def __init__(
             self,
-            x_train: np.ndarray | None = None,   # DCA-encoded sequences
-            y_train: np.ndarray | None  = None,  # true labels
-            x_test: np.ndarray | None = None,    # not necessary for training
-            y_test: np.ndarray | None = None,    # not necessary for training
-            x_wt: np.ndarray | None = None,      # Wild type encoding
-            alphas: np.ndarray | None = None,    # Ridge regression grid for the parameter 'alpha'
+            x_train: np.ndarray | None = None,     # DCA-encoded sequences
+            y_train: np.ndarray | None  = None,    # true labels
+            x_test: np.ndarray | None = None,      # not necessary for training
+            y_test: np.ndarray | None = None,      # not necessary for training
+            x_wt: np.ndarray | None = None,        # Wild type encoding
+            alphas: np.ndarray | None = None,      # Ridge regression grid for the parameter 'alpha'
             parameter_range: list | None = None,   # Parameter range of 'beta_1' and 'beta_2' with lower bound <= x <= upper bound
             logistic: bool | None = None
     ):

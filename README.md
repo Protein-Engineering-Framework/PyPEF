@@ -1,31 +1,7 @@
-This repository contains the source files and supplementary information for the PyPEF framework, which is described in<br>
-
-Niklas E. Siedhoff<sup>*1,§*</sup>, Alexander-Maurice Illig<sup>*1,§*</sup>, Ulrich Schwaneberg<sup>*1,2*</sup>, Mehdi D. Davari<sup>*3,\**</sup>, <br>
-PyPEF – An Integrated Framework for Data-Driven Protein Engineering,<br>
-*J. Chem. Inf. Model.* 2021, 61, 3463-3476 <br>
-https://doi.org/10.1021/acs.jcim.1c00099 <br>
-
-as well as additional framework features described in the preprint<br>
-
-Alexander-Maurice Illig<sup>*1,§*</sup>, Niklas E. Siedhoff<sup>*1,§*</sup>, Ulrich Schwaneberg<sup>*1,2*</sup>, Mehdi D. Davari<sup>*3,\**</sup>, <br>
-A hybrid model combining evolutionary probability and machine learning leverages data-driven protein engineering,<br>
-preprint available at bioRxiv: https://doi.org/10.1101/2022.06.07.495081<br>
-*now published as*<br>
-Evolutionary Probability and Stacked Regressions Enable Data-Driven Protein Engineering with Minimized Experimental Effort,<br>
-*J. Chem. Inf. Model.* 2024, 64, 16, 6350–6360<br>
-https://doi.org/10.1021/acs.jcim.4c00704
-
-<sup>*1*</sup><sub>Institute of Biotechnology, RWTH Aachen University, Worringer Weg 3, 52074 Aachen, Germany</sub> <br>
-<sup>*2*</sup><sub>DWI-Leibniz Institute for Interactive Materials, Forckenbeckstraße 50, 52074 Aachen, Germany</sub> <br>
-<sup>*3*</sup><sub>Department of Bioorganic Chemistry, Leibniz Institute of Plant Biochemistry, Weinberg 3, 06120 Halle, Germany</sub> <br>
-<sup>*\**</sup><sub>Corresponding author</sub> <br>
-<sup>*§*</sup><sub>Equal contribution</sub> <br>
-
----
-
 ## Table of Contents
 [PyPEF: Pythonic Protein Engineering Framework](#pypef-pythonic-protein-engineering-framework)
   - [Quick Installation](#quick-installation)
+    - [GUI Installation](#gui-installation)
   - [Requirements](#requirements)
   - [Running Examples](#running-examples)
   - [Tutorial](#tutorial)
@@ -38,7 +14,9 @@ https://doi.org/10.1021/acs.jcim.4c00704
   - [Preprocessing for DCA-based Sequence Encoding](#preprocessing-for-dca-based-sequence-encoding)
   - [Unsupervised/zero-shot prediction vs. supervised few-shot prediction](#unsupervisedzero-shot-prediction-vs-supervised-few-shot-prediction)
   - [API Usage for Sequence Encoding](#api-usage-for-sequence-encoding)
----
+  - [Citation](#citation)
+
+-------------------------------
 
 <a name="pypef"></a>
 # PyPEF: Pythonic Protein Engineering Framework
@@ -82,6 +60,26 @@ pypef --help
 
 The detailed routine for setting up a new virtual environment with Anaconda, installing the necessary Python packages for that environment, and running the Jupyter notebook tutorial can be found below in the Tutorial section.
 A quick file setup and run test can be performed running files in [scripts/Setup](scripts/Setup) containing a Batch script for Windows and a Bash script for Linux (the latter requires conda, i.e. Miniconda3 or Anaconda3, already being installed).
+
+<a name="gui-installation"></a>
+### GUI Installation
+
+A rudimentary graphical user interface (GUI) can be installed using the gui_setup.bat and gui_setup.sh scripts for Windows and Linux, respectively (which download and run `./gui/qt_window.py`):
+
+Windows (PowerShell)
+```powershell
+Invoke-WebRequest https://raw.githubusercontent.com/Protein-Engineering-Framework/PyPEF/refs/heads/main/gui_setup.bat -OutFile gui_setup.bat
+Invoke-WebRequest https://raw.githubusercontent.com/Protein-Engineering-Framework/PyPEF/refs/heads/main/gui/qt_window.py -OutFile ( New-Item -Path ".\gui\qt_window.py" -Force )
+.\gui_setup.bat
+```
+
+Linux
+```bash
+wget https://raw.githubusercontent.com/Protein-Engineering-Framework/PyPEF/refs/heads/main/gui_setup.sh -O gui_setup.sh
+mkdir -p ./gui/ && wget https://raw.githubusercontent.com/Protein-Engineering-Framework/PyPEF/refs/heads/main/gui/qt_window.py -O ./gui/qt_window.py
+chmod a+x ./gui_setup.sh && ./gui_setup.sh
+```
+
 
 <a name="requirements"></a>
 ## Requirements
@@ -493,3 +491,30 @@ For script-based encoding of sequences using PyPEF and the available AAindex-, O
 <p align="center">
     <img src=".github/imgs/low_N_avGFP_extrapolation.png" alt="drawing" width="500"/>
 </p>
+
+
+<a name="Citation"></a>
+## Citation
+
+This repository contains the source files and supplementary information for the PyPEF framework, which is described in<br>
+
+Niklas E. Siedhoff<sup>*1,§*</sup>, Alexander-Maurice Illig<sup>*1,§*</sup>, Ulrich Schwaneberg<sup>*1,2*</sup>, Mehdi D. Davari<sup>*3,\**</sup>, <br>
+PyPEF – An Integrated Framework for Data-Driven Protein Engineering,<br>
+*J. Chem. Inf. Model.* 2021, 61, 3463-3476 <br>
+https://doi.org/10.1021/acs.jcim.1c00099 <br>
+
+as well as additional framework features described in the preprint<br>
+
+Alexander-Maurice Illig<sup>*1,§*</sup>, Niklas E. Siedhoff<sup>*1,§*</sup>, Ulrich Schwaneberg<sup>*1,2*</sup>, Mehdi D. Davari<sup>*3,\**</sup>, <br>
+A hybrid model combining evolutionary probability and machine learning leverages data-driven protein engineering,<br>
+preprint available at bioRxiv: https://doi.org/10.1101/2022.06.07.495081<br>
+*now published as*<br>
+Evolutionary Probability and Stacked Regressions Enable Data-Driven Protein Engineering with Minimized Experimental Effort,<br>
+*J. Chem. Inf. Model.* 2024, 64, 16, 6350–6360<br>
+https://doi.org/10.1021/acs.jcim.4c00704
+
+<sup>*1*</sup><sub>Institute of Biotechnology, RWTH Aachen University, Worringer Weg 3, 52074 Aachen, Germany</sub> <br>
+<sup>*2*</sup><sub>DWI-Leibniz Institute for Interactive Materials, Forckenbeckstraße 50, 52074 Aachen, Germany</sub> <br>
+<sup>*3*</sup><sub>Department of Bioorganic Chemistry, Leibniz Institute of Plant Biochemistry, Weinberg 3, 06120 Halle, Germany</sub> <br>
+<sup>*\**</sup><sub>Corresponding author</sub> <br>
+<sup>*§*</sup><sub>Equal contribution</sub> <br>

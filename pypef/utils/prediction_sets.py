@@ -46,7 +46,7 @@ def make_fasta_ps(
     """
     myfile = open(filename, 'w')
     count = 0
-    for i, var in enumerate(substitutions):
+    for var in substitutions:
         temporary = list(wt)
         name = ''
         separation = 0
@@ -65,7 +65,7 @@ def make_fasta_ps(
     myfile.close()
 
 
-def make_recombinations_double(arr: tuple) -> list:
+def make_recombinations_double(arr: tuple[list]):
     """
     Description
     -----------
@@ -98,7 +98,7 @@ def make_recombinations_double(arr: tuple) -> list:
     yield doubles
 
 
-def make_recombinations_triple(arr: list):
+def make_recombinations_triple(arr: tuple[list]):
     """
     Description
     -----------
@@ -135,7 +135,7 @@ def make_recombinations_triple(arr: list):
     yield triples
 
 
-def make_recombinations_quadruple(arr):
+def make_recombinations_quadruple(arr: tuple[list]):
     """
     Description
     -----------
@@ -175,7 +175,7 @@ def make_recombinations_quadruple(arr):
     yield quadruples
 
 
-def make_recombinations_quintuple(arr):
+def make_recombinations_quintuple(arr: tuple[list]):
     """
     Make quintuple recombination variants.
 

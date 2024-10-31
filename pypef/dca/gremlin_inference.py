@@ -47,7 +47,8 @@ from __future__ import annotations
 import logging
 logger = logging.getLogger('pypef.dca.params_inference')
 
-from os import mkdir, PathLike, environ
+import os
+from os import mkdir, PathLike
 import pickle
 import numpy as np
 import matplotlib.pyplot as plt
@@ -706,7 +707,6 @@ def save_gremlin_as_pickle(alignment: str, wt_seq: str, opt_iter: int = 100):
     except FileExistsError:
         pass
 
-    logger.info(f'Saving GREMLIN model as Pickle file...')
     pickle.dump(
         {
             'model': gremlin,
@@ -718,6 +718,7 @@ def save_gremlin_as_pickle(alignment: str, wt_seq: str, opt_iter: int = 100):
         },
         open('Pickles/GREMLIN', 'wb')
     )
+    logger.info(f"Saved GREMLIN model as Pickle file ({os.path.abspath('Pickles/GREMLIN')})...")
     return gremlin
 
 

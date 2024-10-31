@@ -15,6 +15,8 @@
 import os
 import numpy as np
 
+import logging
+logger = logging.getLogger('pypef.utils.to_file')
 
 def predictions_out(
         predictions,
@@ -34,9 +36,15 @@ def predictions_out(
     col_width = max(len(str(value)) for row in data for value in row) + 5
 
     head = ['Name', 'Prediction']
-    path_ = os.path.join(path, 'Predictions_' + str(model) + '_' + str(prediction_set.split('.')[0]) + '.txt')
-    with open(path_, 'w') as f:
+    txt_file_out_path = os.path.abspath(
+        os.path.join(
+            path, 'Predictions_' + str(model) + 
+            '_' + str(os.path.splitext(os.path.basename(prediction_set))[0]) + '.txt'
+            )
+    )
+    with open(txt_file_out_path, 'w') as f:
         f.write("".join(caption.ljust(col_width) for caption in head) + '\n')
         f.write(len(head)*col_width*'-' + '\n')
         for row in data:
             f.write("".join(str(value).ljust(col_width) for value in row) + '\n')
+    logger.info(f'Wrote predictions to {txt_file_out_path}.')

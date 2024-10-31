@@ -12,4 +12,4 @@
 # Journal of Chemical Information and Modeling, 2021, 61, 3463-3476
 # https://doi.org/10.1021/acs.jcim.1c00099
 
-__version__ = '0.3.6'
+__version__ = '0.3.7-dev'
