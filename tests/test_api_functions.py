@@ -45,8 +45,8 @@ def test_gremlin():
     
 
 def test_dataset_b_results():
-    train_seqs, train_vars, train_ys = get_sequences_from_file(ls_b)
-    test_seqs, test_vars, test_ys = get_sequences_from_file(ts_b)
+    train_seqs, _train_vars, train_ys = get_sequences_from_file(ls_b)
+    test_seqs, _test_vars, test_ys = get_sequences_from_file(ts_b)
     aaindex = "WOLR810101.txt"
     x_fft_train, _ = AAIndexEncoding(full_aaidx_txt_path(aaindex), train_seqs).collect_encoded_sequences()
     x_fft_test, _ = AAIndexEncoding(full_aaidx_txt_path(aaindex), test_seqs).collect_encoded_sequences()
@@ -58,4 +58,9 @@ def test_dataset_b_results():
         regressor='pls_loocv'
     )  
     # Dataset B PLS_LOOCV results: R², RMSE, NRMSE, Pearson's r, Spearman's rho 
-    np.testing.assert_almost_equal(performances[:5], [0.72, 14.48, 0.52, 0.86, 0.89], decimal=2)
+    # RMSE, in Python 3.10 14.669 and from Python 3.11 on 14.17:
+    np.testing.assert_almost_equal(performances[1], 14.48, decimal=0)
+    # R²
+    np.testing.assert_almost_equal(performances[0], 0.72, decimal=2)
+    #  NRMSE, Pearson's r, Spearman's rho
+    np.testing.assert_almost_equal(performances[2:5], [0.52, 0.86, 0.89], decimal=2)
