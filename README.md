@@ -64,19 +64,19 @@ A quick file setup and run test can be performed running files in [scripts/Setup
 <a name="gui-installation"></a>
 ### GUI Installation
 
-A rudimentary graphical user interface (GUI) can be installed using the gui_setup.bat and gui_setup.sh scripts for Windows and Linux, respectively (which download and run `./gui/qt_window.py`):
+A rudimentary graphical user interface (GUI) can be installed using the gui_setup.bat and gui_setup.sh scripts for Windows and Linux, respectively (which download and run `./gui/qt_window.py`, run these commands in a directory without any whitespaces):
 
 Windows (PowerShell)
 ```powershell
-Invoke-WebRequest https://raw.githubusercontent.com/Protein-Engineering-Framework/PyPEF/refs/heads/main/gui_setup.bat -OutFile gui_setup.bat
-Invoke-WebRequest https://raw.githubusercontent.com/Protein-Engineering-Framework/PyPEF/refs/heads/main/gui/qt_window.py -OutFile ( New-Item -Path ".\gui\qt_window.py" -Force )
+Invoke-WebRequest https://raw.githubusercontent.com/Protein-Engineering-Framework/PyPEF/refs/heads/master/gui_setup.bat -OutFile gui_setup.bat
+Invoke-WebRequest https://raw.githubusercontent.com/Protein-Engineering-Framework/PyPEF/refs/heads/master/gui/qt_window.py -OutFile ( New-Item -Path ".\gui\qt_window.py" -Force )
 .\gui_setup.bat
 ```
 
 Linux
 ```bash
-wget https://raw.githubusercontent.com/Protein-Engineering-Framework/PyPEF/refs/heads/main/gui_setup.sh -O gui_setup.sh
-mkdir -p ./gui/ && wget https://raw.githubusercontent.com/Protein-Engineering-Framework/PyPEF/refs/heads/main/gui/qt_window.py -O ./gui/qt_window.py
+wget https://raw.githubusercontent.com/Protein-Engineering-Framework/PyPEF/refs/heads/master/gui_setup.sh -O gui_setup.sh
+mkdir -p ./gui/ && wget https://raw.githubusercontent.com/Protein-Engineering-Framework/PyPEF/refs/heads/master/gui/qt_window.py -O ./gui/qt_window.py
 chmod a+x ./gui_setup.sh && ./gui_setup.sh
 ```
 
