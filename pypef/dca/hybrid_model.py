@@ -906,7 +906,7 @@ def generate_model_and_save_pkl(
     variants_splitted = split_variants(variants, substitution_sep)
     variants, ys_true, sequences = get_seqs_from_var_name(wt_seq, variants_splitted, ys_true)
 
-    xs, variants, sequences, ys_true, x_wt, model, model_type = plmc_or_gremlin_encoding(
+    xs, variants, sequences, ys_true, x_wt, _model, model_type = plmc_or_gremlin_encoding(
         variants, sequences, ys_true, params_file, substitution_sep, threads)
 
     logger.info(

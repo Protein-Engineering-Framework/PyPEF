@@ -17,6 +17,8 @@ import os
 import numpy as np
 import pandas as pd
 
+import logging
+logger = logging.getLogger('pypef.utils.variant_data')
 
 amino_acids = [
     'A', 'C', 'D', 'E', 'F',
@@ -394,6 +396,7 @@ def generate_dataframe_and_save_csv(
     if save_df_as_csv:
         filename = f'{get_basename(csv_file)}_{encoding_type}_encoded.csv'
         df_dca.to_csv(filename, sep=';', index=False)
+        logger.info(f"Saved encoded CSV file as {os.path.abspath(filename)}...")
 
     return df_dca
 

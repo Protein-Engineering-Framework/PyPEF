@@ -214,7 +214,7 @@ class GREMLIN:
         and removes those sequences from the MSA.
         """
         msa_ori = []
-        for i, (seq, seq_id) in enumerate(zip(self.seqs, self.seq_ids)):
+        for i, (seq, _seq_id) in enumerate(zip(self.seqs, self.seq_ids)):
             if i < self.max_msa_seqs:
                 msa_ori.append([self.aa2int(aa.upper()) for aa in seq])
             else:
@@ -228,7 +228,7 @@ class GREMLIN:
         tmp = (msa_ori == self.states - 1).astype(float)
         non_gaps = np.where(np.sum(tmp.T, -1).T / msa_ori.shape[0] < self.gap_cutoff)[0]
         gaps = np.where(np.sum(tmp.T, -1).T / msa_ori.shape[0] >= self.gap_cutoff)[0]
-        self.gaps_1_indexed = [g+1 for g in gaps]
+        self.gaps_1_indexed = [int(g+1) for g in gaps]
         logger.info(f'Gap positions (removed from MSA; 1-indexed):\n{self.gaps_1_indexed}')
         ncol_trimmed = len(non_gaps)
         logger.info(f'Positions remaining: {ncol_trimmed} of {np.shape(msa_ori)[1]} '
