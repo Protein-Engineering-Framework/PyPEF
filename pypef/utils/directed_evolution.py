@@ -267,9 +267,9 @@ class DirectedEvolution:
             with warnings.catch_warnings():  # catching Overflow warning
                 warnings.simplefilter("ignore")
                 try:
-                    boltz = np.exp(((new_y - prior_y) / self.temp), dtype=np.longfloat)
+                    boltz = np.exp(((new_y - prior_y) / self.temp), dtype=np.longdouble)
                     if self.negative:
-                        boltz = np.exp((-(new_y - prior_y) / self.temp), dtype=np.longfloat)
+                        boltz = np.exp((-(new_y - prior_y) / self.temp), dtype=np.longdouble)
                 except OverflowError:
                     boltz = 1
             p = min(1, boltz)
