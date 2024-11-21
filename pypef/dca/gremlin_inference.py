@@ -28,13 +28,13 @@ https://github.com/sokrypton/GREMLIN_CPP/blob/master/GREMLIN_TF.ipynb
 
 References:
 [1] Kamisetty, H., Ovchinnikov, S., & Baker, D.
-    Assessing the utility of coevolution-based residue–residue contact predictions in a
+    Assessing the utility of coevolution-based residue-residue contact predictions in a
     sequence- and structure-rich era.
     Proceedings of the National Academy of Sciences, 2013, 110, 15674-15679
     https://www.pnas.org/doi/10.1073/pnas.1314045110
 [2] Balakrishnan, S., Kamisetty, H., Carbonell, J. G., Lee, S.-I., & Langmead, C. J.
     Learning generative models for protein fold families.
-    Proteins, 79(4), 2011, 1061–78.
+    Proteins, 79(4), 2011, 1061-78.
     https://doi.org/10.1002/prot.22934
 [3] Ekeberg, M., Lövkvist, C., Lan, Y., Weigt, M., & Aurell, E.
     Improved contact prediction in proteins: Using pseudolikelihoods to infer Potts models.
@@ -57,8 +57,9 @@ from scipy.spatial.distance import pdist, squareform
 from scipy.special import logsumexp
 from scipy.stats import boxcox
 import pandas as pd
+from tqdm import tqdm
 import tensorflow as tf
-tf.get_logger().setLevel('DEBUG')
+tf.get_logger().setLevel('WARNING')
 # Uncomment to hide GPU devices
 #environ['CUDA_VISIBLE_DEVICES'] = '-1'  
 
@@ -647,6 +648,7 @@ class GREMLIN:
         ax.set_ylim(-1, matrix.shape[0])
         plt.title(matrix_type.upper())
         plt.savefig(f'{matrix_type}.png', dpi=500)
+        logger.info(f"Plotted correlation matrix {os.path.abspath(matrix_type)}.png")
         plt.close('all')
 
     def get_top_coevolving_residues(self, wt_seq=None, min_distance=0, sort_by="apc"):
@@ -718,7 +720,7 @@ def save_gremlin_as_pickle(alignment: str, wt_seq: str, opt_iter: int = 100):
         },
         open('Pickles/GREMLIN', 'wb')
     )
-    logger.info(f"Saved GREMLIN model as Pickle file ({os.path.abspath('Pickles/GREMLIN')})...")
+    logger.info(f"Saved GREMLIN model as Pickle file as {os.path.abspath('Pickles/GREMLIN')}...")
     return gremlin
 
 
@@ -732,4 +734,58 @@ def save_corr_csv(gremlin: GREMLIN, min_distance: int = 0, sort_by: str = 'apc')
     df_mtx_sorted_mindist = gremlin.get_top_coevolving_residues(
         min_distance=min_distance, sort_by=sort_by
     )
-    df_mtx_sorted_mindist.to_csv(f"coevolution_{sort_by}_sorted.csv")
+    df_mtx_sorted_mindist.to_csv(f"coevolution_{sort_by}_sorted.csv", sep=',')
+    logger.info(f"Saved coevolution CSV data as "
+                f"{os.path.abspath(f'coevolution_{sort_by}_sorted.csv')}")
+
+
+def plot_predicted_ssm(gremlin: GREMLIN):
+    """
+    Function to plot all predicted 19 amino acid substitution 
+    effects at all predictable WT/input sequence positions; e.g.: 
+    M1A, M1C, M1E, ..., D2A, D2C, D2E, ..., ..., T300V, T300W, T300Y
+    """
+    wt_sequence = gremlin.wt_seq
+    wt_score = gremlin.get_wt_score()[0]
+    aas = "".join(sorted(gremlin.char_alphabet.replace("-", "")))
+    variantss, variant_sequencess, variant_scoress = [], [], []
+    logger.info("Predicting all SSM effects using the unsupervised GREMLIN model...")
+    for i, aa_wt in enumerate(tqdm(wt_sequence)):
+        variants, variant_sequences, variant_scores = [], [], []
+        for aa_sub in aas:
+            variant = aa_wt + str(i + 1) + aa_sub
+            variant_sequence = wt_sequence[:i] + aa_sub + wt_sequence[i + 1:]
+            variant_score = gremlin.get_score(variant_sequence)[0]
+            variants.append(variant)
+            variant_sequences.append(variant_sequence)
+            variant_scores.append(variant_score - wt_score)
+        variantss.append(variants)
+        variant_sequencess.append(variant_sequences)
+        variant_scoress.append(variant_scores)
+
+    fig, ax = plt.subplots(figsize=(2 * len(wt_sequence) / len(aas), 3))
+    ax.imshow(np.array(variant_scoress).T)
+    for i_vss, vss in enumerate(variant_scoress):
+        for i_vs, vs in enumerate(vss):
+            ax.text(
+                i_vss, i_vs, 
+                f'{variantss[i_vss][i_vs]}\n{round(vs, 1)}', 
+                size=1.5, va='center', ha='center'
+            )
+    ax.set_xticks(
+        range(len(wt_sequence)), 
+        [f'{aa}{i + 1}' for i, aa in enumerate(wt_sequence)], 
+        size=6, rotation=90
+    )
+    ax.set_yticks(range(len(aas)), aas, size=6)
+    plt.tight_layout()
+    plt.savefig('SSM_landscape.png', dpi=500)
+    pd.DataFrame(
+        {
+            'Variant': np.array(variantss).flatten(),
+            'Sequence': np.array(variant_sequencess).flatten(),
+            'Variant_Score': np.array(variant_scoress).flatten()
+        }
+    ).to_csv('SSM_landscape.csv', sep=',')
+    logger.info(f"Saved SSM landscape as {os.path.abspath('SSM_landscape.png')} "
+                f"and CSV data as {os.path.abspath('SSM_landscape.csv')}...")

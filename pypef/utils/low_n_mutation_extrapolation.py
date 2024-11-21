@@ -289,8 +289,8 @@ def performance_mutation_extrapolation(
             logger.info('Fitting regressor on lvl 1 substitution data...')
             regressor.fit(x_train, y_train)
             if save_model:
-                logger.info(f'Saving model as Pickle file: ML_LVL_1')
                 pickle.dump(regressor, open(os.path.join('Pickles', 'ML_LVL_1'), 'wb'))
+                logger.info(f'Saved model as Pickle file: ML_LVL_1')
         for i, _ in enumerate(tqdm(collected_levels)):
             if i < len(collected_levels) - 1:  # not last i else error, last entry is: lvl 1 --> all higher variants
                 test_idx = collected_levels[i + 1]

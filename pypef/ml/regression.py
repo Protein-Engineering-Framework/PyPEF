@@ -649,11 +649,11 @@ def formatted_output(
     for (idx, val, val2, val3, val4, val5, r_m, pam) in performance_list:
         if val >= minimum_r2:
             index.append(get_basename(idx))
-            value.append('{:f}'.format(val))
-            value2.append('{:f}'.format(val2))
-            value3.append('{:f}'.format(val3))
-            value4.append('{:f}'.format(val4))
-            value5.append('{:f}'.format(val5))
+            value.append(f'{val:.6f}')
+            value2.append(f'{val2:.6f}')
+            value3.append(f'{val3:.6f}')
+            value4.append(f'{val4:.6f}')
+            value5.append(f'{val5:.6f}')
             regression_model.append(r_m.upper())
             params.append(pam)
 
@@ -853,10 +853,9 @@ def crossval_on_all(x_train, x_test, y_train, y_test, regressor: str, parameter,
         get_performances(y_test_total, y_predicted_total)
 
     with open(cv_filename, 'a') as f:
-        f.write('Regression type: {}; Parameter: {}; Encoding index: {}\n'.format(
-            regressor.upper(), parameter, name))
-        f.write('R2 = {:.5f}; RMSE = {:.5f}; NRMSE = {:.5f}; Pearson\'s r = {:.5f};'
-                ' Spearman\'s rho = {:.5f}\n\n'.format(r_squared, rmse, nrmse, pearson_r, spearman_rho))
+        f.write(f'Regression type: {regressor.upper()}; Parameter: {parameter}; Encoding index: {name}\n')
+        f.write(f'R2 = {r_squared:.6f}; RMSE = {rmse:.6f}; NRMSE = {nrmse:.6f}; Pearson\'s r = {pearson_r:.6f}; '
+                f'Spearman\'s rho = {spearman_rho:.6f}\n\n')
 
     figure, ax = plt.subplots()
     legend = r'$R^2$' + f' = {r_squared:.3f}' + f'\nRMSE = {rmse:.3f}' + f'\nNRMSE = {nrmse:.3f}' + \
@@ -959,10 +958,10 @@ def save_model(
             if model_type in ['PLMC', 'GREMLIN'] and encoding not in ['aaidx', 'onehot']:
                 name = 'ML' + model_type.lower()
             f_name = os.path.abspath(os.path.join(path, 'Pickles', name))
-            logger.info(f'Saving model ({f_name})...')
             file = open(f_name, 'wb')
             pickle.dump(regressor_, file)
             file.close()
+            logger.info(f'Saved model as {f_name}...')
 
         except IndexError:
             raise IndexError

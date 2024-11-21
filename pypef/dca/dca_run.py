@@ -19,7 +19,7 @@ import ray
 from pypef.utils.variant_data import read_csv, get_wt_sequence
 from pypef.dca.plmc_encoding import save_plmc_dca_encoding_model
 from pypef.dca.hybrid_model import get_model_and_type, performance_ls_ts, predict_ps, generate_model_and_save_pkl
-from pypef.dca.gremlin_inference import save_gremlin_as_pickle, save_corr_csv, plot_all_corr_mtx
+from pypef.dca.gremlin_inference import save_gremlin_as_pickle, save_corr_csv, plot_all_corr_mtx, plot_predicted_ssm
 from pypef.utils.low_n_mutation_extrapolation import performance_mutation_extrapolation, low_n
 
 
@@ -128,6 +128,7 @@ def run_pypef_hybrid_modeling(arguments):
         )
         save_corr_csv(gremlin)
         plot_all_corr_mtx(gremlin)
+        plot_predicted_ssm(gremlin)
 
     else:
         performance_ls_ts(

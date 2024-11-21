@@ -87,6 +87,6 @@ def plot_y_true_vs_y_pred(
     #     i += 1  # iterate until finding an unused file name
     #     file_name = f'DCA_Hybrid_Model_LS_TS_Performance({i}).png'
     plt.colorbar()
-    logger.info(f'Saving plot ({os.path.abspath(file_name)})...')
     plt.savefig(file_name, dpi=500)
     plt.close('all')
+    logger.info(f'Saved plot as {os.path.abspath(file_name)}...')

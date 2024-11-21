@@ -124,11 +124,20 @@ class MainWindow(QtWidgets.QWidget):
         self.button_dca_inference_gremlin = QtWidgets.QPushButton("MSA optimization (GREMLIN)")
         self.button_dca_inference_gremlin.setMinimumWidth(80)
         self.button_dca_inference_gremlin.setToolTip(
-            "Generating DCA parameters using GREMLIN (\"MSA optimization\"), "
-            "you have to provide an MSA in FASTA or A2M format"
+            "Generating DCA parameters using GREMLIN (\"MSA optimization\"); "
+            "requires an MSA in FASTA or A2M format"
         )
         self.button_dca_inference_gremlin.clicked.connect(self.pypef_gremlin)
         self.button_dca_inference_gremlin.setStyleSheet(button_style)
+
+        self.button_dca_inference_gremlin_msa_info = QtWidgets.QPushButton("GREMLIN SSM prediction")
+        self.button_dca_inference_gremlin_msa_info.setMinimumWidth(80)
+        self.button_dca_inference_gremlin_msa_info.setToolTip(
+            "Generating DCA parameters using GREMLIN (\"MSA optimization\") and save plots of "
+            "visualized results; requires an MSA in FASTA or A2M format"
+        )
+        self.button_dca_inference_gremlin_msa_info.clicked.connect(self.pypef_gremlin_msa_info)
+        self.button_dca_inference_gremlin_msa_info.setStyleSheet(button_style)
 
         self.button_dca_test_dca = QtWidgets.QPushButton("Test (DCA)")
         self.button_dca_test_dca.setMinimumWidth(80)
@@ -208,8 +217,9 @@ class MainWindow(QtWidgets.QWidget):
 
         layout.addWidget(self.dca_text, 3, 1, 1, 1)
         layout.addWidget(self.button_dca_inference_gremlin, 4, 1, 1, 1)
-        layout.addWidget(self.button_dca_test_dca, 5, 1, 1, 1)
-        layout.addWidget(self.button_dca_predict_dca, 6, 1, 1, 1)
+        layout.addWidget(self.button_dca_inference_gremlin_msa_info, 5, 1, 1, 1)
+        layout.addWidget(self.button_dca_test_dca, 6, 1, 1, 1)
+        layout.addWidget(self.button_dca_predict_dca, 7, 1, 1, 1)
 
         layout.addWidget(self.hybrid_text, 3, 2, 1, 1)
         layout.addWidget(self.button_hybrid_train_dca, 4, 2, 1, 1)
@@ -222,7 +232,7 @@ class MainWindow(QtWidgets.QWidget):
         layout.addWidget(self.button_supervised_train_test_dca, 4, 3, 1, 1)
         layout.addWidget(self.button_supervised_train_test_onehot, 5, 3, 1, 1)
 
-        layout.addWidget(self.textedit_out, 7, 0, 1, -1)
+        layout.addWidget(self.textedit_out, 8, 0, 1, -1)
 
         self.process = QtCore.QProcess(self)
         self.process.setProcessChannelMode(QtCore.QProcess.MergedChannels)
@@ -233,6 +243,8 @@ class MainWindow(QtWidgets.QWidget):
         self.process.finished.connect(lambda: self.button_mklsts.setEnabled(True))
         self.process.started.connect(lambda: self.button_dca_inference_gremlin.setEnabled(False))
         self.process.finished.connect(lambda: self.button_dca_inference_gremlin.setEnabled(True))
+        self.process.started.connect(lambda: self.button_dca_inference_gremlin_msa_info.setEnabled(False))
+        self.process.finished.connect(lambda: self.button_dca_inference_gremlin_msa_info.setEnabled(True))
         self.process.started.connect(lambda: self.button_dca_test_dca.setEnabled(False))
         self.process.finished.connect(lambda: self.button_dca_test_dca.setEnabled(True))
         self.process.started.connect(lambda: self.button_dca_predict_dca.setEnabled(False))
@@ -290,6 +302,14 @@ class MainWindow(QtWidgets.QWidget):
             self.version_text.setText("Running GREMLIN (DCA) optimization on MSA...")
             self.exec_pypef(f'param_inference --wt {wt_fasta_file} --msa {msa_file}')  # --opt_iter 100
 
+    @QtCore.Slot()
+    def pypef_gremlin_msa_info(self):
+        wt_fasta_file = QtWidgets.QFileDialog.getOpenFileName(self, "Select WT FASTA File")[0]
+        msa_file = QtWidgets.QFileDialog.getOpenFileName(
+            self, "Select Multiple Sequence Alignment (MSA) file (in FASTA or A2M format)")[0]
+        if wt_fasta_file and msa_file:
+            self.version_text.setText("Running GREMLIN (DCA) optimization on MSA...")
+            self.exec_pypef(f'save_msa_info --wt {wt_fasta_file} --msa {msa_file}')
 
     @QtCore.Slot()
     def pypef_dca_test(self):
