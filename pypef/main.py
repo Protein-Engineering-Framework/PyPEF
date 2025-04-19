@@ -143,7 +143,9 @@ Usage:
     pypef hybrid 
         [--ts TEST_SET] [--ps PREDICTION_SET]
         [--model MODEL] [--params PARAM_FILE]
-        [--ls LEARNING_SET] [--label] [--threads THREADS]
+        [--ls LEARNING_SET] [--label] 
+        [--llm LLM] [--pdb PDB_FILE] [--wt WT_FASTA]
+        [--threads THREADS]
     pypef hybrid --model MODEL --params PARAM_FILE
         [--ts TEST_SET] [--label]
         [--ps PREDICTION_SET] [--pmult] [--drecomb] [--trecomb] [--qarecomb] [--qirecomb]
@@ -206,6 +208,7 @@ Options:
                                     (line trimming) [default: 0.5].
   --label                           Label the plot instances [default: False].
   -l --ls LEARNING_SET              Input learning set in .fasta format.
+  --llm LLM                         LLM model to use for hybrid modeling next to DCA (options are 'ESM1v' and 'ProSST').
   -m --model MODEL                  Model (pickle file) for plotting of validation or for
                                     performing predictions.
   --msa MSA_FILE                    Multiple sequence alignment (MSA) in FASTA or A2M format for
@@ -224,6 +227,7 @@ Options:
   --opt_iter N_ITER                 Number of iterations for GREMLIN-based optimization of local fields
                                     and couplings [default: 100].
   --params PARAM_FILE               Input PLMC couplings parameter file.
+  --pdb PDB_FILE                    Input protein structure file in PDB format used for ProSST LLM modeling.
   -u --pmult                        Predict for all prediction files in folder for recombinants
                                     or for diverse variants [default: False].
   -p --ps PREDICTION_SET            Prediction set for performing predictions using a trained Model.
@@ -284,12 +288,6 @@ Options:
 """
 
 
-from os import environ
-try:
-    environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # 3 = TensorFlow INFO, WARNING, and ERROR messages are not printed
-except KeyError:                           
-    pass
-
 from sys import argv, version_info
 from pypef import __version__
 if version_info[0] < 3 or version_info[1] < 9:
@@ -304,7 +302,7 @@ from docopt import docopt
 from schema import Schema, SchemaError, Optional, Or, Use
 
 from pypef.ml.ml_run import run_pypef_pure_ml
-from pypef.dca.dca_run import run_pypef_hybrid_modeling
+from pypef.hybrid.hybrid_run import run_pypef_hybrid_modeling
 from pypef.utils.utils_run import run_pypef_utils
 
 
@@ -336,6 +334,7 @@ schema = Schema({
     Optional('--inter_gap'): Use(float),
     Optional('--intra_gap'): Use(float),
     Optional('--label'): bool,
+    Optional('--llm'): Or(None, str),
     Optional('--ls'): Or(None, str),
     Optional('--model'): Or(None, str),
     Optional('--msa'): Or(None, str),
@@ -348,6 +347,7 @@ schema = Schema({
     Optional('--offset'): Use(int),
     Optional('--opt_iter'): Use(int),
     Optional('--params'): Or(None, str),
+    Optional('--pdb'): Or(None, str),    
     Optional('--pmult'): bool,
     Optional('--ps'): Or(None, str),
     Optional('--qdiverse'): bool,

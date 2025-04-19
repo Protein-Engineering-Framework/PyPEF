@@ -49,7 +49,7 @@ from pypef.utils.variant_data import (
 )
 from pypef.utils.plot import plot_y_true_vs_y_pred
 from pypef.utils.performance import get_performances
-from pypef.dca.hybrid_model import plmc_or_gremlin_encoding
+from pypef.hybrid.hybrid_model import plmc_or_gremlin_encoding
 
 import warnings
 warnings.filterwarnings(action='ignore', category=RuntimeWarning, module='numpy')
@@ -560,7 +560,7 @@ def performance_list(
     """
     global x_train, y_train, train_variants, train_sequences, \
         x_test, y_test, test_variants, test_sequences, \
-        model_type
+        model_type # noqa: F824
     encoding = encoding.lower()
     performance_list = []
     train_sequences, train_variants, y_train = get_sequences_from_file(train_set)
@@ -903,7 +903,7 @@ def save_model(
     """
     global x_train, y_train, train_variants, train_sequences, \
         x_test, y_test, test_variants, test_sequences, \
-        model_type
+        model_type # noqa: F824
     logger.info('Encoding and cross validation on all data (creating folder CV_performance)...')
     regressor = regressor.lower()
     try:

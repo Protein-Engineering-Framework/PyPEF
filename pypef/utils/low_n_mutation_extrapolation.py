@@ -25,7 +25,7 @@ import pickle
 from tqdm import tqdm
 
 from pypef.ml.regression import cv_regression_options
-from pypef.dca.hybrid_model import DCAHybridModel
+from pypef.hybrid.hybrid_model import DCALLMHybridModel
 from pypef.utils.variant_data import process_df_encoding, get_basename
 
 
@@ -126,7 +126,7 @@ def low_n(
 
             if hybrid_modeling:
                 x_wt = x[0]  # WT should be first CSV variant entry
-                hybrid_model = DCAHybridModel(
+                hybrid_model = DCALLMHybridModel(
                     x_train=x_train,
                     y_train=y_train,
                     x_test=x_test,  # only used for adjusting +/- sign of y_dca, can also be None
@@ -271,7 +271,7 @@ def performance_mutation_extrapolation(
         all_higher_variants, x_all_higher, y_all_higher = process_df_encoding(all_higher_df)
         if hybrid_modeling:
             x_wt = x_train[0]
-            hybrid_model = DCAHybridModel(
+            hybrid_model = DCALLMHybridModel(
                 x_train=x_train,
                 y_train=y_train,
                 x_test=x_all_higher,  # only used for adjusting +/- of y_dca, can also be None but

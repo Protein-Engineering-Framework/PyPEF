@@ -42,7 +42,7 @@ from pypef.utils.directed_evolution import DirectedEvolution
 from pypef.utils.sto2a2m import convert_sto2a2m
 
 from pypef.ml.regression import OneHotEncoding, AAIndexEncoding, full_aaidx_txt_path
-from pypef.dca.hybrid_model import plmc_or_gremlin_encoding
+from pypef.hybrid.hybrid_model import plmc_or_gremlin_encoding
 
 
 def run_pypef_utils(arguments):

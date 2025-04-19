@@ -31,7 +31,7 @@ import logging
 logger = logging.getLogger('pypef.utils.directed_evolution')
 
 from pypef.ml.regression import predict
-from pypef.dca.hybrid_model import predict_directed_evolution
+from pypef.hybrid.hybrid_model import predict_directed_evolution
 
 # ignoring warnings of scikit-learn regression
 warnings.filterwarnings(action='ignore', category=RuntimeWarning, module='sklearn')

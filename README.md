@@ -22,7 +22,7 @@
 # PyPEF: Pythonic Protein Engineering Framework
 [![PyPI version](https://img.shields.io/pypi/v/PyPEF?color=blue)](https://pypi.org/project/pypef/)
 [![Python version](https://img.shields.io/pypi/pyversions/PyPEF)](https://www.python.org/downloads/)
-[![Build](https://github.com/Protein-Engineering-Framework/PyPEF/actions/workflows/build.yml/badge.svg)](https://github.com/Protein-Engineering-Framework/PyPEF/actions?query=workflow:build)
+[![Build](https://github.com/niklases/PyPEF/actions/workflows/build.yml/badge.svg)](https://github.com/niklases/PyPEF/actions/?query=workflow:build)
 [![PyPI Downloads](https://static.pepy.tech/badge/pypef)](https://pepy.tech/projects/pypef)
 
 a framework written in Python 3 for performing sequence-based machine learning-assisted protein engineering to predict a protein's fitness from its sequence using different forms of sequence encoding:
@@ -69,15 +69,15 @@ A rudimentary graphical user interface (GUI) can be installed using the gui_setu
 
 Windows (PowerShell)
 ```powershell
-Invoke-WebRequest https://raw.githubusercontent.com/Protein-Engineering-Framework/PyPEF/refs/heads/master/gui_setup.bat -OutFile gui_setup.bat
-Invoke-WebRequest https://raw.githubusercontent.com/Protein-Engineering-Framework/PyPEF/refs/heads/master/gui/qt_window.py -OutFile ( New-Item -Path ".\gui\qt_window.py" -Force )
+Invoke-WebRequest https://raw.githubusercontent.com/niklases/PyPEF/refs/heads/main/gui_setup.bat -OutFile gui_setup.bat
+Invoke-WebRequest https://raw.githubusercontent.com/niklases/PyPEF/refs/heads/main/gui/qt_window.py -OutFile ( New-Item -Path ".\gui\qt_window.py" -Force )
 .\gui_setup.bat
 ```
 
 Linux
 ```bash
-wget https://raw.githubusercontent.com/Protein-Engineering-Framework/PyPEF/refs/heads/master/gui_setup.sh -O gui_setup.sh
-mkdir -p ./gui/ && wget https://raw.githubusercontent.com/Protein-Engineering-Framework/PyPEF/refs/heads/master/gui/qt_window.py -O ./gui/qt_window.py
+wget https://raw.githubusercontent.com/niklases/PyPEF/refs/heads/main/gui_setup.sh -O gui_setup.sh
+mkdir -p ./gui/ && wget https://raw.githubusercontent.com/niklases/PyPEF/refs/heads/main/gui/qt_window.py -O ./gui/qt_window.py
 chmod a+x ./gui_setup.sh && ./gui_setup.sh
 ```
 
@@ -218,8 +218,8 @@ bash Anaconda3-2023.03-1-Linux-x86_64.sh
 ```
 
 After accepting all steps, the conda setup should also be written to your `~/.bashrc`file, so that you can call anaconda typing `conda`.
-Next, to download this repository click Code > Download ZIP and unzip the zipped file, e.g. with `unzip PyPEF-master.zip`, or just clone this repository using your bash shell to your local machine `git clone https://github.com/Protein-Engineering-Framework/PyPEF`.
-To set up a new environment with conda you can either create the conda environment from the provided YAML file inside the PyPEF directory (`cd PyPEF` or `cd PyPEF-master` dependent on the downloaded file name and chose YAML file for your operating system):
+Next, to download this repository click Code > Download ZIP and unzip the zipped file, e.g. with `unzip PyPEF-main.zip`, or just clone this repository using your bash shell to your local machine `git clone https://github.com/niklases/PyPEF`.
+To set up a new environment with conda you can either create the conda environment from the provided YAML file inside the PyPEF directory (`cd PyPEF` or `cd PyPEF-main` dependent on the downloaded file name and chose YAML file for your operating system):
 
 ```
 conda env create --file linux_env.yml
@@ -237,7 +237,7 @@ To activate the environment you can define:
 conda activate pypef
 ```
 
-After activating the environment you can install required packages after changing the directory to the PyPEF directory (`cd PyPEF` or `cd PyPEF-master`) and install required packages with pip if you did not use the YAML file for creating the environment (if using conda, packages will be installed in anaconda3/envs/pypef/lib/python3.10/site-packages):
+After activating the environment you can install required packages after changing the directory to the PyPEF directory (`cd PyPEF` or `cd PyPEF-main`) and install required packages with pip if you did not use the YAML file for creating the environment (if using conda, packages will be installed in anaconda3/envs/pypef/lib/python3.10/site-packages):
 
 ```
 python3 -m pip install -r requirements.txt
@@ -327,23 +327,23 @@ The following model hyperparameter ranges are tested during (*k*-fold) cross-val
 PyPEF was developed to be run from a command-line interface while `python3 ./pypef/main.py` (when using the downloaded version of this repository and setting the `PYTHONPATH`) is equal to `pypef` when installed with pip. 
 Downloading/cloning the repository files (manually or with `wget`/`git clone`):<br>
 ```
-wget https://github.com/Protein-Engineering-Framework/PyPEF/archive/refs/heads/master.zip
+wget https://github.com/niklases/PyPEF/archive/main.zip
 ```
 
 Unzipping the zipped file (manually or e.g. with `unzip`):
 ```
-unzip master.zip
+unzip main.zip
 ```
 
 Setting the `PYTHONPATH` (so that no import errors occur stating that the package `pypef` and thus dependent absolute imports are unknown):<br>
 &nbsp;&nbsp;Windows (example path, PowerShell)
 ```
-$env:PYTHONPATH="C:\Users\name\path\to\PyPEF-master"
+$env:PYTHONPATH="C:\Users\name\path\to\PyPEF-main"
 ```
 
 &nbsp;&nbsp;Linux (example path)
 ```
-export PYTHONPATH="${PYTHONPATH}:/home/name/path/to/PyPEF-master"
+export PYTHONPATH="${PYTHONPATH}:/home/name/path/to/PyPEF-main"
 ```
 Installing the requirements:<br>
 &nbsp;&nbsp;Windows (PowerShell)
@@ -356,7 +356,7 @@ python -m pip install -r requirements.txt
 python3 -m pip install -r requirements.txt
 ```
 
-Running the main script (from PyPEF-master directory):<br>
+Running the main script (from PyPEF-main directory):<br>
 &nbsp;&nbsp;Windows (PowerShell)
 ```
 python .\pypef\main.py
@@ -484,6 +484,11 @@ The performance of the GREMLIN model used is shown in the following for predicti
 </p>
 
 for ProteinGym datasets computed using the scripts located at [scripts/ProteinGym_runs](scripts/ProteinGym_runs).
+
+A hybrid GREMLIN-ESM1v low-N-tuned model achieved even increased performances compared to the pure DCA-tuned model (script available at [scripts/ESM_finetuning](scripts/ESM_finetuning))
+<p align="center">
+    <img src=".github/imgs/mut_performance_violin_DCA_ESM.png" alt="drawing" width="250"/>
+</p>
 
 <a name="api-usage"></a>
 ## API Usage for Sequence Encoding

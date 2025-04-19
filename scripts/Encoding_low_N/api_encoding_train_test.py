@@ -20,9 +20,9 @@ from pypef.ml.regression import (
     OneHotEncoding, AAIndexEncoding, get_regressor_performances,
     path_aaindex_dir, full_aaidx_txt_path
 )
-from pypef.dca.hybrid_model import DCAHybridModel, remove_gap_pos, get_delta_e_statistical_model
+from pypef.hybrid.hybrid_model import DCALLMHybridModel, remove_gap_pos
 from pypef.dca.plmc_encoding import PLMC
-from pypef.dca.gremlin_inference import GREMLIN
+from pypef.dca.gremlin_inference import GREMLIN, get_delta_e_statistical_model
 
 
 use_gremlin = True  # if False uses plmc (requires plmc-generated .params file)
@@ -154,7 +154,7 @@ for i, indices in enumerate(train_val_splits_indices):
     print(f'Split {i + 1}/{len(train_val_splits_indices)}:\nSpearmans rho (ML) = {performances[4]:.3f}')
     # B. Hybrid modeling
     # -------------------------------------------------------------------------------
-    hybrid_model = DCAHybridModel(x_train=x_train_val, y_train=y_train_val, x_wt=x_wt)
+    hybrid_model = DCALLMHybridModel(x_train=x_train_val, y_train=y_train_val, x_wt=x_wt)
     beta_1, beta_2, regressor = hybrid_model.settings(x_train=x_train_val, y_train=y_train_val)
     y_test_pred = hybrid_model.hybrid_prediction(x=x_test, reg=regressor, beta_1=beta_1, beta_2=beta_2)
     ten_split_performance_hybrid.append(spearmanr(y_test, y_test_pred)[0])
@@ -240,7 +240,7 @@ print(f'N Total variants = {len(variants)}.\nEncoding sequences...')
 
 if use_gremlin:
     variants, sequences, fitnesses = remove_gap_pos(dca_encoder.gaps, variants, sequences, fitnesses)
-    x_dca = dca_encoder.get_score(sequences, encode=True)
+    x_dca = dca_encoder.get_scores(sequences, encode=True)
 else:
     x_dca = dca_encoder.collect_encoded_sequences(variants)
     # removing not DCA-encodable positions (and also reduce fitnesses, variants, and sequences accordingly)
@@ -274,7 +274,7 @@ for n_train in pbar:
         performances_dca_ml.append(get_regressor_performances(
             x_dca_train, x_dca_test, y_train, y_test, regressor='ridge')[4])  # [4] defines spearmanr correlation
 
-        hybrid_model = DCAHybridModel(x_train=x_dca_train, y_train=y_train, x_wt=x_wt)
+        hybrid_model = DCALLMHybridModel(x_train=x_dca_train, y_train=y_train, x_wt=x_wt)
         beta_1, beta_2, hybrid_regressor = hybrid_model.settings(x_train=x_dca_train, y_train=y_train)
         y_hybrid_pred = hybrid_model.hybrid_prediction(x=x_dca_test, reg=hybrid_regressor, beta_1=beta_1, beta_2=beta_2)
         performances_hybrid.append(spearmanr(y_test, y_hybrid_pred)[0])

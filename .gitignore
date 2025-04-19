@@ -27,6 +27,7 @@ scripts/ProteinGym_runs/single_point_mut_performance.png
 scripts/ProteinGym_runs/multi_point_mut_performance.png
 
 # Created test/output files
+model_saves/*
 scripts/Setup/windows/Miniconda3-latest-Windows-x86_64.exe
 scripts/Setup/windows/Miniconda3/*
 scripts/Encoding_low_N/apc.png
@@ -402,3 +403,27 @@ scripts/Runtime_tests/runtimes.png
 datasets/AVGFP/Recomb_Double_Split/Predictions_Hybrid_TopRecomb_Double_Split.txt
 scripts/ProteinGym_runs/single_point_mut_performance_violin.png
 scripts/ProteinGym_runs/multi_point_mut_performance_violin.png
+scripts/ESM_finetuning/DMS_msa_files/
+scripts/ESM_finetuning/DMS_ProteinGym_substitutions/
+scripts/ESM_finetuning/ProteinGym_AF2_structures/
+
+scripts/ESM_finetuning/higher_point_dms_mut_data.json
+scripts/ESM_finetuning/single_point_dms_mut_data.json
+scripts/ESM_finetuning/results/dca_esm_and_hybrid_opt_results_clean.csv
+scripts/ESM_finetuning/results/dca_esm_and_hybrid_opt_results.csv
+scripts/ESM_finetuning/mut_performance.png
+scripts/ESM_finetuning/_Description_DMS_substitutions_data.csv
+scripts/ESM_finetuning/mut_performance_violin.png
+datasets/ANEH/SSM_landscape.png
+datasets/ANEH/SSM_landscape.csv
+datasets/AVGFP/model_saves/*
+datasets/AVGFP/Pickles/*
+datasets/AVGFP/DCA_Hybrid_Model_Performance_ESM1v_no_ML.png
+datasets/AVGFP/DCA_Hybrid_Model_Performance_ProSST_no_ML.png
+
+# Large files // LFS in niklases/PyPEF
+datasets/ANEH/ANEH_72.6.params
+datasets/AVGFP/uref100_avgfp_jhmmer_119_plmc_42.6.params
+datasets/AVGFP/uref100_avgfp_jhmmer_119.sto
+datasets/GRB2/GRB2_HUMAN_full_11-26-2021_b05.a2m
+datasets/ANEH/ANEH_jhmmer.sto
