@@ -1,0 +1,13 @@
+numpy
+pandas
+tqdm
+docopt
+matplotlib
+scipy
+adjustText
+scikit-learn
+scikit-learn-intelex
+biopython
+schema
+ray[default]
+tensorflow

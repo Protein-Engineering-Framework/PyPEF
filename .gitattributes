@@ -1,0 +1,5 @@
+*.ipynb linguist-detectable=false
+*.html linguist-detectable=false
+*.sto filter=lfs diff=lfs merge=lfs -text
+#*.csv filter=lfs diff=lfs merge=lfs -text
+*.params filter=lfs diff=lfs merge=lfs -text
