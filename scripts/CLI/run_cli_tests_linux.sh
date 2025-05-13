@@ -16,22 +16,26 @@ export PS4='+(Line ${LINENO}): '  # echo script line numbers
 ### $ ./run_cli_tests_linux.sh                      # printing STDOUT and STDERR to terminal
 ### $ ./run_cli_tests_linux.sh &> test_cli_run.log  # writing STDOUT and STDERR to log file
 
+
+cd '../'
+path=$( echo ${PWD%/*} )
+cd 'CLI'  
 ### if using downloaded/locally stored pypef .py files:
 ##########################################################################################################################
-conda env remove -n pypef                                                                                                #
+yes | conda env remove -n pypef || true                                                                                  #
 conda create -n pypef python=3.12 -y                                                                                     #
 eval "$(conda shell.bash hook)"                                                                                          #
 conda activate pypef                                                                                                     #
-cd '../'                                                                                                                 #
-path=$( echo ${PWD%/*} )                                                                                                 #
-cd 'CLI'                                                                                                                 #
 python -m pip install -r "$path/requirements.txt"                                                                        #
+#pip install --pre torch torchvision torchaudio --index-url https://download.pytorch.org/whl/nightly/cu128               # ONLY IF NIGHTLY IS NEEDED, E.G., NEW BLACKWELL GPU GENERATION 
 export PYTHONPATH=${PYTHONPATH}:$path                                                                                    #
 pypef="python3 $path/pypef/main.py"                                                                                      #
 ##########################################################################################################################
 ### else just use pip-installed pypef version (uncomment):                                                               #
 #pypef=pypef                                                                                                             #
 ##########################################################################################################################
+# threads are only used for some parallelization of AAindex and DCA-based sequence encoding                              # 
+# if pypef/settings.py defines USE_RAY = True                                                                            #
 threads=12                                                                                                               #
 ##########################################################################################################################
 
@@ -167,13 +171,13 @@ $pypef ml -e aaidx -m FAUJ880104 -t TS.fasl
 echo
 $pypef ml -e onehot -m ONEHOT -t TS.fasl
 echo
-$pypef ml -e dca -m MLplmc -t TS.fasl --params ANEH_72.6.params --threads $threads 
+$pypef ml -e dca -m MLPLMC -t TS.fasl --params ANEH_72.6.params --threads $threads 
 echo
 $pypef ml -e aaidx -m FAUJ880104 -t TS.fasl --label
 echo
 $pypef ml -e onehot -m ONEHOT -t TS.fasl --label
 echo
-$pypef ml -e dca -m MLplmc -t TS.fasl --label --params ANEH_72.6.params --threads $threads
+$pypef ml -e dca -m MLPLMC -t TS.fasl --label --params ANEH_72.6.params --threads $threads
 echo
 
 $pypef mkps -i 37_ANEH_variants.csv -w Sequence_WT_ANEH.fasta
@@ -182,7 +186,7 @@ $pypef ml -e aaidx -m FAUJ880104 -p 37_ANEH_variants_prediction_set.fasta
 echo
 $pypef ml -e onehot -m ONEHOT -p 37_ANEH_variants_prediction_set.fasta
 echo
-$pypef ml -e dca -m MLplmc -p 37_ANEH_variants_prediction_set.fasta --params ANEH_72.6.params --threads $threads
+$pypef ml -e dca -m MLPLMC -p 37_ANEH_variants_prediction_set.fasta --params ANEH_72.6.params --threads $threads
 echo
 $pypef ml -e dca -m MLgremlin -p 37_ANEH_variants_prediction_set.fasta --params GREMLIN
 echo
@@ -193,41 +197,41 @@ $pypef ml -e aaidx -m FAUJ880104 --pmult --drecomb --trecomb --qarecomb --qireco
 echo
 $pypef ml -e onehot -m ONEHOT --pmult --drecomb --trecomb --qarecomb --qirecomb --ddiverse
 echo
-$pypef ml -e dca -m MLplmc --params ANEH_72.6.params --pmult --drecomb --trecomb --qarecomb --qirecomb --ddiverse --threads $threads
+$pypef ml -e dca -m MLPLMC --params ANEH_72.6.params --pmult --drecomb --trecomb --qarecomb --qirecomb --ddiverse --threads $threads
 echo
 $pypef ml -e dca -m MLgremlin --params GREMLIN --pmult --drecomb --trecomb --qarecomb --qirecomb --ddiverse
 echo
 
-$pypef ml -e aaidx directevo -m FAUJ880104 -w Sequence_WT_ANEH.fasta --y_wt -1.5 --negative
+$pypef ml -e aaidx directevo -m FAUJ880104 -w Sequence_WT_ANEH.fasta --negative
 echo
-$pypef ml -e onehot directevo -m ONEHOT -w Sequence_WT_ANEH.fasta --y_wt -1.5 --negative
+$pypef ml -e onehot directevo -m ONEHOT -w Sequence_WT_ANEH.fasta --negative
 echo
-$pypef ml -e dca directevo -m MLplmc -w Sequence_WT_ANEH.fasta --y_wt -1.5 --negative --params ANEH_72.6.params
+$pypef ml -e dca directevo -m MLPLMC -w Sequence_WT_ANEH.fasta --negative --params ANEH_72.6.params
 echo
-$pypef ml -e dca directevo -m MLgremlin -w Sequence_WT_ANEH.fasta --y_wt -1.5 --negative --params GREMLIN
+$pypef ml -e dca directevo -m MLgremlin -w Sequence_WT_ANEH.fasta --negative --params GREMLIN
 echo
-$pypef ml -e aaidx directevo -m FAUJ880104 -w Sequence_WT_ANEH.fasta -y -1.5 --numiter 10 --numtraj 8 --negative
+$pypef ml -e aaidx directevo -m FAUJ880104 -w Sequence_WT_ANEH.fasta --numiter 10 --numtraj 8 --negative
 echo
-$pypef ml -e onehot directevo -m ONEHOT -w Sequence_WT_ANEH.fasta -y -1.5 --numiter 10 --numtraj 8 --negative
+$pypef ml -e onehot directevo -m ONEHOT -w Sequence_WT_ANEH.fasta --numiter 10 --numtraj 8 --negative
 echo
-$pypef ml -e dca directevo -m MLplmc -w Sequence_WT_ANEH.fasta -y -1.5 --numiter 10 --numtraj 8 --negative --params ANEH_72.6.params
+$pypef ml -e dca directevo -m MLPLMC -w Sequence_WT_ANEH.fasta --numiter 10 --numtraj 8 --negative --params ANEH_72.6.params
 echo
-$pypef ml -e dca directevo -m MLgremlin -w Sequence_WT_ANEH.fasta -y -1.5 --numiter 10 --numtraj 8 --negative --params GREMLIN
+$pypef ml -e dca directevo -m MLgremlin -w Sequence_WT_ANEH.fasta --numiter 10 --numtraj 8 --negative --params GREMLIN
 echo
-$pypef ml -e aaidx directevo -m FAUJ880104 -i 37_ANEH_variants.csv -w Sequence_WT_ANEH.fasta -y -1.5 --temp 0.1 --usecsv --csvaa --negative
+$pypef ml -e aaidx directevo -m FAUJ880104 -i 37_ANEH_variants.csv -w Sequence_WT_ANEH.fasta --temp 0.1 --usecsv --csvaa --negative
 echo
-$pypef ml -e onehot directevo -m ONEHOT -i 37_ANEH_variants.csv -w Sequence_WT_ANEH.fasta -y -1.5 --temp 0.1 --usecsv --csvaa --negative
+$pypef ml -e onehot directevo -m ONEHOT -i 37_ANEH_variants.csv -w Sequence_WT_ANEH.fasta --temp 0.1 --usecsv --csvaa --negative
 echo
-$pypef ml -e dca directevo -m MLplmc -i 37_ANEH_variants.csv -w Sequence_WT_ANEH.fasta -y -1.5 --temp 0.1 --usecsv --csvaa --negative --params ANEH_72.6.params
+$pypef ml -e dca directevo -m MLPLMC -i 37_ANEH_variants.csv -w Sequence_WT_ANEH.fasta --temp 0.1 --usecsv --csvaa --negative --params ANEH_72.6.params
 echo
-$pypef ml -e dca directevo -m MLgremlin -i 37_ANEH_variants.csv -w Sequence_WT_ANEH.fasta -y -1.5 --temp 0.1 --usecsv --csvaa --negative --params GREMLIN
+$pypef ml -e dca directevo -m MLgremlin -i 37_ANEH_variants.csv -w Sequence_WT_ANEH.fasta --temp 0.1 --usecsv --csvaa --negative --params GREMLIN
 echo
 
 $pypef ml -e aaidx -l LS.fasl -t TS.fasl --regressor pls --nofft
 echo
 $pypef ml --show
 echo
-$pypef ml -e aaidx directevo -m WEBA780101 -w Sequence_WT_ANEH.fasta -y -1.5 --negative --nofft
+$pypef ml -e aaidx directevo -m WEBA780101 -w Sequence_WT_ANEH.fasta --negative --nofft
 echo
 
 $pypef encode -i 37_ANEH_variants.csv -e aaidx -m FAUJ880104 -w Sequence_WT_ANEH.fasta
@@ -236,11 +240,11 @@ $pypef encode -i 37_ANEH_variants.csv -e onehot -w Sequence_WT_ANEH.fasta
 echo
 $pypef encode -i 37_ANEH_variants.csv -e dca -w Sequence_WT_ANEH.fasta --params ANEH_72.6.params --threads $threads
 echo
-mv 37_ANEH_variants_dca_encoded.csv 37_ANEH_variants_plmc_dca_encoded.csv
+mv 37_ANEH_variants_dca_encoded.csv 37_ANEH_variants_plmc_dca_encoded.csv || true
 echo
 $pypef encode -i 37_ANEH_variants.csv -e dca -w Sequence_WT_ANEH.fasta --params GREMLIN
 echo
-mv 37_ANEH_variants_dca_encoded.csv 37_ANEH_variants_gremlin_dca_encoded.csv
+mv 37_ANEH_variants_dca_encoded.csv 37_ANEH_variants_gremlin_dca_encoded.csv || true
 echo
 
 $pypef ml low_n -i 37_ANEH_variants_aaidx_encoded.csv
@@ -270,32 +274,28 @@ echo
 $pypef ml extrapolation -i 37_ANEH_variants_gremlin_dca_encoded.csv --conc
 echo
 
-$pypef hybrid train_and_save -i 37_ANEH_variants.csv -w Sequence_WT_ANEH.fasta --params ANEH_72.6.params --fit_size 0.66 --threads $threads
-echo
 $pypef hybrid -l LS.fasl -t TS.fasl --params ANEH_72.6.params --threads $threads
 echo
-$pypef hybrid -m HYBRIDplmc -t TS.fasl --params ANEH_72.6.params --threads $threads
+$pypef hybrid -m HYBRIDPLMC -t TS.fasl --params ANEH_72.6.params --threads $threads
 echo
 
-$pypef hybrid train_and_save -i 37_ANEH_variants.csv -w Sequence_WT_ANEH.fasta --params GREMLIN --fit_size 0.66
-echo
 $pypef hybrid -l LS.fasl -t TS.fasl --params GREMLIN
 echo
-$pypef hybrid -m HYBRIDgremlin -t TS.fasl --params GREMLIN
+$pypef hybrid -m HYBRIDGREMLIN -t TS.fasl --params GREMLIN
 echo
 
 $pypef mkps -i 37_ANEH_variants.csv -w Sequence_WT_ANEH.fasta
 echo
-$pypef hybrid -m HYBRIDplmc -p 37_ANEH_variants_prediction_set.fasta --params ANEH_72.6.params --threads $threads
+$pypef hybrid -m HYBRIDPLMC -p 37_ANEH_variants_prediction_set.fasta --params ANEH_72.6.params --threads $threads
 echo
-$pypef hybrid -m HYBRIDplmc --params ANEH_72.6.params --pmult --drecomb --threads $threads
+$pypef hybrid -m HYBRIDPLMC --params ANEH_72.6.params --pmult --drecomb --threads $threads
 echo
 
-$pypef hybrid directevo -m HYBRIDplmc -w Sequence_WT_ANEH.fasta --y_wt -1.5 --negative --params ANEH_72.6.params
+$pypef hybrid directevo -m HYBRIDPLMC -w Sequence_WT_ANEH.fasta --negative --params ANEH_72.6.params
 echo
-$pypef hybrid directevo -m HYBRIDplmc -w Sequence_WT_ANEH.fasta -y -1.5 --numiter 10 --numtraj 8 --negative --params ANEH_72.6.params
+$pypef hybrid directevo -m HYBRIDPLMC -w Sequence_WT_ANEH.fasta --numiter 10 --numtraj 8 --negative --params ANEH_72.6.params
 echo
-$pypef hybrid directevo -m HYBRIDplmc -i 37_ANEH_variants.csv -w Sequence_WT_ANEH.fasta -y -1.5 --temp 0.1 --usecsv --csvaa --negative --params ANEH_72.6.params
+$pypef hybrid directevo -m HYBRIDPLMC -i 37_ANEH_variants.csv -w Sequence_WT_ANEH.fasta --temp 0.1 --usecsv --csvaa --negative --params ANEH_72.6.params
 echo
 
 $pypef encode -i 37_ANEH_variants.csv -e dca -w Sequence_WT_ANEH.fasta --params ANEH_72.6.params --threads $threads
@@ -305,6 +305,18 @@ echo
 $pypef hybrid extrapolation -i 37_ANEH_variants_dca_encoded.csv
 echo
 $pypef hybrid extrapolation -i 37_ANEH_variants_dca_encoded.csv --conc
+echo
+
+# 0.4.0 features: hybrid DCA-LLM modeling
+$pypef hybrid --ls LS.fasl --ts TS.fasl --params GREMLIN --llm esm
+echo
+$pypef hybrid -m HYBRIDGREMLINESM1V --ts TS.fasl --params GREMLIN --llm esm
+echo
+$pypef mkps -i 37_ANEH_variants.csv --wt Sequence_WT_ANEH.fasta
+echo
+$pypef hybrid -m HYBRIDGREMLINESM1V --ps 37_ANEH_variants_prediction_set.fasta --params GREMLIN --llm esm
+echo
+$pypef hybrid directevo -m HYBRIDGREMLINESM1V -w Sequence_WT_ANEH.fasta --negative --params GREMLIN
 echo
 
 rm 37_ANEH_variants_plmc_dca_encoded.csv
@@ -342,7 +354,6 @@ echo
 $pypef hybrid -t TS.fasl --params GREMLIN
 echo
 
-
 # using .params file
 $pypef ml -e dca -l LS.fasl -t TS.fasl --params uref100_avgfp_jhmmer_119_plmc_42.6.params --threads $threads
 echo
@@ -351,18 +362,17 @@ $pypef ml -e dca -l LS.fasl -t TS.fasl --regressor pls --params GREMLIN
 echo
 $pypef ml -e dca -l LS.fasl -t TS.fasl --regressor pls --params uref100_avgfp_jhmmer_119_plmc_42.6.params
 echo
-# Transforming .params file to DCAEncoding and using DCAEncoding Pickle; output file: Pickles/MLplmc.
+# Transforming .params file to DCAEncoding and using DCAEncoding Pickle; output file: Pickles/MLPLMC.
 # That means using uref100_avgfp_jhmmer_119_plmc_42.6.params or PLMC as params file is identical.
 $pypef param_inference --params uref100_avgfp_jhmmer_119_plmc_42.6.params
 echo
 $pypef ml -e dca -l LS.fasl -t TS.fasl --regressor pls --params PLMC --threads $threads
 echo
 # ml only TS
-$pypef ml -e dca -m MLplmc -t TS.fasl --params uref100_avgfp_jhmmer_119_plmc_42.6.params --threads $threads
+$pypef ml -e dca -m MLPLMC -t TS.fasl --params uref100_avgfp_jhmmer_119_plmc_42.6.params --threads $threads
 echo
 $pypef ml -e dca -m MLgremlin -t TS.fasl --params GREMLIN --threads $threads
 echo
-
 
 echo
 $pypef ml -e dca -l LS.fasl -t TS.fasl --params PLMC --threads $threads
@@ -395,9 +405,6 @@ echo
 $pypef hybrid -l LS.fasl -t TS.fasl --params GREMLIN
 echo
 $pypef save_msa_info --msa uref100_avgfp_jhmmer_119.a2m -w P42212_F64L.fasta --opt_iter 100
-# train and save only for hybrid
-$pypef hybrid train_and_save -i avGFP.csv --params GREMLIN --wt P42212_F64L.fasta
-echo
 # Encode CSV
 $pypef encode -e dca -i avGFP.csv --wt P42212_F64L.fasta --params GREMLIN
 echo
@@ -415,7 +422,7 @@ echo
 # Direct Evo
 $pypef ml -e dca directevo -m MLgremlin --wt P42212_F64L.fasta --params GREMLIN
 echo
-$pypef ml -e dca directevo -m MLplmc --wt P42212_F64L.fasta --params PLMC
+$pypef ml -e dca directevo -m MLPLMC --wt P42212_F64L.fasta --params PLMC
 echo
 $pypef hybrid directevo -m GREMLIN --wt P42212_F64L.fasta --params GREMLIN
 echo
@@ -429,7 +436,7 @@ echo
 # Hybrid prediction using GREMLIN parameters
 $pypef hybrid -l LS.fasl -t TS.fasl --params GREMLIN
 echo 
-$pypef hybrid -m HYBRIDgremlin -t TS.fasl --params GREMLIN
+$pypef hybrid -m HYBRIDGREMLIN -t TS.fasl --params GREMLIN
 echo 
 
 
@@ -444,33 +451,62 @@ echo
 $pypef encode -i avGFP.csv -e aaidx -m GEIM800103 -w P42212_F64L.fasta 
 echo
 
-$pypef hybrid train_and_save -i avGFP.csv --params uref100_avgfp_jhmmer_119_plmc_42.6.params --fit_size 0.66 -w P42212_F64L.fasta --threads $threads
-echo
 $pypef hybrid -l LS.fasl -t TS.fasl --params uref100_avgfp_jhmmer_119_plmc_42.6.params --threads $threads
 echo
-$pypef hybrid -m HYBRIDplmc -t TS.fasl --params uref100_avgfp_jhmmer_119_plmc_42.6.params --threads $threads
+$pypef hybrid -m HYBRIDPLMC -t TS.fasl --params uref100_avgfp_jhmmer_119_plmc_42.6.params --threads $threads
 echo
 
-$pypef ml -e dca -m MLplmc -t TS.fasl --params uref100_avgfp_jhmmer_119_plmc_42.6.params --label --threads $threads
+$pypef ml -e dca -m MLPLMC -t TS.fasl --params uref100_avgfp_jhmmer_119_plmc_42.6.params --label --threads $threads
 echo
 
 $pypef mkps -i avGFP.csv -w P42212_F64L.fasta
 echo
-$pypef hybrid -m HYBRIDplmc -p avGFP_prediction_set.fasta --params uref100_avgfp_jhmmer_119_plmc_42.6.params --threads $threads
+$pypef hybrid -m HYBRIDPLMC -p avGFP_prediction_set.fasta --params uref100_avgfp_jhmmer_119_plmc_42.6.params --threads $threads
 echo
 $pypef mkps -i avGFP.csv -w P42212_F64L.fasta --drecomb
 echo
 # many single variants for recombination, takes too long
-#$pypef hybrid -m HYBRIDplmc --params uref100_avgfp_jhmmer_119_plmc_42.6.params --pmult --drecomb --threads $threads  
+#$pypef hybrid -m HYBRIDPLMC --params uref100_avgfp_jhmmer_119_plmc_42.6.params --pmult --drecomb --threads $threads  
 #echo
-$pypef hybrid -m HYBRIDgremlin --params GREMLIN --pmult --drecomb
+$pypef hybrid -m HYBRIDGREMLIN --params GREMLIN --pmult --drecomb
 echo
 
-$pypef hybrid directevo -m HYBRIDplmc -w P42212_F64L.fasta --params uref100_avgfp_jhmmer_119_plmc_42.6.params
+$pypef hybrid directevo -m HYBRIDPLMC -w P42212_F64L.fasta --params uref100_avgfp_jhmmer_119_plmc_42.6.params
 echo
-$pypef hybrid directevo -m HYBRIDplmc -w P42212_F64L.fasta --numiter 10 --numtraj 8 --params uref100_avgfp_jhmmer_119_plmc_42.6.params
+$pypef hybrid directevo -m HYBRIDPLMC -w P42212_F64L.fasta --numiter 10 --numtraj 8 --params uref100_avgfp_jhmmer_119_plmc_42.6.params
 echo
-$pypef hybrid directevo -m HYBRIDplmc -i avGFP.csv -w P42212_F64L.fasta --temp 0.1 --usecsv --csvaa --params uref100_avgfp_jhmmer_119_plmc_42.6.params
+$pypef hybrid directevo -m HYBRIDPLMC -i avGFP.csv -w P42212_F64L.fasta --temp 0.1 --usecsv --csvaa --params uref100_avgfp_jhmmer_119_plmc_42.6.params
+
+# 0.4.0 features: hybrid DCA-LLM modeling
+$pypef hybrid --ls LS.fasl --ts TS.fasl --params GREMLIN --llm esm
+echo
+$pypef hybrid -m HYBRIDGREMLINESM1V --ts TS.fasl --params GREMLIN --llm esm
+echo
+
+$pypef hybrid --ls LS.fasl --ts TS.fasl --params GREMLIN --llm prosst --wt P42212_F64L.fasta  --pdb GFP_AEQVI.pdb
+echo
+$pypef hybrid -m HYBRIDGREMLINPROSST --ts TS.fasl --params GREMLIN --llm esm --llm prosst --wt P42212_F64L.fasta  --pdb GFP_AEQVI.pdb
+echo
+
+$pypef hybrid directevo -m HYBRIDGREMLINESM1V -w P42212_F64L.fasta --params GREMLIN --llm esm
+ExitOnExitCode
+Write-Host
+$pypef hybrid directevo -m HYBRIDGREMLINPROSST -w P42212_F64L.fasta --params GREMLIN --llm prosst --pdb GFP_AEQVI.pdb
+ExitOnExitCode
+Write-Host
+
+# Takes long.. better delete 7 out of the 8 recomb txt files
+#$pypef hybrid -m HYBRIDGREMLINESM1V -w P42212_F64L.fasta --params GREMLIN --llm esm --pmult --drecomb
+#echo
+#$pypef hybrid -m HYBRIDGREMLINPROSST -w P42212_F64L.fasta --params GREMLIN --llm prosst --pdb GFP_AEQVI.pdb --pmult --drecomb
+#echo
+$pypef hybrid -m HYBRIDGREMLINESM1V -w P42212_F64L.fasta --params GREMLIN --llm esm -p avGFP_prediction_set.fasta
+echo
+$pypef hybrid -m HYBRIDGREMLINPROSST -w P42212_F64L.fasta --params GREMLIN --llm prosst --pdb GFP_AEQVI.pdb -p avGFP_prediction_set.fasta
+echo
+
+
+
 
 $pypef hybrid low_n -i avGFP_dca_encoded.csv
 echo

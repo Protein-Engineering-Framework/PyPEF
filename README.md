@@ -22,13 +22,15 @@
 # PyPEF: Pythonic Protein Engineering Framework
 [![PyPI version](https://img.shields.io/pypi/v/PyPEF?color=blue)](https://pypi.org/project/pypef/)
 [![Python version](https://img.shields.io/pypi/pyversions/PyPEF)](https://www.python.org/downloads/)
-[![Build](https://github.com/Protein-Engineering-Framework/PyPEF/actions/workflows/build.yml/badge.svg)](https://github.com/Protein-Engineering-Framework/PyPEF/actions?query=workflow:build)
+[![Build](https://github.com/niklases/PyPEF/actions/workflows/build.yml/badge.svg)](https://github.com/niklases/PyPEF/actions/?query=workflow:build)
 [![PyPI Downloads](https://static.pepy.tech/badge/pypef)](https://pepy.tech/projects/pypef)
 
-a framework written in Python 3 for performing sequence-based machine learning-assisted protein engineering to predict a protein's fitness from its sequence using different forms of sequence encoding:
+a framework written in Python 3 for performing sequence-based machine learning-assisted protein engineering to predict a protein's fitness from its sequence (and structure) using different forms of sequence encodings and LLM embeddings:
+
 - One-hot encoding
 - Amino acid descriptor sets (taken from AAindex database) encoding
 - Direct coupling analysis (amino acid coevolution based on multiple sequence alignments) encoding
+- LLM embeddings (currently, [ESM1v](https://github.com/facebookresearch/esm) and [ProSST](https://github.com/ai4protein/ProSST))
 
 Written by Niklas Siedhoff and Alexander-Maurice Illig.
 
@@ -36,21 +38,24 @@ Written by Niklas Siedhoff and Alexander-Maurice Illig.
     <img src=".github/imgs/ML_Model_Performance_DCA_GREMLIN.png" alt="drawing" width="500"/>
 </p>
 
-Protein engineering by rational or random approaches generates data that can aid the construction of self-learned sequence-function landscapes to predict beneficial variants by using probabilistic methods that can screen the unexplored sequence space with uncertainty *in silico*. Such predictive methods can be applied for increasing the success/effectivity of an engineering campaign while partly offering the prospect to reveal (higher-order) epistatic effects. Here we present an engineering framework termed PyPEF for assisting the supervised training and testing of regression models for predicting beneficial combinations of (identified) amino acid substitutions using machine learning algorithms from the [Scikit-learn](https://github.com/scikit-learn/scikit-learn) package. As training input, the developed framework requires the variant sequences and the corresponding screening results (fitness labels) of the identified variants as CSV (or FASTA-Like (FASL) datasets following a self-defined convention). Using linear or nonlinear regression methods (partial least squares (PLS), Ridge, Lasso, Elastic net, support vector machines (SVR), random forest (RF), and multilayer perceptron (MLP)-based regression), PyPEF trains on the given learning data while optimizing model hyperparameters (default: five-fold cross-validation) and can compute model performances on left-out test data. As sequences are encoded using amino acid descriptor sets taken from the [AAindex database](https://www.genome.jp/aaindex/), finding the best index-dependent encoding for a specific test set can be seen as a hyperparameter search on the test set. In addition, one-hot and [direct coupling analysis](https://en.wikipedia.org/wiki/Direct_coupling_analysis)-based feature generation are implemented as sequence encoding techniques, which often outperform AAindex-based encoding techniques. Finally, the selected or best identified encoding technique and regression model can be used to perform directed evolution walks *in silico* (see [Church-lab implementation](https://github.com/churchlab/UniRep) or the [reimplementation](https://github.com/ivanjayapurna/low-n-protein-engineering)) or to predict natural diverse or recombinant variant sequences that subsequently are to be designed and validated in the wet-lab.
+Protein engineering by rational or random approaches generates data that can aid the construction of self-learned sequence-function landscapes to predict beneficial variants by using probabilistic methods that can screen the unexplored sequence space with uncertainty *in silico*. Such predictive methods can be applied for increasing the success/effectivity of an engineering campaign while partly offering the prospect to reveal (higher-order) epistatic mutation effects. Here we present an engineering framework termed PyPEF for assisting the unsupervised optimization, supervised training, and testing of protein fitness models for predicting beneficial combinations of (identified) amino acid substitutions using machine learning approaches.
+As training input, the developed framework requires the variant sequences and the corresponding screening results (fitness labels) of the variants as CSV files (or FASTA-Like ("FASL") data files following a self-defined convention). Using linear or nonlinear regression methods (partial least squares (PLS), Ridge, Lasso, Elastic net, support vector machines (SVR), random forest (RF), and multilayer perceptron (MLP)-based regression), PyPEF trains on the given learning data while optimizing model hyperparameters (default: five-fold cross-validation) and can compute model performances on left-out test data. As sequences are encoded using amino acid descriptor sets taken from the [AAindex database](https://www.genome.jp/aaindex/), finding the best index-dependent encoding for a specific test set can be seen as a hyperparameter search on the test set. In addition, one-hot and [direct coupling analysis (DCA)](https://en.wikipedia.org/wiki/Direct_coupling_analysis)-based feature generation are implemented as sequence encoding techniques, which often outperform AAindex-based encoding techniques. While one-hot encodings fail for positional extrapolation, DCA-based sequence encoding offers positional extrapolation capabilities and is hence better suited for most generalization tasks. In addition, a hybrid, combined model of the unsupervised and supervised DCA model provides even better performance and robust predictions, even when training with only a few data points (e.g. 50-100 variant fitness labels). Furthermore, a mixed hybrid DCA model combined with LLM models  predictions show even increased overall performance across the [ProteinGym](https://proteingym.org/) datasets tested. 
 
-For detailed information, please refer to the above-mentioned publications and related Supporting Information.
+Finally, the selected (un-) trained (pure or hybrid) model can be used to perform directed evolution walks *in silico* (see [Church-lab implementation](https://github.com/churchlab/UniRep) or the [reimplementation](https://github.com/ivanjayapurna/low-n-protein-engineering)) or to predict natural diverse or recombinant variant sequences that subsequently are to be designed and validated in the wet-lab.
 
-The workflow procedure is explained in the [Jupyter notebook](scripts/CLI/Workflow_PyPEF.ipynb) (.ipynb) protocol (see
-Tutorial section below).
 
-<img src=".github/imgs/splitting_workflow.png" alt="drawing" width="1000"/>
+<p align="center">
+  <img src=".github/imgs/splitting_workflow.png" alt="drawing" width="1000"/>
+</p>
 
 <a name="installation"></a>
 ## Quick Installation
-A quick installation of the PyPEF command line framework using PyPI for Linux and Windows and Python >= 3.9 can be performed with:
+A quick installation of the PyPEF command line framework using PyPI for Linux and Windows and Python >= 3.10 can be performed with:
 
-```
+```bash
 pip install -U pypef
+# optionally, for GPU support (see requirements section below):
+# pip install torch --index-url https://download.pytorch.org/whl/cu128
 ```
 
 After successful installation, PyPEF should work by calling `pypef` in the shell:
@@ -65,52 +70,62 @@ A quick file setup and run test can be performed running files in [scripts/Setup
 <a name="gui-installation"></a>
 ### GUI Installation
 
-A rudimentary graphical user interface (GUI) can be installed using the gui_setup.bat and gui_setup.sh scripts for Windows and Linux, respectively (which download and run `./gui/qt_window.py`, run these commands in a directory without any whitespaces):
+A rudimentary graphical user interface (GUI) can be installed using the gui_setup.bat and gui_setup.sh scripts for Windows and Linux, respectively (which install PyPEF from PyPI and download and finally run `./gui/PyPEFGUIQtWindow.py`). Run these commands in a directory without any whitespaces:
 
 Windows (PowerShell)
 ```powershell
-Invoke-WebRequest https://raw.githubusercontent.com/Protein-Engineering-Framework/PyPEF/refs/heads/master/gui_setup.bat -OutFile gui_setup.bat
-Invoke-WebRequest https://raw.githubusercontent.com/Protein-Engineering-Framework/PyPEF/refs/heads/master/gui/qt_window.py -OutFile ( New-Item -Path ".\gui\qt_window.py" -Force )
+Invoke-WebRequest https://raw.githubusercontent.com/niklases/PyPEF/refs/heads/main/gui_setup.bat -OutFile gui_setup.bat
+Invoke-WebRequest https://raw.githubusercontent.com/niklases/PyPEF/refs/heads/main/gui/PyPEFGUIQtWindow.py -OutFile ( New-Item -Path ".\gui\PyPEFGUIQtWindow.py" -Force )
 .\gui_setup.bat
 ```
 
 Linux
 ```bash
-wget https://raw.githubusercontent.com/Protein-Engineering-Framework/PyPEF/refs/heads/master/gui_setup.sh -O gui_setup.sh
-mkdir -p ./gui/ && wget https://raw.githubusercontent.com/Protein-Engineering-Framework/PyPEF/refs/heads/master/gui/qt_window.py -O ./gui/qt_window.py
+wget https://raw.githubusercontent.com/niklases/PyPEF/refs/heads/main/gui_setup.sh -O gui_setup.sh
+mkdir -p ./gui/ && wget https://raw.githubusercontent.com/niklases/PyPEF/refs/heads/main/gui/PyPEFGUIQtWindow.py -O ./gui/PyPEFGUIQtWindow.py
 chmod a+x ./gui_setup.sh && ./gui_setup.sh
 ```
 
+<p align="center">
+  <img src=".github/imgs/pypef_gui_screenshot.png" alt="drawing" width="1000"/>
+</p>
 
 <a name="requirements"></a>
 ## Requirements
-- Python >=3.9
+- Python >=3.10
     - numpy
     - scipy
     - pandas
+    - torch
+    - torch-geometric
     - scikit-learn
-    - scikit-learn-intelex
-    - tensorflow
-    - ray[default]
+    - peft (Hugging Face transformers)
     - matplotlib
     - tqdm
     - biopython
+    - biotite
     - schema
     - docopt
     - adjustText
 
+and optionally ray[default] and scikit-learn-intelex. LLM/DCA-related tasks can be accelerated using a GPU for computations. As PyTorch is shipped with its own CUDA runtime, for running on GPU, only a recent NVIDIA driver and a CUDA-compatible GPU is needed (a compatibility list can be found at [NVIDIA website](https://developer.nvidia.com/cuda-gpus) and [Wikipedia](https://en.wikipedia.org/wiki/CUDA#GPUs_supported)) next to an installed CUDA toolkit version that fits the GPU driver version (see [download link](https://developer.nvidia.com/cuda-downloads) and [release notes](https://docs.nvidia.com/cuda/cuda-toolkit-release-notes/index.html), Table 2). 
+Usually, running the command presented at https://pytorch.org/get-started/locally/ using the latest CUDA version is working for setting up the GPU, e.g.:
+```
+pip install torch --index-url https://download.pytorch.org/whl/cu128
+```
 If errors occur with third-party packages, you can check the required Python version dependencies (if available); also, as a rule of thumb, it is often helpful to use the second most recent Python version instead of the latest, since development for the latest version is often ongoing:
 
 [![Python version](https://img.shields.io/pypi/pyversions/numpy?label=numpy%3A%20python)](https://github.com/numpy/numpy)
 [![Python version](https://img.shields.io/pypi/pyversions/scipy?label=scipy%3A%20python)](https://github.com/scipy/scipy)
 [![Python version](https://img.shields.io/pypi/pyversions/pandas?label=pandas%3A%20python)](https://github.com/pandas-dev/pandas)
+[![Python version](https://img.shields.io/pypi/pyversions/torch?label=torch%3A%20python)](https://github.com/pytorch/pytorch)
+[![Python version](https://img.shields.io/pypi/pyversions/torch-geometric?label=torch-geometric%3A%20python)](https://github.com/pyg-team/pytorch_geometric)
 [![Python version](https://img.shields.io/pypi/pyversions/scikit-learn?label=scikit-learn%3A%20python)](https://github.com/scikit-learn/scikit-learn)
-[![Python version](https://img.shields.io/pypi/pyversions/scikit-learn-intelex?label=scikit-learn-intelex%3A%20python)](https://github.com/intel/scikit-learn-intelex)
-[![Python version](https://img.shields.io/pypi/pyversions/tensorflow?label=tensorflow%3A%20python)](https://github.com/tensorflow/tensorflow)
-[![Python version](https://img.shields.io/pypi/pyversions/ray?label=ray%3A%20python)](https://github.com/ray-project/ray)
+[![Python version](https://img.shields.io/pypi/pyversions/peft?label=peft%3A%20python)](https://github.com/huggingface/peft)
 [![Python version](https://img.shields.io/pypi/pyversions/matplotlib?label=matplotlib%3A%20python)](https://github.com/matplotlib/matplotlib)
 [![Python version](https://img.shields.io/pypi/pyversions/tqdm?label=tqdm%3A%20python)](https://github.com/tqdm/tqdm)
 [![Python version](https://img.shields.io/pypi/pyversions/biopython?label=biopython%3A%20python)](https://github.com/biopython/biopython)
+[![Python version](https://img.shields.io/pypi/pyversions/biotite?label=biotite%3A%20python)](https://github.com/biotite-dev/biotite)
 [![Python version](https://img.shields.io/pypi/pyversions/schema?label=schema%3A%20python)](https://github.com/keleshev/schema)
 [![Python version](https://img.shields.io/pypi/pyversions/docopt?label=docopt%3A%20python)](https://github.com/docopt/docopt)
 [![Python version](https://img.shields.io/pypi/pyversions/adjusttext?label=adjusttext%3A%20python)](https://github.com/Phlya/adjustText)
@@ -122,14 +137,14 @@ Printing the help function:
 pypef --help
 ```
 
-Creating sets for model learning and testing:
+Creating sets for model learning and testing (output: "FASL" files):
 ```
-pypef mklsts -w WT_SEQUENCE.FASTA -i VARIANT-FITNESS_DATA.CSV 
+pypef mklsts -w WT_SEQUENCE.fasta -i VARIANT-FITNESS_DATA.csv 
 ```
 
 Training and testing a model (encoding technique = {`aaidx`, `onehot`, `dca`}, regression model = {`pls`, `ridge`, `lasso`, `elasticnet`, `svr`, `rf`, `mlp`}):
 ```
-pypef ml -e aaidx -l LEARNING_SET.FASL -t TEST_SET.FASL --regressor pls 
+pypef ml -e aaidx -l LEARNING_SET.fasl -t TEST_SET.fasl --regressor pls 
 ```
 
 Show the model performance(s) (reads and prints the created Model_Results.txt file):
@@ -139,18 +154,18 @@ pypef ml --show
 
 Load a trained model, predict fitness of test sequences using that model, and plot the measured versus the predicted fitness values:
 ```
-pypef ml -e aaidx -m MODEL -t TEST_SET.FASL
+pypef ml -e aaidx -m MODEL -t TEST_SET.fasl
 ```
 `-m MODEL`is the saved model Pickle file name, for `-e aaidx` this will be the AAindex to use for encoding, e.g. `-m ARGP820101`, for `-e onehot` it will be `-m ONEHOTMODEL` and for `-e dca` it will be `-m DCAMODEL`.
 
 Load a trained model and use it for predicting the fitness of sequences of a prediction set (with unknown corresponding fitness):
 ```
-pypef ml -e aaidx -m MODEL -p PREDICTION_SET.FASTA
+pypef ml -e aaidx -m MODEL -p PREDICTION_SET.fasta
 ```
 
-Systematic creation of prediction sets – double, triple, or quadruple substituted variant recombinations of already identified amino acid substitutions (`--drecomb`, `--trecomb`, `--qarecomb`, `--qirecomb`) or naturally diverse combinations of all 20 canonical amino acids at the identified positions (`--ddiverse`, `--tdiverse`, `--qdiverse`): 
+Systematic creation of prediction sets – double, triple, or quadruple substituted variant recombinations of already identified amino acid substitutions (`--drecomb`, `--trecomb`, `--qarecomb`, `--qirecomb`) or naturally diverse combinations of all 20 canonical amino acids at the identified positions (`--ddiverse`, `--tdiverse`, `--qdiverse`):
 ```
-pypef mkps -w WT_SEQUENCE.FASTA -i VARIANT-FITNESS_DATA.CSV --drecomb
+pypef mkps -w WT_SEQUENCE.fasta -i VARIANT-FITNESS_DATA.csv --drecomb
 ```
 
 Systematic prediction of the created (re)combination prediction sets:
@@ -160,47 +175,54 @@ pypef ml -e aaidx -m MODEL --pmult --drecomb
 
 An alternative way of prediction and variant identification is the *in silico* [directed evolution](https://en.wikipedia.org/wiki/Directed_evolution) using the [Metropolis-Hastings](https://en.wikipedia.org/wiki/Metropolis%E2%80%93Hastings_algorithm) algorithm:
 ```
-pypef directevo ml -e -m MODEL -w WT_SEQUENCE.FASTA --usecsv -i VARIANT-FITNESS_DATA.CSV --ywt WT_FITNESS
+pypef directevo ml -e -m MODEL -w WT_SEQUENCE.fasta --usecsv -i VARIANT-FITNESS_DATA.csv
 ```
 
 Encoding a variant-fitness CSV file and writing it to a new CSV file (for the different encodings, also specify the AAindex name with the `-m` option next to `-e aaidx`):
 
 ```
-pypef encode -i VARIANT-FITNESS_DATA.CSV -w WT_SEQUENCE.FASTA -e aaidx
+pypef encode -i VARIANT-FITNESS_DATA.csv -w WT_SEQUENCE.fasta -e aaidx
 ```
 
 Using the created variant-encoded sequence-fitness CSV file for a simulated "low *N*" engineering task:
 
 ```
-pypef ml low_n -i VARIANT-FITNESS-ENCODING_DATA.CSV --regressor pls
+pypef ml low_n -i VARIANT-FITNESS-ENCODING_DATA.csv --regressor pls
 ```
 
 Using the created variant-encoded sequence-fitness CSV file for a simulated "mutation extrapolation" task (requires higher/deeply-substituted variants):
 ```
-pypef ml extrapolation -i VARIANT-FITNESS-ENCODING_DATA.CSV --regressor pls
+pypef ml extrapolation -i VARIANT-FITNESS-ENCODING_DATA.csv --regressor pls
 ```
 
 The use of the hybrid model (`pypef hybrid`) - instead of a pure ML model (`pypef ml`) as described in the steps above - is quite similar in terms of commands, but does not require the definition of the `-e`/`--encoding` and the `--regressor` flags, since it depends only on the DCA-based encoding technique and (so far) only uses Ridge regression for modeling. However, DCA-based encoding of sequences always requires a parameter file as input, which comes from the preprocessing of a query-specific multiple sequence alignment (MSA) and results in the parameter file generated by [plmc](https://github.com/debbiemarkslab/plmc). E.g. for training a model on a learning set and testing it on a test set, the command for hybrid modeling is:
 
 ```
-pypef hybrid -l LEARNING_SET.FASL -t TEST_SET.FASL --params PLMC_FILE.params
+pypef hybrid -l LEARNING_SET.fasl -t TEST_SET.fasl --params PLMC_FILE.params
 ```
 
 Also, it is now possible to infer DCA model parameters using [GREMLIN](https://www.pnas.org/doi/10.1073/pnas.1314045110)'s [TensorFlow implementation](https://github.com/sokrypton/GREMLIN_CPP/blob/master/GREMLIN_TF.ipynb) and a generated MSA in FASTA or A2M format:
 
 ```
-pypef param_inference --msa MSA.fasta -w WT_SEQUENCE.FASTA --opt_iter 250
+pypef param_inference --msa MSA.fasta -w WT_SEQUENCE.fasta --opt_iter 250
 ```
 
 For getting coupling information and highly evolved amino acids:
 ```
-pypef save_msa_info --msa MSA.fasta -w WT_SEQUENCE.FASTA --opt_iter 250
+pypef save_msa_info --msa MSA.fasta -w WT_SEQUENCE.fasta --opt_iter 250
 ```
 
 Using saved GREMLIN model for testing:
 
 ```
-pypef hybrid -l LEARNING_SET.FASL -t TEST_SET.FASL --params GREMLIN
+pypef hybrid -l LEARNING_SET.fasl -t TEST_SET.fasl --params GREMLIN
+```
+
+Adding a LLM model as blend, just add it to the command prompt; note however, that LLM finetuning requires a decent GPU (and video RAM) or quite some time when running on the CPU:
+
+```
+pypef hybrid -l LEARNING_SET.fasl -t TEST_SET.fasl --params GREMLIN --llm esm
+pypef hybrid -l LEARNING_SET.fasl -t TEST_SET.fasl --params GREMLIN --llm prosst --wt WT_SEQUENCE.fasta --pdb PDB_STRUCTURE.pdb
 ```
 
 Sample files for testing PyPEF routines are provided in the workflow directory, which are also used when running the notebook tutorial. PyPEF's package dependencies are linked [here](https://github.com/niklases/PyPEF/network/dependencies).
@@ -210,6 +232,8 @@ As standard input files, PyPEF requires the target protein wild-type sequence in
 
 <a name="tutorial"></a>
 ## Tutorial
+
+A basic example workflow procedure (tutorial) is explained in the [Jupyter notebook](scripts/CLI/Workflow_PyPEF.ipynb) (.ipynb) protocol.
 Before starting running the tutorial, it is a good idea to set up a new Python environment using Anaconda, https://www.anaconda.com/, e.g. using [Anaconda](https://www.anaconda.com/download#downloads) ([Anaconda3-2023.03-1-Linux-x86_64.sh installer download](https://repo.anaconda.com/archive/Anaconda3-2023.03-1-Linux-x86_64.sh)) or [Miniconda](https://docs.conda.io/en/latest/miniconda.html).
 Change to the download directory and run the installation, e.g. in Linux:
 
@@ -218,8 +242,8 @@ bash Anaconda3-2023.03-1-Linux-x86_64.sh
 ```
 
 After accepting all steps, the conda setup should also be written to your `~/.bashrc`file, so that you can call anaconda typing `conda`.
-Next, to download this repository click Code > Download ZIP and unzip the zipped file, e.g. with `unzip PyPEF-master.zip`, or just clone this repository using your bash shell to your local machine `git clone https://github.com/Protein-Engineering-Framework/PyPEF`.
-To set up a new environment with conda you can either create the conda environment from the provided YAML file inside the PyPEF directory (`cd PyPEF` or `cd PyPEF-master` dependent on the downloaded file name and chose YAML file for your operating system):
+Next, to download this repository click Code > Download ZIP and unzip the zipped file, e.g. with `unzip PyPEF-main.zip`, or just clone this repository using your bash shell to your local machine `git clone https://github.com/niklases/PyPEF`.
+To set up a new environment with conda you can either create the conda environment from the provided YAML file inside the PyPEF directory (`cd PyPEF` or `cd PyPEF-main` dependent on the downloaded file name and chose YAML file for your operating system):
 
 ```
 conda env create --file linux_env.yml
@@ -237,7 +261,7 @@ To activate the environment you can define:
 conda activate pypef
 ```
 
-After activating the environment you can install required packages after changing the directory to the PyPEF directory (`cd PyPEF` or `cd PyPEF-master`) and install required packages with pip if you did not use the YAML file for creating the environment (if using conda, packages will be installed in anaconda3/envs/pypef/lib/python3.10/site-packages):
+After activating the environment you can install required packages after changing the directory to the PyPEF directory (`cd PyPEF` or `cd PyPEF-main`) and install required packages with pip if you did not use the YAML file for creating the environment (if using conda, packages will be installed in anaconda3/envs/pypef/lib/python3.10/site-packages):
 
 ```
 python3 -m pip install -r requirements.txt
@@ -327,23 +351,23 @@ The following model hyperparameter ranges are tested during (*k*-fold) cross-val
 PyPEF was developed to be run from a command-line interface while `python3 ./pypef/main.py` (when using the downloaded version of this repository and setting the `PYTHONPATH`) is equal to `pypef` when installed with pip. 
 Downloading/cloning the repository files (manually or with `wget`/`git clone`):<br>
 ```
-wget https://github.com/Protein-Engineering-Framework/PyPEF/archive/refs/heads/master.zip
+wget https://github.com/niklases/PyPEF/archive/main.zip
 ```
 
 Unzipping the zipped file (manually or e.g. with `unzip`):
 ```
-unzip master.zip
+unzip main.zip
 ```
 
 Setting the `PYTHONPATH` (so that no import errors occur stating that the package `pypef` and thus dependent absolute imports are unknown):<br>
 &nbsp;&nbsp;Windows (example path, PowerShell)
 ```
-$env:PYTHONPATH="C:\Users\name\path\to\PyPEF-master"
+$env:PYTHONPATH="C:\Users\name\path\to\PyPEF-main"
 ```
 
 &nbsp;&nbsp;Linux (example path)
 ```
-export PYTHONPATH="${PYTHONPATH}:/home/name/path/to/PyPEF-master"
+export PYTHONPATH="${PYTHONPATH}:/home/name/path/to/PyPEF-main"
 ```
 Installing the requirements:<br>
 &nbsp;&nbsp;Windows (PowerShell)
@@ -356,7 +380,7 @@ python -m pip install -r requirements.txt
 python3 -m pip install -r requirements.txt
 ```
 
-Running the main script (from PyPEF-master directory):<br>
+Running the main script (from PyPEF-main directory):<br>
 &nbsp;&nbsp;Windows (PowerShell)
 ```
 python .\pypef\main.py
@@ -465,27 +489,20 @@ Other well-performing zero-shot prediction methods with available source code ar
   
 This list is by no means complete, see ProteinGym [repository](https://github.com/OATML-Markslab/ProteinGym) and [website](https://proteingym.org/) for a more detailed overview of available methods and achieved performances (as well as for getting many benchmark data sets).
 
-The performance of the GREMLIN model used is shown in the following for predicting
+The performance of the GREMLIN model used is shown in the following for predicting single substitution effects (blue), including Hybrid model performances with N_Train = {100, 200, 1000}.
+Hybrid GREMLIN-LLM low-N-tuned models using [ESM1v](https://github.com/facebookresearch/esm) and [ProSST](https://github.com/ai4protein/ProSST) achieved increased performances compared to the pure DCA-tuned hybrid model for ProteinGym datasets tested using the scripts located at [scripts/ProteinGym_runs](scripts/ProteinGym_runs):
 
-(I) single substitution effects (blue), including Hybrid model performances with N_Train = {100, 200, 1000} (orange, green, and red, respectively)
 <p align="center">
-    <img src=".github/imgs/single_point_mut_performance.png" alt="drawing" width="500"/>
+    <img src=".github/imgs/mut_performance_violin.png" alt="drawing" width="750"/>
 </p>
 <p align="center">
-    <img src=".github/imgs/single_point_mut_performance_violin.png" alt="drawing" width="250"/>
+    <img src=".github/imgs/mut_performance.png" alt="drawing" width="1000"/>
 </p>
-
-(II) multi-substitution effects (blue), including Hybrid model performances with N_Train = {100, 200, 1000} (orange, green, and red, respectively)
-<p align="center">
-    <img src=".github/imgs/multi_point_mut_performance.png" alt="drawing" width="500"/>
-</p>
-<p align="center">
-    <img src=".github/imgs/multi_point_mut_performance_violin.png" alt="drawing" width="250"/>
-</p>
-
-for ProteinGym datasets computed using the scripts located at [scripts/ProteinGym_runs](scripts/ProteinGym_runs).
 
 <a name="api-usage"></a>
+
+
+
 ## API Usage for Sequence Encoding
 For script-based encoding of sequences using PyPEF and the available AAindex-, OneHot- or DCA-based techniques, the classes and corresponding functions can be imported, i.e. `OneHotEncoding`, `AAIndexEncoding`, `GREMLIN` (DCA),  `PLMC` (DCA), and `DCAHybridModel`. In addition, implemented functions for CV-based tuning of regression models can be used to train and validate models, eventually deriving them to obtain performances on retained data for testing. An exemplary script and a Jupyter notebook for CV-based (low-*N*) tuning of models and using them for testing is provided at [scripts/Encoding_low_N/api_encoding_train_test.py](scripts/Encoding_low_N/api_encoding_train_test.py) and [scripts/Encoding_low_N/api_encoding_train_test.ipynb](scripts/Encoding_low_N/api_encoding_train_test.ipynb), respectively.
 

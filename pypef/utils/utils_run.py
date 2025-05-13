@@ -12,11 +12,11 @@
 # Journal of Chemical Information and Modeling, 2021, 61, 3463-3476
 # https://doi.org/10.1021/acs.jcim.1c00099
 
-import os
 
 import logging
 logger = logging.getLogger('pypef.utils.utils_run')
 
+import os
 import numpy as np
 import re
 
@@ -25,7 +25,6 @@ from pypef.utils.variant_data import (
     get_basename, read_csv_and_shift_pos_ints,
     get_seqs_from_var_name, get_wt_sequence
 )
-
 from pypef.utils.learning_test_sets import (
     csv_input, drop_rows, get_variants, make_sub_ls_ts,
     make_sub_ls_ts_randomly, make_fasta_ls_ts
@@ -42,32 +41,35 @@ from pypef.utils.directed_evolution import DirectedEvolution
 from pypef.utils.sto2a2m import convert_sto2a2m
 
 from pypef.ml.regression import OneHotEncoding, AAIndexEncoding, full_aaidx_txt_path
-from pypef.dca.hybrid_model import plmc_or_gremlin_encoding
+from pypef.hybrid.hybrid_model import plmc_or_gremlin_encoding
 
 
 def run_pypef_utils(arguments):
     if arguments['mklsts']:
         wt_sequence = get_wt_sequence(arguments['--wt'])
         t_drop = float(arguments['--drop'])
+        ls_proportion = arguments['--ls_proportion']
 
         logger.info(f'Length of provided sequence: {len(wt_sequence)} amino acids.')
-        df = drop_rows(arguments['--input'], amino_acids, t_drop, arguments['--sep'], arguments['--mutation_sep'])
+        logger.info(f'Training set proportion (--ls_proportion): {ls_proportion}.')
+        df = drop_rows(arguments['--input'], amino_acids, t_drop, 
+                       arguments['--sep'], arguments['--mutation_sep'])
         no_rnd = arguments['--numrnd']
 
         single_variants, single_values, higher_variants, higher_values = get_variants(
             df, amino_acids, wt_sequence, arguments['--mutation_sep']
         )
-        logger.info(f'Number of single variants: {len(single_variants)}.')
         if len(single_variants) == 0:
-            logger.info('Found NO single substitution variants for possible recombination!')
+            logger.info('Found no single substitution variants for possible recombination!')
         sub_ls, val_ls, sub_ts, val_ts = make_sub_ls_ts(
-            single_variants, single_values, higher_variants, higher_values)
+            single_variants, single_values, 
+            higher_variants, higher_values, 
+            ls_proportion
+        )
         logger.info('Tip: You can edit your LS and TS datasets just by '
                     'cutting/pasting between the LS and TS fasta datasets.')
 
-        logger.info('Creating LS dataset...')
         make_fasta_ls_ts('LS.fasl', wt_sequence, sub_ls, val_ls)
-        logger.info('Creating TS dataset...')
         make_fasta_ls_ts('TS.fasl', wt_sequence, sub_ts, val_ts)
 
         try:
@@ -80,7 +82,8 @@ def run_pypef_utils(arguments):
             while random_set_counter <= no_rnd:
                 sub_ls, val_ls, sub_ts, val_ts = make_sub_ls_ts_randomly(
                     single_variants, single_values,
-                    higher_variants, higher_values
+                    higher_variants, higher_values,
+                    ls_proportion
                 )
                 make_fasta_ls_ts('LS_random_' + str(random_set_counter) + '.fasl', wt_sequence, sub_ls, val_ls)
                 make_fasta_ls_ts('TS_random_' + str(random_set_counter) + '.fasl', wt_sequence, sub_ts, val_ts)
@@ -169,7 +172,7 @@ def run_pypef_utils(arguments):
             arguments['--qirecomb'], arguments['--ddiverse'], arguments['--tdiverse'],
             arguments['--qdiverse'], arguments['--ssm']
         ]:
-            logger.info(f'\nMaking prediction set fasta file from {csv_file}...\n')
+            logger.info(f'Making prediction set fasta file from {csv_file}...\n')
             make_fasta_ps(
                 filename=f'{get_basename(csv_file)}_prediction_set.fasta',
                 wt=wt_sequence,
@@ -204,7 +207,6 @@ def run_pypef_utils(arguments):
         except ValueError:
             raise ValueError("Define flags 'numiter' and 'numtraj' as integer and 'temp' as float.")
         s_wt = get_wt_sequence(arguments['--wt'])
-        y_wt = arguments['--y_wt']
         negative = arguments['--negative']
         # Metropolis-Hastings-driven directed evolution on single mutant position csv data
         usecsv = arguments['--usecsv']
@@ -216,9 +218,7 @@ def run_pypef_utils(arguments):
             drop_wt = []
             for i in range(len(df)):
                 if df.iloc[i, 0] == 'WT':
-                    logger.info('Using fitness value (y_WT) for wild-type (WT) as specified in CSV.')
                     drop_wt.append(i)
-                    y_wt = df.iloc[i, 1]
             df = df.drop(drop_wt).reset_index(drop=True)
             single_variants, single_values, higher_variants, higher_values = \
                 get_variants(df, amino_acids, s_wt)
@@ -236,7 +236,6 @@ def run_pypef_utils(arguments):
             ml_or_hybrid=ml_or_hybrid,
             encoding=arguments['--encoding'],
             s_wt=s_wt,
-            y_wt=y_wt,
             single_vars=single_vars,
             num_iterations=num_iterations,
             num_trajectories=num_trajectories,
@@ -303,10 +302,7 @@ def run_pypef_utils(arguments):
             assert len(xs) == len(variants) == len(ys_true)
 
             if variants[0][0] != variants[0][-1]:  # WT is required for DCA-based hybrid modeling
-                if arguments['--y_wt'] is not None:
-                    y_wt = arguments['--y_wt']
-                else:
-                    y_wt = 1
+                y_wt = 1
                 # better using re then: wt = variants[0][0] + str(variants[0][1:-1] + variants[0][0])
                 wt = variants[0][0] + re.findall(r"\d+", variants[0])[0] + variants[0][0]
                 variants = list(variants)

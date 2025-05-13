@@ -39,6 +39,7 @@ import numpy as np
 import random
 import pandas as pd
 import re
+from os import path
 
 
 def csv_input(csv_file):
@@ -213,8 +214,8 @@ def get_variants(
                 if i not in index_lower:
                     index_lower.append(i)
     logger.info(
-        '\nSingle (for mklsts if provided plus WT): {}\nDouble: {}\nTriple: {}\nQuadruple: {}\nQuintuple: {}\n'
-        'Sextuple: {}\nSeptuple: {}\nOctuple: {}\nNonuple: {}\nDecuple: {}\nHigher (>Decuple): {}'.format(
+        'Single (for mklsts if provided plus WT): {}, Double: {}, Triple: {}, Quadruple: {}, Quintuple: {}, '
+        'Sextuple: {}, Septuple: {}, Octuple: {}, Nonuple: {}, Decuple: {}, Higher (>Decuple): {}'.format(
             single, double, triple, quadruple, quintuple, sextuple, septuple, octuple, nonuple, decuple, higher
         )
     )
@@ -237,12 +238,13 @@ def make_sub_ls_ts(
         single_values,
         higher_variants,
         higher_values,
-        directed_evolution=False):
+        ls_proportion: float | None = None
+):
     """
     Creates learning and test sets, fills learning set with single substituted variants and splits
     rest (higher substituted) for learning and test sets: 3/4 to LS and 1/4 to TS
     """
-    logger.info(f'No. of single substituted variants (if provided plus WT): {len(single_variants)}.'
+    logger.info(f'No. of single substituted variants (if provided plus WT): {len(single_variants)}. '
                 f'No. of values: {len(single_values)}.')
     logger.info(f'No. of higher substituted variants: {len(higher_variants)}. '
                 f'No. of values: {len(higher_values)}.')
@@ -265,35 +267,36 @@ def make_sub_ls_ts(
     sub_ls = []
     values_ls = []
 
-    if directed_evolution is False:
-        if len(higher_variants) != 0:
-            sub_ls = list(single_variants)  # Substitutions of LS
-            values_ls = list(single_values)  # Values of LS
-            for i in range(len(higher_variants)):
-                if len(higher_variants) < 6:  # if less than 6 higher variants --> all higher variants to TS
-                    sub_ts.append(higher_variants[i])
-                    values_ts.append(higher_values[i])
-                elif (i % 3) == 0 and i != 0:  # 1/4 of higher variants to TS, 3/4 to LS
-                    sub_ts.append(higher_variants[i])
-                    values_ts.append(higher_values[i])
-                else:                       # 3/4 to LS
-                    sub_ls.append(higher_variants[i])
-                    values_ls.append(higher_values[i])
-        else:  # if no higher substituted variants are available split 80%/20%
-            random_nums = []
-            range_list = np.arange(0, len(all_variants))
-            while len(sub_ls) < len(all_variants) * 4 // 5:  # 80 % Learning Set
-                random_num = random.choice(range_list)
-                if random_num not in random_nums:
-                    random_nums.append(random_num)
-                    sub_ls.append(all_variants[random_num])
-                    values_ls.append(all_values[random_num])
-            else:  # 20 % Test Set
-                for num in range_list:
-                    if num not in random_nums:
-                        sub_ts.append(all_variants[num])
-                        values_ts.append(all_values[num])
-
+    if len(higher_variants) != 0 and ls_proportion is None:
+        sub_ls = list(single_variants)  # Substitutions of LS
+        values_ls = list(single_values)  # Values of LS
+        for i in range(len(higher_variants)):
+            if len(higher_variants) < 6:  # if less than 6 higher variants --> all higher variants to TS
+                sub_ts.append(higher_variants[i])
+                values_ts.append(higher_values[i])
+            elif (i % 3) == 0 and i != 0:  # 1/4 of higher variants to TS, 3/4 to LS
+                sub_ts.append(higher_variants[i])
+                values_ts.append(higher_values[i])
+            else:                       # 3/4 to LS
+                sub_ls.append(higher_variants[i])
+                values_ls.append(higher_values[i])
+    else:  # if no higher substituted variants are available split 80%/20%
+        if ls_proportion is None:
+            ls_proportion = 0.8
+        random_nums = []
+        range_list = np.arange(0, len(all_variants))
+        while len(sub_ls) < len(all_variants) * ls_proportion:  # 80 % Learning Set
+            random_num = random.choice(range_list)
+            if random_num not in random_nums:
+                random_nums.append(random_num)
+                sub_ls.append(all_variants[random_num])
+                values_ls.append(all_values[random_num])
+        else:  # 20 % Test Set
+            for num in range_list:
+                if num not in random_nums:
+                    sub_ts.append(all_variants[num])
+                    values_ts.append(all_values[num])
+    
     return sub_ls, values_ls, sub_ts, values_ts
 
 
@@ -301,17 +304,20 @@ def make_sub_ls_ts_randomly(
         single_variants,
         single_values,
         higher_variants,
-        higher_values
+        higher_values,
+        ls_proportion: float | None = None
 ):
     """
     Creation of learning set and test set by randomly splitting sets
     """
+    if ls_proportion is None:
+        ls_proportion = 0.8
     length = len(single_variants) + len(higher_variants)
     range_list = np.arange(0, length)
 
     ts = []
     ls = []
-    while len(ls) < length * 4 // 5:
+    while len(ls) < length * ls_proportion:
         random_num = random.choice(range_list)
         if random_num not in ls:
             ls.append(random_num)
@@ -320,8 +326,8 @@ def make_sub_ls_ts_randomly(
         if j not in ls:
             ts.append(j)
 
-    combined = single_variants + higher_variants  # substitutions
-    combined2 = single_values + higher_values  # values
+    combined_variants = single_variants + higher_variants  # substitutions
+    combined_values = single_values + higher_values  # values
 
     sub_ls = []
     values_ls = []
@@ -329,19 +335,19 @@ def make_sub_ls_ts_randomly(
     tot_sub_ts, tot_values_ts = [], []
 
     for i in ls:
-        sub_ls.append(combined[i])
-        values_ls.append(combined2[i])
+        sub_ls.append(combined_variants[i])
+        values_ls.append(combined_values[i])
 
     sub_ts = []
     values_ts = []
     for j in ts:
-        sub_ts.append(combined[j])
-        values_ts.append(combined2[j])
+        sub_ts.append(combined_variants[j])
+        values_ts.append(combined_values[j])
 
     for subs in sub_ls:
         for subs2 in sub_ts:
             if subs == subs2:
-                logger.warning(f'\n<Warning> LS and TS overlap for: {subs} - '
+                logger.warning(f'\nWarning: LS and TS overlap for: {subs} - '
                                f'You might want to consider checking the provided '
                                f'datasets for multiple entries.')
 
@@ -398,3 +404,4 @@ def make_fasta_ls_ts(
         print(''.join(temp), file=myfile)
         # print(name+';'+str(val[i])+';'+''.join(temp), file=myfile)  # uncomment output: CSV format
     myfile.close()
+    logger.info(f"Created file {path.abspath(filename)} with {len(substitutions)} entries...")

@@ -67,6 +67,22 @@
         },
 
         {
+            "name": "Python: PyPEF MKPS avGFP PS",
+            "type": "debugpy",
+            "request": "launch",
+            "env": {"PYTHONPATH": "${workspaceFolder}"},
+            "program": "${workspaceFolder}/pypef/main.py",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "cwd": "${workspaceFolder}/datasets/AVGFP/",
+            "args": [
+                "mkps", 
+                "--wt", "P42212_F64L.fasta", 
+                "--input", "avGFP.csv"
+            ]
+        },
+
+        {
             "name": "Python: PyPEF ml -e onehot pls_loocv",
             "type": "debugpy",
             "request": "launch",
@@ -105,6 +121,24 @@
         },
 
         {
+            "name": "Python: PyPEF ML avGFP DirectEvo: GREMLIN",
+            "type": "debugpy",
+            "request": "launch",
+            "env": {"PYTHONPATH": "${workspaceFolder}"},
+            "program": "${workspaceFolder}/pypef/main.py",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "cwd": "${workspaceFolder}/datasets/AVGFP/",
+            "args": [
+                "hybrid", 
+                "directevo",
+                "--wt", "P42212_F64L.fasta",
+                "--params", "GREMLIN",
+                "--temp", "0.3"
+            ]
+        },
+
+        {
             "name": "Python: PyPEF hybrid LS-TS GREMLIN-DCA avGFP",
             "type": "debugpy",
             "request": "launch",
@@ -123,6 +157,46 @@
         },
 
         {
+            "name": "Python: PyPEF hybrid LS-TS GREMLIN-DCA-ESM1v avGFP",
+            "type": "debugpy",
+            "request": "launch",
+            "env": {"PYTHONPATH": "${workspaceFolder}"},
+            "program": "${workspaceFolder}/pypef/main.py",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "cwd": "${workspaceFolder}/datasets/AVGFP/",
+            "args": [
+                "hybrid", 
+                //"-m", "GREMLIN",   // optional, not required  
+                "--ls", "LS.fasl",
+                "--ts", "TS.fasl", 
+                "--params", "GREMLIN",
+                "--llm", "esm"
+            ]
+        },
+
+        {
+            "name": "Python: PyPEF hybrid LS-TS GREMLIN-DCA-ProSST avGFP",
+            "type": "debugpy",
+            "request": "launch",
+            "env": {"PYTHONPATH": "${workspaceFolder}"},
+            "program": "${workspaceFolder}/pypef/main.py",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "cwd": "${workspaceFolder}/datasets/AVGFP/",
+            "args": [
+                "hybrid", 
+                //"-m", "GREMLIN",   // optional, not required  
+                "--ls", "LS.fasl",
+                "--ts", "TS.fasl", 
+                "--params", "GREMLIN",
+                "--llm", "prosst",
+                "--wt", "P42212_F64L.fasta",
+                "--pdb", "GFP_AEQVI.pdb"
+            ]
+        },
+
+        { // Test on test set
             "name": "Python: PyPEF hybrid/only-TS-zero-shot GREMLIN-DCA avGFP",
             "type": "debugpy",
             "request": "launch",
@@ -139,6 +213,24 @@
             ]
         },
 
+        { // Test on test set: Hybrid DCA-LLM ESM1v
+            "name": "Python: PyPEF hybrid/only-TS-zero-shot GREMLIN-DCA-ESM1v avGFP",
+            "type": "debugpy",
+            "request": "launch",
+            "env": {"PYTHONPATH": "${workspaceFolder}"},
+            "program": "${workspaceFolder}/pypef/main.py",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "cwd": "${workspaceFolder}/datasets/AVGFP/",
+            "args": [
+                "hybrid", 
+                //"-m", "GREMLIN",   // optional, not required  
+                "--ts", "TS.fasl", 
+                "--params", "GREMLIN",
+                "--llm", "esm"
+            ]
+        },
+
         {
             "name": "Python: PyPEF hybrid/only-PS-zero-shot GREMLIN-DCA avGFP",
             "type": "debugpy",
@@ -152,6 +244,23 @@
                 "hybrid", 
                 //"-m", "GREMLIN",   // optional, not required  
                 "--ps", "TS.fasl", 
+                "--params", "GREMLIN"
+            ]
+        },
+
+        {
+            "name": "Python: PyPEF hybrid/only-PS-zero-shot GREMLIN-DCA avGFP drecomb",
+            "type": "debugpy",
+            "request": "launch",
+            "env": {"PYTHONPATH": "${workspaceFolder}"},
+            "program": "${workspaceFolder}/pypef/main.py",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "cwd": "${workspaceFolder}/datasets/AVGFP/",
+            "args": [
+                "hybrid", 
+                "-m", "GREMLIN", 
+                "--pmult", "--drecomb", 
                 "--params", "GREMLIN"
             ]
         },
@@ -174,7 +283,7 @@
         },
 
         {
-            "name": "Python: PyPEF hybrid/only-PS-zero-shot GREMLIN-DCA avGFP drecomb",
+            "name": "Python: PyPEF hybrid/only-PS-zero-shot GREMLIN-DCA avGFP drecomb III: ESM",
             "type": "debugpy",
             "request": "launch",
             "env": {"PYTHONPATH": "${workspaceFolder}"},
@@ -184,9 +293,98 @@
             "cwd": "${workspaceFolder}/datasets/AVGFP/",
             "args": [
                 "hybrid", 
-                "-m", "GREMLIN", 
+                "-m", "HYBRIDgremlinesm", 
                 "--pmult", "--drecomb", 
                 "--params", "GREMLIN"
+            ]
+        },
+
+        {
+            "name": "Python: PyPEF hybrid/only-PS-zero-shot GREMLIN-DCA avGFP drecomb IV: ProSST",
+            "type": "debugpy",
+            "request": "launch",
+            "env": {"PYTHONPATH": "${workspaceFolder}"},
+            "program": "${workspaceFolder}/pypef/main.py",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "cwd": "${workspaceFolder}/datasets/AVGFP/",
+            "args": [
+                "hybrid", 
+                "-m", "HYBRIDgremlinprosst", 
+                "--pmult", "--drecomb", 
+                "--params", "GREMLIN"
+            ]
+        },
+
+        {
+            "name": "Python: PyPEF hybrid/only-PS-zero-shot GREMLIN-DCA avGFP PS: ProSST",
+            "type": "debugpy",
+            "request": "launch",
+            "env": {"PYTHONPATH": "${workspaceFolder}"},
+            "program": "${workspaceFolder}/pypef/main.py",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "cwd": "${workspaceFolder}/datasets/AVGFP/",
+            "args": [
+                "hybrid", 
+                "-m", "HYBRIDgremlinprosst", 
+                "--ps", "avGFP_prediction_set.fasta", 
+                "--params", "GREMLIN"
+            ]
+        },
+
+        {
+            "name": "Python: PyPEF hybrid/only-PS-zero-shot GREMLIN-DCA avGFP PS: ESM1v",
+            "type": "debugpy",
+            "request": "launch",
+            "env": {"PYTHONPATH": "${workspaceFolder}"},
+            "program": "${workspaceFolder}/pypef/main.py",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "cwd": "${workspaceFolder}/datasets/AVGFP/",
+            "args": [
+                "hybrid", 
+                "-m", "HYBRIDgremlinesm", 
+                "--ps", "avGFP_prediction_set.fasta", 
+                "--params", "GREMLIN"
+            ]
+        },
+
+        {
+            "name": "Python: PyPEF hybrid/only-PS-zero-shot GREMLIN-DCA avGFP DirectEvo: ESM1v",
+            "type": "debugpy",
+            "request": "launch",
+            "env": {"PYTHONPATH": "${workspaceFolder}"},
+            "program": "${workspaceFolder}/pypef/main.py",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "cwd": "${workspaceFolder}/datasets/AVGFP/",
+            "args": [
+                "hybrid", 
+                "directevo",
+                "-m", "HYBRIDgremlinesm", 
+                "--wt", "P42212_F64L.fasta",
+                "--params", "GREMLIN",
+                "--temp", "0.1"
+            ]
+        },
+
+        {
+            "name": "Python: PyPEF hybrid/only-PS-zero-shot GREMLIN-DCA avGFP DirectEvo: ProSST",
+            "type": "debugpy",
+            "request": "launch",
+            "env": {"PYTHONPATH": "${workspaceFolder}"},
+            "program": "${workspaceFolder}/pypef/main.py",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "cwd": "${workspaceFolder}/datasets/AVGFP/",
+            "args": [
+                "hybrid", 
+                "directevo",
+                "-m", "HYBRIDgremlinprosst", 
+                "--wt", "P42212_F64L.fasta",
+                "--params", "GREMLIN",
+                "--temp", "0.1"
             ]
         },
 

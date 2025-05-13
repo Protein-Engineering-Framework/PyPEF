@@ -45,7 +45,7 @@ References:
 from __future__ import annotations
 
 import logging
-logger = logging.getLogger('pypef.dca.params_inference')
+logger = logging.getLogger('pypef.dca.gremlin_inference')
 
 import os
 from os import mkdir, PathLike
@@ -58,19 +58,12 @@ from scipy.special import logsumexp
 from scipy.stats import boxcox
 import pandas as pd
 from tqdm import tqdm
-import tensorflow as tf
-tf.get_logger().setLevel('WARNING')
-# Uncomment to hide GPU devices
-#environ['CUDA_VISIBLE_DEVICES'] = '-1'  
+import torch
 
 
 class GREMLIN:
     """
-    Alphabet char order in GREMLIN: "ARNDCQEGHILKMFPSTWYV-".
-    gap_cutoff = 0.5 and eff_cutoff = 0.8 is proposed by Hopf et al.;
-    here, by default all columns are used (gap_cutoff >= 1.0 and eff_cutoff > 1.0).
-    v_ini represent the weighted frequency of each amino acid at each position, i.e.,
-    np.log(np.sum(onehot_cat_msa.T * self.msa_weights, -1).T + pseudo_count).
+    GREMLIN model in Torch.
     """
     def __init__(
             self,
@@ -83,13 +76,26 @@ class GREMLIN:
             eff_cutoff=0.8,
             opt_iter=100,
             max_msa_seqs: int | None = 10000,
-            seqs=None
+            seqs: list[str] | np.ndarray[str] | None =None,
+            device: str | None = None
     ):
-        if not tf.config.list_physical_devices('GPU'):
-            logger.info('Using CPU for GREMLIN computations...')
-        else:
-            logger.info('Using GPU for GREMLIN computations...')
-            
+        """
+        Alphabet char order in GREMLIN: "ARNDCQEGHILKMFPSTWYV-".
+        gap_cutoff = 0.5 and eff_cutoff = 0.8 is proposed by Hopf et al.;
+        here, by default all columns are used (gap_cutoff >= 1.0 and eff_cutoff > 1.0).
+        v_ini represent the weighted frequency of each amino acid at each position, i.e.,
+        np.log(np.sum(onehot_cat_msa.T * self.msa_weights, -1).T + pseudo_count).
+        """
+        if device is None:
+            device = (
+                "cuda"
+                if torch.cuda.is_available()
+                else "mps"
+                if torch.backends.mps.is_available()
+                else "cpu"
+            )
+        self.device = device    
+        logger.info(f'Using {self.device.upper()} for GREMLIN computations...')   
         self.char_alphabet = char_alphabet
         self.allowed_chars = "ARNDCQEGHILKMFPSTWYV-"
         self.allowed_chars += self.allowed_chars.lower()
@@ -136,10 +142,7 @@ class GREMLIN:
         self.aa_freqs = self.aa_counts / self.n_row
         self.optimize = optimize
         if self.optimize:
-            self.v_opt_with_gaps, self.w_opt_with_gaps = self.run_opt_tf()
-            no_gap_states = self.states - 1
-            self.v_opt = self.v_opt_with_gaps[:, :no_gap_states],
-            self.w_opt = self.w_opt_with_gaps[:, :no_gap_states, :, :no_gap_states]
+            self.run_optimization()
         self.x_wt = self.collect_encoded_sequences(np.atleast_1d(self.wt_seq))
 
     def get_sequences_from_msa(self, msa_file: str):
@@ -158,7 +161,8 @@ class GREMLIN:
         """
         sequences = []
         seq_ids = []
-        alignment = AlignIO.read(open(msa_file), "fasta")
+        with open(msa_file, 'r') as fh:
+            alignment = AlignIO.read(fh, "fasta")
         for record in alignment:
             sequences.append(str(record.seq))
             seq_ids.append(str(record.id))
@@ -192,17 +196,8 @@ class GREMLIN:
         into a list of integer sequences, e.g.:
         ["ACD","EFG"] -> [[0,4,3], [6,13,7]]
         """
-        if type(aa_seqs) == str:
-            aa_seqs = np.array(aa_seqs)
-        if type(aa_seqs) == list:
-            aa_seqs = np.array(aa_seqs)
-        if aa_seqs.dtype.type is np.str_:
-            if aa_seqs.ndim == 0:  # single seq
-                return np.array([self.aa2int(aa) for aa in str(aa_seqs)])
-            else:  # list of seqs
-                return np.array([[self.aa2int(aa) for aa in seq] for seq in aa_seqs])
-        else:
-            return aa_seqs
+        aa_seqs = np.atleast_1d(aa_seqs)
+        return np.array([[self.aa2int(aa) for aa in seq] for seq in aa_seqs])
 
     @property
     def get_v_idx_w_idx(self):
@@ -229,7 +224,7 @@ class GREMLIN:
         tmp = (msa_ori == self.states - 1).astype(float)
         non_gaps = np.where(np.sum(tmp.T, -1).T / msa_ori.shape[0] < self.gap_cutoff)[0]
         gaps = np.where(np.sum(tmp.T, -1).T / msa_ori.shape[0] >= self.gap_cutoff)[0]
-        self.gaps_1_indexed = [int(g+1) for g in gaps]
+        self.gaps_1_indexed = [int(g + 1) for g in gaps]
         logger.info(f'Gap positions (removed from MSA; 1-indexed):\n{self.gaps_1_indexed}')
         ncol_trimmed = len(non_gaps)
         logger.info(f'Positions remaining: {ncol_trimmed} of {np.shape(msa_ori)[1]} '
@@ -242,7 +237,7 @@ class GREMLIN:
     def get_eff_msa_weights(self, msa):
         """Compute effective weight for each sequence"""
         # pairwise identity
-        pdistance_msa = pdist(msa, "hamming")
+        pdistance_msa = pdist(msa, "hamming")  # TODO: to PyTorch?
         msa_sm = 1.0 - squareform(pdistance_msa)
         # weight for each sequence
         msa_w = (msa_sm >= self.eff_cutoff).astype(float)
@@ -250,44 +245,11 @@ class GREMLIN:
         return msa_w
 
     @staticmethod
-    def l2(x):
-        return np.sum(np.square(x))
+    def flatten_v_w(v, w):
+        return torch.cat((v.flatten(), w.flatten()), 0)
 
-    def objective(self, v, w=None, flattened=True):
-        """
-        Same objective function as used in run_opt_tf below
-        but here only using numpy not TensorFlow functions.
-        Potentially helpful for implementing SciPy optimizers.
-        """
-        if w is None:
-            w = self.w_ini
-        onehot_cat_msa = np.eye(self.states)[self.msa_trimmed]
-        if flattened:
-            v = np.reshape(v, (self.n_col, self.states))
-            w = np.reshape(w, (self.n_col, self.states, self.n_col, self.states))
-        ########################################
-        # Pseudo-Log-Likelihood
-        ########################################
-        # v + w
-        vw = v + np.tensordot(onehot_cat_msa, w, 2)
-        # Hamiltonian
-        h = np.sum(np.multiply(onehot_cat_msa, vw), axis=(1, 2))
-        # local z (partition function)
-        z = np.sum(np.log(np.sum(np.exp(vw), axis=2)), axis=1)
-        # Pseudo-Log-Likelihood
-        pll = h - z
-        ########################################
-        # Regularization
-        ########################################
-        l2_v = 0.01 * self.l2(v)
-        l2_w = 0.01 * self.l2(w) * 0.5 * (self.n_col - 1) * (self.states - 1)
-        # loss function to minimize
-        loss = -np.sum(pll * self.msa_weights) / np.sum(self.msa_weights)
-        loss = loss + (l2_v + l2_w) / self.n_eff
-        return loss
 
-    @staticmethod
-    def opt_adam(loss, name, var_list=None, lr=1.0, b1=0.9, b2=0.999, b_fix=False):
+    def opt_adam_step(self, lr=1.0, b1=0.9, b2=0.999):
         """
         Adam optimizer [https://arxiv.org/abs/1412.6980] with first and second moments
             mt          and
@@ -297,94 +259,62 @@ class GREMLIN:
         Furthermore, we find that disabling the bias correction
         (b_fix=False) speeds up convergence for our case.
         """
-        if var_list is None:
-            var_list = tf.compat.v1.trainable_variables()
-        gradients = tf.gradients(loss, var_list)
-        if b_fix:
-            t = tf.Variable(0.0, "t")
-        opt = []
-        for n, (x, g) in enumerate(zip(var_list, gradients)):
-            if g is not None:
-                ini = dict(initializer=tf.zeros_initializer, trainable=False)
-                mt = tf.compat.v1.get_variable(name + "_mt_" + str(n), shape=list(x.shape), **ini)
-                vt = tf.compat.v1.get_variable(name + "_vt_" + str(n), shape=[], **ini)
+        self.v.retain_grad()
+        self.w.retain_grad()
+        loss = self.loss(self.v, self.w)
+        loss.backward()
 
-                mt_tmp = b1 * mt + (1 - b1) * g
-                vt_tmp = b2 * vt + (1 - b2) * tf.reduce_sum(tf.square(g))
-                lr_tmp = lr / (tf.sqrt(vt_tmp) + 1e-8)
+        mt_tmp_v = b1 * self.mt_v + (1 - b1) * self.v.grad
+        vt_tmp_v = b2 * self.vt_v + (1 - b2) * torch.sum(torch.square(self.v.grad))
+        lr_tmp_v = lr / (torch.sqrt(vt_tmp_v) + 1e-8)
+        self.v = self.v.add(-lr_tmp_v * mt_tmp_v)
 
-                if b_fix:
-                    lr_tmp = lr_tmp * tf.sqrt(1 - tf.pow(b2, t)) / (1 - tf.pow(b1, t))
+        mt_tmp_w = b1 * self.mt_w + (1 - b1) * self.w.grad
+        vt_tmp_w = b2 * self.vt_w + (1 - b2) * torch.sum(torch.square(self.w.grad))
+        lr_tmp_w = lr / (torch.sqrt(vt_tmp_w) + 1e-8)
+        self.w = self.w.add(-lr_tmp_w * mt_tmp_w)
 
-                opt.append(x.assign_add(-lr_tmp * mt_tmp))
-                opt.append(vt.assign(vt_tmp))
-                opt.append(mt.assign(mt_tmp))
+        self.vt_v = vt_tmp_v
+        self.mt_v = mt_tmp_v
+        self.vt_w = vt_tmp_w
+        self.mt_w = mt_tmp_w
 
-        if b_fix:
-            opt.append(t.assign_add(1.0))
-        return tf.group(opt)
-
-    @staticmethod
-    def sym_w(w):
+    def sym_w(self, w, device: str | None = None):
         """
         Symmetrize input matrix of shape (x,y,x,y)
         As the full couplings matrix W might/will be slightly "unsymmetrical"
         it will be symmetrized according to one half being "mirrored".
         """
+        if device is None:
+            device = self.device
         x = w.shape[0]
-        w = w * np.reshape(1 - np.eye(x), (x, 1, x, 1))
-        w = w + tf.transpose(w, [2, 3, 0, 1])
+        w = w * torch.reshape(1 - torch.eye(x), (x, 1, x, 1)).to(device)
+        w = w + torch.permute(w, (2, 3, 0, 1))
         return w
 
     @staticmethod
-    def l2_tf(x):
-        return tf.reduce_sum(tf.square(x))
-
-    def run_opt_tf(self, opt_rate=1.0, batch_size=None):
-        """
-        For optimization of v and w ADAM is used here (L-BFGS-B not (yet) implemented
-        for TF 2.x, e.g. using scipy.optimize.minimize).
-        Gaps (char '-' respectively '21') included.
-        """
+    def l2_reg(x):
+        return torch.sum(torch.square(x))
+    
+    def loss(self, v, w, device: str | None = None):
         ##############################################################
         # SETUP COMPUTE GRAPH
         ##############################################################
-        # kill any existing tensorflow graph
-        tf.compat.v1.reset_default_graph()
-        tf.compat.v1.disable_eager_execution()
-
-        # msa (multiple sequence alignment)
-        msa = tf.compat.v1.placeholder(tf.int32, shape=(None, self.n_col), name="msa")
-
-        # one-hot encode msa
-        oh_msa = tf.one_hot(msa, self.states)
-
-        # msa weights
-        msa_weights = tf.compat.v1.placeholder(tf.float32, shape=(None,), name="msa_weights")
-
-        # 1-body-term of the MRF
-        v = tf.compat.v1.get_variable(name="v",
-                                      shape=[self.n_col, self.states],
-                                      initializer=tf.compat.v1.zeros_initializer)
-
-        # 2-body-term of the MRF
-        w = tf.compat.v1.get_variable(name="w",
-                                      shape=[self.n_col, self.states, self.n_col, self.states],
-                                      initializer=tf.compat.v1.zeros_initializer)
-
+        if device is None:
+            device = self.device
+        v, w = v.to(device), w.to(device)
         # symmetrize w
-        w = self.sym_w(w)
+        w = self.sym_w(w, device).to(torch.float32)
 
         ########################################
         # Pseudo-Log-Likelihood
         ########################################
-        # v + w
-        vw = v + tf.tensordot(oh_msa, w, 2)
+        vw = v + torch.tensordot(self.oh_msa.to(device), w, dims=2)
 
         # Hamiltonian
-        h = tf.reduce_sum(tf.multiply(oh_msa, vw), axis=(1, 2))
+        h = torch.sum(torch.mul(self.oh_msa.to(device), vw), dim=(1, 2))
         # partition function Z
-        z = tf.reduce_sum(tf.reduce_logsumexp(vw, axis=2), axis=1)
+        z = torch.sum(torch.logsumexp(vw, dim=2), dim=1)
 
         # Pseudo-Log-Likelihood
         pll = h - z
@@ -392,51 +322,63 @@ class GREMLIN:
         ########################################
         # Regularization
         ########################################
-        l2_v = 0.01 * self.l2_tf(v)
-        lw_w = 0.01 * self.l2_tf(w) * 0.5 * (self.n_col - 1) * (self.states - 1)
+        l2_v = 0.01 * self.l2_reg(v)
+        lw_w = 0.01 * self.l2_reg(w) * 0.5 * (self.n_col - 1) * (self.states - 1)
 
         # loss function to minimize
-        loss = -tf.reduce_sum(pll * msa_weights) / tf.reduce_sum(msa_weights)
+        loss = (
+            -torch.sum(pll * self.msa_weights.to(device)) / 
+            torch.sum(self.msa_weights.to(device))
+        )
         loss = loss + (l2_v + lw_w) / self.n_eff
+        return loss
+    
+    def _loss(self, decimals=2):
+        return  torch.round(
+            self.loss(self.v.detach(), self.w.detach(), device='cpu') * self.n_eff, 
+            decimals=decimals
+        )
 
+    def run_optimization(self):
+        """
+        For optimization of v and w ADAM is used here (L-BFGS-B not (yet) implemented
+        for TF 2.x, e.g. using scipy.optimize.minimize).
+        Gaps (char '-' respectively '21') included.
+        """
         ##############################################################
         # MINIMIZE LOSS FUNCTION
         ##############################################################
-        opt = self.opt_adam(loss, "adam", lr=opt_rate)
         # initialize V (local fields)
-        msa_cat = tf.keras.utils.to_categorical(self.msa_trimmed, self.states)
+        msa_cat = np.eye(self.states)[self.msa_trimmed]
         pseudo_count = 0.01 * np.log(self.n_eff)
         v_ini = np.log(np.sum(msa_cat.T * self.msa_weights, -1).T + pseudo_count)
         v_ini = v_ini - np.mean(v_ini, -1, keepdims=True)
+        self.v = torch.from_numpy(v_ini).to(torch.float32).requires_grad_(True).to(self.device)
+        self.w = torch.zeros(
+            size=(self.n_col, self.states, self.n_col, self.states)
+            ).to(torch.float32).requires_grad_(True).to(self.device)
 
-        # generate input/feed
-        def feed(feed_all=False):
-            if batch_size is None or feed_all:
-                return {msa: self.msa_trimmed, msa_weights: self.msa_weights}
-            else:
-                idx = np.random.randint(0, self.n_row, size=batch_size)
-                return {msa: self.msa_trimmed[idx], msa_weights: self.msa_weights[idx]}
+        self.msa = torch.Tensor(self.msa_trimmed).to(torch.int64).to(self.device)
+        self.oh_msa = torch.nn.functional.one_hot(self.msa, self.states).to(torch.float32).to(self.device)
+        self.msa_weights = torch.from_numpy(self.msa_weights).to(torch.float32).to(self.device)
 
-        with tf.compat.v1.Session() as sess:
-            # initialize variables V (local fields) and W (couplings)
-            sess.run(tf.compat.v1.global_variables_initializer())
-            sess.run(v.assign(v_ini))
-            # compute loss across all data
-            get_loss = lambda: round(sess.run(loss, feed(feed_all=True)) * self.n_eff, 2)
-            logger.info(f"Initial loss: {get_loss()}. Starting parameter optimization...")
-            for i in range(self.opt_iter):
-                sess.run(opt, feed())
-                try:
-                    if (i + 1) % int(self.opt_iter / 10) == 0:
-                        logger.info(f"Iteration {(i + 1)} {get_loss()}")
-                except ZeroDivisionError:
-                    logger.info(f"Iteration {(i + 1)} {get_loss()}")
-            # save the v and w parameters of the MRF
-            v_opt = sess.run(v)
-            w_opt = sess.run(w)
-        no_gap_states = self.states - 1
-        return v_opt[:, :no_gap_states], w_opt[:, :no_gap_states, :, :no_gap_states]
-        #return v_opt, w_opt
+        self.mt_v, self.vt_v = torch.zeros_like(self.v), torch.zeros_like(self.v)
+        self.mt_w, self.vt_w = torch.zeros_like(self.w), torch.zeros_like(self.w)
+        logger.info(f'Initial loss: {self._loss()}')
+        for i in range(self.opt_iter):
+            self.opt_adam_step()
+            try:
+                if (i + 1) % int(self.opt_iter / 10) == 0:
+                    logger.info(f'Loss step {i + 1}: {self._loss()}')
+            except ZeroDivisionError:
+                logger.info(f'Loss step {i + 1}: {self._loss()}')
+        
+        self.v = self.v.detach().cpu().numpy()
+        self.w = self.w.detach().cpu().numpy()
+        self.vt_v = self.vt_v.detach().cpu().numpy()
+        self.mt_v = self.mt_v.detach().cpu().numpy()
+        self.vt_w = self.vt_w.detach().cpu().numpy()
+        self.mt_w = self.mt_w.detach().cpu().numpy()
 
 
     def initialize_v_w(self, remove_gap_entries=True):
@@ -451,7 +393,6 @@ class GREMLIN:
         pseudo_count = 0.01 * np.log(self.n_eff)
         v_ini = np.log(np.sum(onehot_cat_msa.T * self.msa_weights, -1).T + pseudo_count)
         v_ini = v_ini - np.mean(v_ini, -1, keepdims=True)
-        # loss_score_ini = self.objective(v_ini, w_ini, flattened=False)
 
         if remove_gap_entries:
             no_gap_states = self.states - 1
@@ -462,33 +403,34 @@ class GREMLIN:
         return v_ini, w_ini, aa_counts
 
     @property
-    def get_v_w_opt(self):
+    def get_v_w(self):
         try:
-            return self.v_opt, self.w_opt
+            return self.v, self.w
         except AttributeError:
             raise SystemError(
-                "No v_opt and w_opt available, this means GREMLIN "
+                "No v and w available, this means GREMLIN "
                 "has not been initialized setting optimize to True, "
                 "e.g., try GREMLIN('Alignment.fasta', optimize=True)."
             )
 
-    def get_score(self, seqs, v=None, w=None, v_idx=None, encode=False, h_wt_seq=0.0, recompute_z=False):
+    def get_scores(self, seqs, v=None, w=None, v_idx=None, encode=False, h_wt_seq=0.0, recompute_z=False):
         """
         Computes the GREMLIN score for a given sequence or list of sequences.
         """
-        if v is None or w is None:
+        if v is None and w is None:
             if self.optimize:
-                v, w = self.v_opt, self.w_opt
+                v = self.v[:, :self.states-1], 
+                w = self.w[:, :self.states-1, :, :self.states-1]
             else:
                 v, w, _ = self.initialize_v_w(remove_gap_entries=True)
         if v_idx is None:
             v_idx = self.v_idx
         seqs_int = self.seq2int(seqs)
-        # if length of sequence != length of model use only
-        # valid positions (v_idx) from the trimmed alignment
+
         try:
-            if seqs_int.shape[-1] != len(v_idx):
-                seqs_int = seqs_int[..., v_idx]
+            if seqs_int.shape[-1] != len(v_idx):  # The input sequence length ({seqs_int.shape[-1]}) 
+                # does not match the common gap-trimmed MSA sequence length (len(v_idx)
+                seqs_int = seqs_int[..., v_idx]  # Shape matches common MSA sequence length (len(v_idx)) now
         except IndexError:
             raise SystemError(
                 "The loaded GREMLIN parameter model does not match the input model "
@@ -501,7 +443,6 @@ class GREMLIN:
 
         # one hot encode
         x = np.eye(self.states)[seqs_int]
-        # aa_pos_counts = np.sum(x, axis=0)
 
         # get non-gap positions
         # no_gap = 1.0 - x[..., -1]
@@ -529,23 +470,18 @@ class GREMLIN:
         else:
             return np.sum(h, axis=-1) - h_wt_seq
 
-    def get_wt_score(self, wt_seq=None, v=None, w=None, encode=False):
+    def get_wt_score(self, wt_seq=None, encode=False):
         if wt_seq is None:
             wt_seq = self.wt_seq
-        if v is None or w is None:
-            if self.optimize:
-                v, w = self.v_opt, self.w_opt
-            else:
-                v, w = self.v_ini, self.w_ini
         wt_seq = np.array(wt_seq, dtype=str)
-        return self.get_score(wt_seq, v, w, encode=encode)
+        return self.get_scores(wt_seq, encode=encode)
 
     def collect_encoded_sequences(self, seqs, v=None, w=None, v_idx=None):
         """
-        Wrapper function for encoding input sequences using the self.get_score
+        Wrapper function for encoding input sequences using the self.get_scores
         function with encode set to True.
         """
-        xs = self.get_score(seqs, v, w, v_idx, encode=True)
+        xs = self.get_scores(seqs, v, w, v_idx, encode=True)
         return xs
 
     @staticmethod
@@ -604,7 +540,7 @@ class GREMLIN:
         zscore      : normalize(apc)    shape=(L,L)
         """
         # l2norm of 20x20 matrices (note: gaps already excluded)
-        raw = np.sqrt(np.sum(np.square(self.w_opt), (1, 3)))
+        raw = np.sqrt(np.sum(np.square(self.w), (1, 3)))
 
         # apc (average product correction)
         ap = np.sum(raw, 0, keepdims=True) * np.sum(raw, 1, keepdims=True) / np.sum(raw)
@@ -624,7 +560,7 @@ class GREMLIN:
         if set_diag_zero:
             np.fill_diagonal(matrix, 0.0)
 
-        fig, ax = plt.subplots(figsize=(10, 10))
+        _fig, ax = plt.subplots(figsize=(10, 10))
 
         if matrix_type == 'zscore' or matrix_type == 'z_score':
             ax.imshow(matrix, cmap='Blues', interpolation='none', vmin=1, vmax=3)
@@ -648,7 +584,6 @@ class GREMLIN:
         ax.set_ylim(-1, matrix.shape[0])
         plt.title(matrix_type.upper())
         plt.savefig(f'{matrix_type}.png', dpi=500)
-        logger.info(f"Plotted correlation matrix {os.path.abspath(matrix_type)}.png")
         plt.close('all')
 
     def get_top_coevolving_residues(self, wt_seq=None, min_distance=0, sort_by="apc"):
@@ -724,6 +659,36 @@ def save_gremlin_as_pickle(alignment: str, wt_seq: str, opt_iter: int = 100):
     return gremlin
 
 
+def get_delta_e_statistical_model(
+        x_test: np.ndarray,
+        x_wt: np.ndarray
+):
+    """
+    Description
+    -----------
+    Delta_E means difference in evolutionary energy in plmc terms.
+    In other words, this is the delta of the sum of Hamiltonian-encoded
+    sequences of local fields and couplings of encoded sequence and wild-type
+    sequence in GREMLIN terms.
+
+    Parameters
+    -----------
+    x_test: np.ndarray [2-dim]
+        Encoded sequences to be subtracted by x_wt to compute delta E.
+    x_wt: np.ndarray [1-dim]
+        Encoded wild-type sequence.
+
+    Returns
+    -----------
+    delta_e: np.ndarray [1-dim]
+        Summed subtracted encoded sequences.
+
+    """
+    delta_x = np.subtract(x_test, x_wt)
+    delta_e = np.sum(delta_x, axis=1)
+    return delta_e
+
+
 def plot_all_corr_mtx(gremlin: GREMLIN):
     gremlin.plot_correlation_matrix(matrix_type='raw')
     gremlin.plot_correlation_matrix(matrix_type='apc')
@@ -755,7 +720,7 @@ def plot_predicted_ssm(gremlin: GREMLIN):
         for aa_sub in aas:
             variant = aa_wt + str(i + 1) + aa_sub
             variant_sequence = wt_sequence[:i] + aa_sub + wt_sequence[i + 1:]
-            variant_score = gremlin.get_score(variant_sequence)[0]
+            variant_score = gremlin.get_scores(variant_sequence)[0]
             variants.append(variant)
             variant_sequences.append(variant_sequence)
             variant_scores.append(variant_score - wt_score)

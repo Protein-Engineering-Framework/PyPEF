@@ -1,5 +1,6 @@
-import os
+import os.path
 import subprocess
+
 
 from pypef import __version__
 
@@ -17,8 +18,11 @@ def capture(command):
 
 
 def test_pypef_version():
-    command = ["python", pypef_main_path + "/pypef/main.py", "--version"]
+    command = [
+        "python", 
+        pypef_main_path + os.path.sep + "pypef" + os.path.sep + "main.py", 
+        "--version"
+    ]
     out, err, exitcode = capture(command)
     assert str(out).split('\'')[1].split('\\')[0] == __version__
     assert exitcode == 0
-

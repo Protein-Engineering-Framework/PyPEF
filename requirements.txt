@@ -6,8 +6,13 @@ matplotlib
 scipy
 adjustText
 scikit-learn
-scikit-learn-intelex
 biopython
+biotite
 schema
-ray[default]
-tensorflow
+pathos
+peft
+#scikit-learn-intelex
+#ray[default]
+--extra-index-url https://download.pytorch.org/whl/cu128
+torch
+torch-geometric

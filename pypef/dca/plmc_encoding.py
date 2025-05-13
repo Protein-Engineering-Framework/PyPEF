@@ -39,18 +39,21 @@ References:
     https://doi.org/10.1103/PhysRevE.87.012707
 """
 
-
-import os
-from collections.abc import Iterable
 import logging
 logger = logging.getLogger('pypef.dca.encoding')
 
+import os
+from collections.abc import Iterable
 import numpy as np
-import ray
 from tqdm import tqdm
 import pickle
 
+from pypef.settings import USE_RAY
+if USE_RAY:
+    import ray
+
 from pypef.utils.variant_data import amino_acids
+from pypef.utils.helpers import ray_conditional_decorator
 
 _SLICE = np.s_[:]
 
@@ -405,7 +408,10 @@ class CouplingsModel:
             Length of list must correspond to model length (self.l)
         """
         if len(mapping) != self.l:
-            raise ValueError(f"Mapping length inconsistent with model length: {len(mapping)} != {self.l}")
+            raise ValueError(f"Mapping length inconsistent with model length: "
+                             f"{len(mapping)} != {self.l}\n"
+                             f"Potentially the loaded PLMC parameter file is not "
+                             f"a binary parameter file produced with PLMC.")
 
         self._index_list = np.array(mapping)
         self.index_map = {b: a for a, b in enumerate(self.index_list)}
@@ -705,11 +711,7 @@ def save_plmc_dca_encoding_model(params_file, substitution_sep='/'):
         pass
     pickle.dump({
         'model': plmc,
-        'model_type': 'PLMCpureDCA',
-        'beta_1': None,
-        'beta_2': None,
-        'spearman_rho': None,
-        'regressor': None
+        'model_type': 'PLMCpureDCA'
     },
         open(f'Pickles/PLMC', 'wb')
     )
@@ -741,7 +743,7 @@ def get_encoded_sequence(
     return encoded_seq
 
 
-@ray.remote
+@ray_conditional_decorator
 def _get_data_parallel(
         variants: list,
         sequences: list,

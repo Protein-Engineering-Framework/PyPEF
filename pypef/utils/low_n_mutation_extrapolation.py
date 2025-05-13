@@ -19,13 +19,13 @@ logger = logging.getLogger('pypef.utils.low_n_mutation_extrapolation')
 
 import pandas as pd
 import numpy as np
-from scipy import stats
 import matplotlib.pyplot as plt
+from scipy.stats import spearmanr
 import pickle
 from tqdm import tqdm
 
 from pypef.ml.regression import cv_regression_options
-from pypef.dca.hybrid_model import DCAHybridModel
+from pypef.hybrid.hybrid_model import DCALLMHybridModel
 from pypef.utils.variant_data import process_df_encoding, get_basename
 
 
@@ -75,8 +75,7 @@ def low_n(
         encoded_csv: str,
         cv_regressor: str = None,
         n_runs: int = 10,
-        hybrid_modeling: bool = False,
-        train_size_train: float = 0.66
+        hybrid_modeling: bool = False
 ):
     """
     Performs the "low N protein engineering task" learning on distinct
@@ -126,30 +125,20 @@ def low_n(
 
             if hybrid_modeling:
                 x_wt = x[0]  # WT should be first CSV variant entry
-                hybrid_model = DCAHybridModel(
-                    x_train=x_train,
+                hybrid_model = DCALLMHybridModel(
+                    x_train_dca=x_train,
                     y_train=y_train,
-                    x_test=x_test,  # only used for adjusting +/- sign of y_dca, can also be None
-                    y_test=y_test,  # only used for adjusting +/- sign of y_dca, can also be None
                     x_wt=x_wt
                 )
-                beta_1, beta_2, reg = hybrid_model.settings(
-                    x_train, y_train, train_size_fit=train_size_train
-                )
                 spearmanr_nruns.append(
-                    hybrid_model.spearmanr(
-                        y_test,
-                        hybrid_model.hybrid_prediction(
-                            x_test, reg, beta_1, beta_2
-                        )
-                    )
+                    spearmanr(y_test, hybrid_model.hybrid_prediction(x_test))[0]
                 )
 
             else:  # ML
                 regressor.fit(x_train, y_train)
                 # Best CV params: best_params = regressor.best_params_
                 y_pred = regressor.predict(x_test)
-                spearmanr_nruns.append(stats.spearmanr(y_test, y_pred)[0])
+                spearmanr_nruns.append(spearmanr(y_test, y_pred)[0])
         avg_spearmanr.append(np.mean(spearmanr_nruns))
         stddev_spearmanr.append(np.std(spearmanr_nruns, ddof=1))
 
@@ -253,7 +242,6 @@ def performance_mutation_extrapolation(
                 'task. Please choose another CV regressor.'
             )
         regressor = cv_regression_options(cv_regressor)
-        beta_1, beta_2 = None, None
     else:
         regressor = None
         hybrid_model = None
@@ -271,19 +259,10 @@ def performance_mutation_extrapolation(
         all_higher_variants, x_all_higher, y_all_higher = process_df_encoding(all_higher_df)
         if hybrid_modeling:
             x_wt = x_train[0]
-            hybrid_model = DCAHybridModel(
-                x_train=x_train,
+            hybrid_model = DCALLMHybridModel(
+                x_train_dca=x_train,
                 y_train=y_train,
-                x_test=x_all_higher,  # only used for adjusting +/- of y_dca, can also be None but
-                y_test=y_all_higher,  # higher risk of wrong sign assignment of beta_1 (y_dca)
                 x_wt=x_wt
-            )
-            beta_1, beta_2, reg = hybrid_model.settings(
-                x_train, y_train, train_size_fit=train_size)
-            pickle.dump(
-                {'hybrid_model': hybrid_model, 'beta_1': beta_1, 'beta_2': beta_2,
-                 'spearman_rho': float('nan'), 'regressor': reg},
-                open(os.path.join('Pickles', 'HYBRID_LVL_1'), 'wb')
             )
         elif cv_regressor:
             logger.info('Fitting regressor on lvl 1 substitution data...')
@@ -310,15 +289,8 @@ def performance_mutation_extrapolation(
                                     'n_y_train': len(y_train),
                                     'test_lvl': test_idx + 1,
                                     'n_y_test': len(y_test),
-                                    'spearman_rho': hybrid_model.spearmanr(
-                                        y_test,
-                                        hybrid_model.hybrid_prediction(
-                                            x_test, reg, beta_1, beta_2
-                                        )
-                                    ),
-                                    'beta_1': beta_1,
-                                    'beta_2': beta_2,
-                                    'regressor': reg
+                                    'spearman_rho': spearmanr(
+                                        y_test, hybrid_model.hybrid_prediction(x_test))[0]
                                 }
                         })
                     else:  # ML
@@ -330,7 +302,7 @@ def performance_mutation_extrapolation(
                                     'n_y_train': len(y_train),
                                     'test_lvl': test_idx + 1,
                                     'n_y_test': len(y_test),
-                                    'spearman_rho': stats.spearmanr(
+                                    'spearman_rho': spearmanr(
                                         y_test,                    # Call predict on the BaseSearchCV estimator
                                         regressor.predict(x_test)  # with the best found parameters
                                     )[0]
@@ -347,10 +319,8 @@ def performance_mutation_extrapolation(
                         train_variants_conc, x_train_conc, y_train_conc = \
                             process_df_encoding(train_df_appended_conc)
                         if hybrid_modeling:  # updating hybrid model params with newly inputted concatenated train data
-                            beta_1_conc, beta_2_conc, reg_conc = hybrid_model.settings(
-                                x_train_conc,
-                                y_train_conc,
-                                train_size_fit=train_size
+                            hybrid_model = DCALLMHybridModel(
+                                x_train_dca=x_train_conc, y_train=y_train_conc, x_wt=x_wt
                             )
                             data.update({
                                 test_idx + 1:
@@ -360,15 +330,10 @@ def performance_mutation_extrapolation(
                                         'n_y_train': len(y_train_conc),
                                         'test_lvl': test_idx + 1,
                                         'n_y_test': len(y_test),
-                                        'spearman_rho': hybrid_model.spearmanr(
-                                            y_test,
-                                            hybrid_model.hybrid_prediction(
-                                                x_test, reg_conc, beta_1_conc, beta_2_conc
-                                            )
-                                        ),
-                                        'beta_1': beta_1_conc,
-                                        'beta_2': beta_2_conc,
-                                        'regressor': reg_conc
+                                        'spearman_rho': spearmanr(
+                                            y_test, 
+                                            hybrid_model.hybrid_prediction(x_test)
+                                        )[0]
                                     }
                             })
                         else:  # ML updating pureML regression model params with newly inputted concatenated train data
@@ -381,7 +346,7 @@ def performance_mutation_extrapolation(
                                     'n_y_train': len(y_train_conc),
                                     'test_lvl': test_idx + 1,
                                     'n_y_test': len(y_test),
-                                    'spearman_rho': stats.spearmanr(
+                                    'spearman_rho': spearmanr(
                                         y_test,  # Call predict on the BaseSearchCV estimator
                                         regressor.predict(x_test)  # with the best found parameters
                                         )[0],
