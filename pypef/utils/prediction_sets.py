@@ -31,6 +31,9 @@ VARIANT_SEQUENCE_2
 """
 
 
+import logging
+logger = logging.getLogger('pypef.utils.prediction_sets')
+
 import os
 import numpy as np
 from tqdm import tqdm
@@ -63,6 +66,7 @@ def make_fasta_ps(
         print(''.join(temporary), file=myfile)
         count += 1
     myfile.close()
+    logger.info(f"Created file {os.path.abspath(filename)} with {len(substitutions)} entries...")
 
 
 def make_recombinations_double(arr: tuple[list]):

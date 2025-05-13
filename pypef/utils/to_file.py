@@ -38,10 +38,11 @@ def predictions_out(
     head = ['Name', 'Prediction']
     txt_file_out_path = os.path.abspath(
         os.path.join(
-            path, 'Predictions_' + str(model) + 
+            path, 'Predictions_' + str(os.path.basename(model)) + 
             '_' + str(os.path.splitext(os.path.basename(prediction_set))[0]) + '.txt'
             )
     )
+    logger.info(txt_file_out_path)
     with open(txt_file_out_path, 'w') as f:
         f.write("".join(caption.ljust(col_width) for caption in head) + '\n')
         f.write(len(head)*col_width*'-' + '\n')

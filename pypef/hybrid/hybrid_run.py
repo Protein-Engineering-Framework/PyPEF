@@ -14,11 +14,14 @@
 
 import logging
 logger = logging.getLogger('pypef.dca.dca_run')
-import ray
+
+from pypef.settings import USE_RAY
+if USE_RAY:
+    import ray
 
 from pypef.utils.variant_data import read_csv, get_wt_sequence
 from pypef.dca.plmc_encoding import save_plmc_dca_encoding_model
-from pypef.hybrid.hybrid_model import get_model_and_type, performance_ls_ts, predict_ps, generate_model_and_save_pkl
+from pypef.hybrid.hybrid_model import get_model_and_type, performance_ls_ts, predict_ps
 from pypef.dca.gremlin_inference import save_gremlin_as_pickle, save_corr_csv, plot_all_corr_mtx, plot_predicted_ssm
 from pypef.utils.low_n_mutation_extrapolation import performance_mutation_extrapolation, low_n
 
@@ -34,7 +37,7 @@ def run_pypef_hybrid_modeling(arguments):
         model_type = 'undefined'
     if model_type in ['GREMLIN', 'DCAHybridModel'] and threads > 1:
         logger.info(f'No (Ray) parallelization for {model_type} model...')
-    elif model_type not in ['GREMLIN', 'DCAHybridModel'] and threads > 1:
+    elif model_type not in ['GREMLIN', 'DCAHybridModel'] and threads > 1 and USE_RAY:
         ray.init()
         logger.info(f'Using {threads} threads for running...')
     if model_type == 'DCAHybridModel':
@@ -82,19 +85,6 @@ def run_pypef_hybrid_modeling(arguments):
             negative=arguments['--negative']
         )
 
-    elif arguments['train_and_save']:
-        variants, fitnesses, _ = read_csv(arguments['--input'])
-        generate_model_and_save_pkl(
-            variants=variants,
-            ys_true=fitnesses,
-            params_file=arguments['--params'],
-            wt=arguments['--wt'],
-            train_percent_fit=arguments['--fit_size'],
-            test_percent=arguments['--test_size'],
-            random_state=arguments['--rnd_state'],
-            substitution_sep=arguments['--mutation_sep'],
-            threads=arguments['--threads']
-        )
 
     elif arguments['low_n'] or arguments['extrapolation']:
         if arguments['low_n']:

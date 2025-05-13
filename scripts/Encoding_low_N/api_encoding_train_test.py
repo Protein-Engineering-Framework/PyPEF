@@ -44,7 +44,7 @@ if not os.path.isdir('AVGFP'):
 # the test performance with the other encoding techniques to be tested, we start with
 # DCA and split the variant fitness data so that sizes of the data sets are same for
 # all encoding techniques tested.
-print(f'\nRunning script... which takes ~ 2 h (GREMLIN) - 4 h in total (PLMC) when using all 566 AAindex-indices '
+print(f'\nRunning script... which takes ~ 5 h (GREMLIN) - 5+ h in total (PLMC) when using all 566 AAindex-indices '
       f'for encoding and model testing (only {n_aaindices_to_test} AAindinces will be tested)...'
       f'\n\n(1/4) Testing DCA-based sequence encoding...\n' + "=" * 50)
 if not use_gremlin:  # PLMC params file-based encoding
@@ -122,7 +122,8 @@ else:  # plmc
     x_dca = dca_encoder.collect_encoded_sequences(variants)
     # removing not DCA-encodable positions (and also fitnesses, variants, and sequences)
     # from the 2000 initial variants, 1427 remain
-    x_dca, fitnesses, variants, sequences = remove_nan_encoded_positions(x_dca, fitnesses, variants, sequences)
+    x_dca, fitnesses, variants, sequences = remove_nan_encoded_positions(
+        x_dca, fitnesses, variants, sequences)
     x_wt = dca_encoder.x_wt
 
 # Statistical model performance
@@ -154,9 +155,8 @@ for i, indices in enumerate(train_val_splits_indices):
     print(f'Split {i + 1}/{len(train_val_splits_indices)}:\nSpearmans rho (ML) = {performances[4]:.3f}')
     # B. Hybrid modeling
     # -------------------------------------------------------------------------------
-    hybrid_model = DCALLMHybridModel(x_train=x_train_val, y_train=y_train_val, x_wt=x_wt)
-    beta_1, beta_2, regressor = hybrid_model.settings(x_train=x_train_val, y_train=y_train_val)
-    y_test_pred = hybrid_model.hybrid_prediction(x=x_test, reg=regressor, beta_1=beta_1, beta_2=beta_2)
+    hybrid_model = DCALLMHybridModel(x_train_dca=x_train_val, y_train=y_train_val, x_wt=x_wt)
+    y_test_pred = hybrid_model.hybrid_prediction(x_dca=x_test)
     ten_split_performance_hybrid.append(spearmanr(y_test, y_test_pred)[0])
     print(f'Spearmans rho (Hybrid) = {spearmanr(y_test, y_test_pred)[0]:.3f}')
 print('-'*80 + f'\n{n_splits}-fold mean Spearmans rho (ML)= {np.mean(ten_split_performance_ml):.3f} '
@@ -227,9 +227,7 @@ print('-'*80 + f'\n{n_splits}-fold mean Spearmans rho = {np.mean(ten_split_perfo
 # 4th example: Low-N and plotting using all encoding techniques and all data
 # -------------------------------------------------------------------------------
 print('Lastly, encoding all variants and performing "low-N" protein engineering task.\n'
-      'This could require some time... < 1 (GREMLIN DCA encoding) to ~ 2 hours (PLMC '
-      'single core DCA encoding) left...')
-
+      'This could require some time...')
 variants = variant_fitness_data.iloc[:, 0]
 fitnesses = variant_fitness_data.iloc[:, 1].tolist()
 variants_split = []
@@ -274,9 +272,8 @@ for n_train in pbar:
         performances_dca_ml.append(get_regressor_performances(
             x_dca_train, x_dca_test, y_train, y_test, regressor='ridge')[4])  # [4] defines spearmanr correlation
 
-        hybrid_model = DCALLMHybridModel(x_train=x_dca_train, y_train=y_train, x_wt=x_wt)
-        beta_1, beta_2, hybrid_regressor = hybrid_model.settings(x_train=x_dca_train, y_train=y_train)
-        y_hybrid_pred = hybrid_model.hybrid_prediction(x=x_dca_test, reg=hybrid_regressor, beta_1=beta_1, beta_2=beta_2)
+        hybrid_model = DCALLMHybridModel(x_train_dca=x_dca_train, y_train=y_train, x_wt=x_wt)
+        y_hybrid_pred = hybrid_model.hybrid_prediction(x_dca=x_dca_test)
         performances_hybrid.append(spearmanr(y_test, y_hybrid_pred)[0])
 
         x_aaidx_train, x_aaidx_test, y_train, y_test = train_test_split(

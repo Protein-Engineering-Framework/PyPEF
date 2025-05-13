@@ -15,8 +15,8 @@
 import warnings
 import numpy as np
 from scipy import stats
-from sklearnex import patch_sklearn
-patch_sklearn(verbose=False)
+#from sklearnex import patch_sklearn
+#patch_sklearn(verbose=False)
 from sklearn.metrics import (
     root_mean_squared_error, r2_score,
     precision_score, accuracy_score, recall_score, 

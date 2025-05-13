@@ -21,10 +21,6 @@ if not "%py_ver:~0,6%"=="Python" (
         echo Found Python version 3.10.
         set "true=1"
     )
-    if  "%py_ver:~7,4%"=="3.9." (
-        echo Found Python version 3.9.
-        set "true=1"
-    )
 )
 
 if "%true%"=="0" (
@@ -69,7 +65,7 @@ powershell -Command "%python_exe% -m pip install -U pypef pyside6"
 (
     echo @echo off
     echo:
-    echo start /min cmd /c powershell -Command ^"%prefix%%python_exe% %%~dp0gui\qt_window.py^"
+    echo start /min cmd /c powershell -Command ^"%prefix%%python_exe% %%~dp0gui\PyPEFGUIQtWindow.py^"
  ) > run_pypef_gui.bat
 
 echo Finished installation...

@@ -237,7 +237,7 @@ class GREMLIN:
     def get_eff_msa_weights(self, msa):
         """Compute effective weight for each sequence"""
         # pairwise identity
-        pdistance_msa = pdist(msa, "hamming")  # TODO: to PyTorch?!
+        pdistance_msa = pdist(msa, "hamming")  # TODO: to PyTorch?
         msa_sm = 1.0 - squareform(pdistance_msa)
         # weight for each sequence
         msa_w = (msa_sm >= self.eff_cutoff).astype(float)
@@ -428,10 +428,9 @@ class GREMLIN:
         seqs_int = self.seq2int(seqs)
 
         try:
-            if seqs_int.shape[-1] != len(v_idx):
-                #logger.info(f'The input sequence length ({seqs_int.shape[-1]}) does not match the common gap-trimmed MSA sequence length ({len(v_idx)})!')
-                seqs_int = seqs_int[..., v_idx]
-                #logger.info(f'Updated shape: ({seqs_int.shape[-1]}) matches common MSA sequence length ({len(v_idx)}) now')
+            if seqs_int.shape[-1] != len(v_idx):  # The input sequence length ({seqs_int.shape[-1]}) 
+                # does not match the common gap-trimmed MSA sequence length (len(v_idx)
+                seqs_int = seqs_int[..., v_idx]  # Shape matches common MSA sequence length (len(v_idx)) now
         except IndexError:
             raise SystemError(
                 "The loaded GREMLIN parameter model does not match the input model "

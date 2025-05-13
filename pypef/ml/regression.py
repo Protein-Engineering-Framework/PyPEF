@@ -30,8 +30,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pickle
 from tqdm import tqdm  # progress bars
-from sklearnex import patch_sklearn
-patch_sklearn(verbose=False)
+#from sklearnex import patch_sklearn
+#patch_sklearn(verbose=False)
 from sklearn.model_selection import LeaveOneOut
 from sklearn.model_selection import KFold
 from sklearn.metrics import mean_squared_error
@@ -956,7 +956,7 @@ def save_model(
             )
             name = get_basename(idx)
             if model_type in ['PLMC', 'GREMLIN'] and encoding not in ['aaidx', 'onehot']:
-                name = 'ML' + model_type.lower()
+                name = 'ML' + model_type.upper()
             f_name = os.path.abspath(os.path.join(path, 'Pickles', name))
             file = open(f_name, 'wb')
             pickle.dump(regressor_, file)

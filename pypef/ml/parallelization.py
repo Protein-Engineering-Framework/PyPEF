@@ -18,12 +18,16 @@ modified for parallelization of the 566 AAindices used for encoding
 with Ray, see https://docs.ray.io/en/latest/index.html.
 """
 
+
 import matplotlib
 matplotlib.use('Agg')
 import os
-import ray
 import warnings
 
+from pypef.settings import USE_RAY
+if USE_RAY:
+    import ray
+from pypef.utils.helpers import ray_conditional_decorator
 from pypef.utils.variant_data import get_sequences_from_file
 from pypef.ml.regression import (
     full_aaidx_txt_path, path_aaindex_dir, AAIndexEncoding, get_regressor_performances
@@ -34,7 +38,7 @@ warnings.filterwarnings(action='ignore', category=RuntimeWarning, module='sklear
 warnings.filterwarnings(action='ignore', category=UserWarning, module='sklearn')
 
 
-@ray.remote
+@ray_conditional_decorator
 def parallel(
         d,
         core,

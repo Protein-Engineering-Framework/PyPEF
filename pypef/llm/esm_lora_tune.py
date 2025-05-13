@@ -5,43 +5,32 @@
 # MIT License
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 # https://github.com/facebookresearch/esm
+# ESM1v model publication:
+# Joshua Meier, Roshan Rao, Robert Verkuil, Jason Liu, Tom Sercu, Alexander Rives
+# Language models enable zero-shot prediction of the effects of mutations on protein function
+# bioRxiv 2021.07.09.450648; doi: https://doi.org/10.1101/2021.07.09.450648 
 
 # Inspired by ConFit
 # https://github.com/luo-group/ConFit
 
+
 from __future__ import annotations
+
+import logging
+logger = logging.getLogger('pypef.llm.esm_lora_tune')
 
 import torch
 import numpy as np
 from scipy.stats import spearmanr
 from tqdm import tqdm
-import logging
+
 
 from peft import LoraConfig, get_peft_model
 from transformers import logging as hf_logging
 hf_logging.set_verbosity_error()
 from transformers import EsmForMaskedLM, EsmTokenizer
 
-logger = logging.getLogger('pypef.llm.esm_lora_tune')
-
-
-def get_vram(verbose: bool = True):
-    free = torch.cuda.mem_get_info()[0] / 1024 ** 3
-    total = torch.cuda.mem_get_info()[1] / 1024 ** 3
-    total_cubes = 24
-    free_cubes = int(total_cubes * free / total)
-    if verbose:
-        print(f'VRAM: {total - free:.2f}/{total:.2f}GB\t VRAM:[' + (
-            total_cubes - free_cubes) * '▮' + free_cubes * '▯' + ']')
-    return free, total
-
-
-def get_device():
-    return (
-        "cuda" if torch.cuda.is_available() 
-        else "mps" if torch.backends.mps.is_available() 
-        else "cpu"
-    )
+from pypef.utils.helpers import get_device
 
 
 def get_esm_models():
@@ -53,9 +42,9 @@ def get_esm_models():
     return base_model, lora_model, tokenizer, optimizer
 
 
-def esm_tokenize_sequences(sequences, tokenizer, max_length):
+def esm_tokenize_sequences(sequences, tokenizer, max_length, verbose=True):
     encoded_sequences = []
-    for seq in tqdm(sequences, desc='Tokenizing sequences for ESM modeling...'):
+    for seq in tqdm(sequences, desc='Tokenizing sequences for ESM modeling', disable=not verbose):
         encoded_sequence, attention_mask = tokenizer(
             seq, 
             padding='max_length', 
@@ -103,19 +92,33 @@ def corr_loss(y_true: torch.Tensor, y_pred: torch.Tensor):
 
 
 def get_batches(a, dtype, batch_size=5, 
-                keep_numpy: bool = False, verbose: bool = False):
+                keep_numpy: bool = False, keep_remaining=False, verbose: bool = False):
     a = np.asarray(a, dtype=dtype)
     orig_shape = np.shape(a)
     remaining = len(a) % batch_size
     if remaining != 0:
-        a = a[:-remaining]
+        if len(a) > batch_size:
+            a = a[:-remaining]
+            a_remaining = a[-remaining:]
+        else:
+            logger.info(f"Batch size greater than or equal to total array length: "
+                  f"returning full array (of shape: {np.shape(a)})...")
+            if keep_remaining:
+                return list(a)
+            else:
+                return a
     if len(orig_shape) == 2:
         a = a.reshape(np.shape(a)[0] // batch_size, batch_size, np.shape(a)[1])
     else:  # elif len(orig_shape) == 1:
         a = a.reshape(np.shape(a)[0] // batch_size, batch_size)
     new_shape = np.shape(a)
     if verbose:
-        print(f'{orig_shape} -> {new_shape}  (dropped {remaining})')
+        logger.info(f'{orig_shape} -> {new_shape}  (dropped {remaining})')
+    if keep_remaining: # Returning a list
+        a = list(a)
+        logger.info('Adding dropped back to batches as last batch...')
+        a.append(a_remaining)
+        return a
     if keep_numpy:
         return a
     return torch.Tensor(a).to(dtype)
@@ -126,7 +129,7 @@ def esm_test(xs, attention_mask, scores, loss_fn, model, device: str | None = No
         device = get_device()
     attention_masks = torch.Tensor(np.full(
         shape=np.shape(xs), fill_value=attention_mask)).to(torch.int64)
-    print(f'Infering ESM model for testing using {device.upper()} device...')
+    logger.info(f'Infering ESM model for testing using {device.upper()} device...')
     model = model.to(device)
     xs, attention_masks, scores = (
         torch.Tensor(xs).to(device), attention_masks.to(device), 
@@ -150,19 +153,20 @@ def esm_test(xs, attention_mask, scores, loss_fn, model, device: str | None = No
         pbar_epochs.set_description(
             f"Testing: Batch {i + 1}/{len(xs)} | Batch loss: {batch_loss:.4f} (SpearCorr: "
             f"{batch_scorr:.4f})| Total loss: {total_loss:.4f} (SpearCorr: {total_scorr:.4f})")
-    print(f"Test performance: Loss: {total_loss:.4f}, SpearCorr: {total_scorr:.4f}")
+    logger.info(f"Test performance: Loss: {total_loss:.4f}, SpearCorr: {total_scorr:.4f}")
     return torch.flatten(scores).detach().cpu(), torch.flatten(y_preds_total).detach().cpu()
 
 
-def esm_infer(xs, attention_mask, model, device: str | None = None):
+def esm_infer(xs, attention_mask, model, device: str | None = None, verbose=True):
     if device is None:
         device = get_device()
     attention_masks = torch.Tensor(np.full(
         shape=np.shape(xs), fill_value=attention_mask)).to(torch.int64)
-    print(f'Infering ESM model for predictions using {device.upper()} device...')
+    if verbose:
+        logger.info(f'Infering ESM model for predictions using {device.upper()} device...')
     for i , (xs_b, am_b) in enumerate(tqdm(
         zip(xs, attention_masks), total=len(xs), 
-        desc="ESM inference - processing sequences"
+        desc="ESM inference - processing sequences", disable=not verbose
     )):
         xs_b = xs_b.to(torch.int64)
         with torch.no_grad():
@@ -180,7 +184,7 @@ def esm_train(xs, attention_mask, scores, loss_fn, model, optimizer, n_epochs=3,
         torch.manual_seed(seed)
     if device is None:
         device = get_device()
-    print(f'Training ESM model using {device.upper()} device '
+    logger.info(f'Training ESM model using {device.upper()} device '
           f'(N_Train={len(torch.flatten(scores))})...')
     model = model.to(device)
     attention_masks = torch.Tensor(np.full(

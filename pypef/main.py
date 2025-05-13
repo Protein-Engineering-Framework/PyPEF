@@ -112,7 +112,7 @@ Creation of prediction sets from CSV data (using single-substituted variant data
 Encoding a CSV file (for further performance studies such as "low N" or
 "mutational extrapolation" engineering tasks:
         pypef encode --input CSV_FILE --encoding ENCODING_TECHNIQUE --wt WT_FASTA
-            [--params PARAM_FILE] [--y_wt WT_FITNESS] [--model MODEL] [--nofft]
+            [--params PARAM_FILE] [--model MODEL] [--nofft]
             [--threads THREADS] [--sep CSV_COLUMN_SEPARATOR] [--fitness_key FITNESS_KEY]
 
 Converting a STO alignment file to A2M format:
@@ -122,7 +122,8 @@ Converting a STO alignment file to A2M format:
 
 Usage:
     pypef mklsts --wt WT_FASTA --input CSV_FILE
-        [--drop THRESHOLD] [--sep CSV_COLUMN_SEPARATOR] [--mutation_sep MUTATION_SEPARATOR] [--numrnd NUMBER]
+        [--drop THRESHOLD] [--sep CSV_COLUMN_SEPARATOR] [--mutation_sep MUTATION_SEPARATOR]
+        [--numrnd NUMBER] [--ls_proportion LS_PROPORTION]
     pypef mkps --wt WT_FASTA [--input CSV_FILE]
         [--drop THRESHOLD] [--ssm] [--drecomb] [--trecomb] [--qarecomb] [--qirecomb]
         [--ddiverse] [--tdiverse] [--qdiverse]
@@ -132,7 +133,7 @@ Usage:
     pypef save_msa_info --msa MSA_FILE --wt WT_FASTA
         [--opt_iter N_ITER]
     pypef encode --input CSV_FILE --encoding ENCODING_TECHNIQUE --wt WT_FASTA
-        [--params PARAM_FILE] [--y_wt WT_FITNESS] [--model MODEL] [--nofft]
+        [--params PARAM_FILE] [--model MODEL] [--nofft]
         [--threads THREADS]
         [--sep CSV_COLUMN_SEPARATOR] [--fitness_key FITNESS_KEY]
     pypef reformat_csv --input CSV_FILE
@@ -140,26 +141,19 @@ Usage:
     pypef shift_pos --input CSV_FILE --offset OFFSET
         [--sep CSV_COLUMN_SEPARATOR] [--mutation_sep MUTATION_SEPARATOR] [--fitness_key FITNESS_KEY]
     pypef sto2a2m --sto STO_MSA_FILE [--inter_gap INTER_GAP] [--intra_gap INTRA_GAP]
-    pypef hybrid 
+    pypef hybrid --params PARAM_FILE
+        [--model MODEL]
         [--ts TEST_SET] [--ps PREDICTION_SET]
-        [--model MODEL] [--params PARAM_FILE]
         [--ls LEARNING_SET] [--label] 
         [--llm LLM] [--pdb PDB_FILE] [--wt WT_FASTA]
-        [--threads THREADS]
-    pypef hybrid --model MODEL --params PARAM_FILE
-        [--ts TEST_SET] [--label]
-        [--ps PREDICTION_SET] [--pmult] [--drecomb] [--trecomb] [--qarecomb] [--qirecomb]
-                                        [--ddiverse] [--tdiverse] [--qdiverse] [--negative]
+        [--pmult] [--drecomb] [--trecomb] [--qarecomb] [--qirecomb]
+                                          [--ddiverse] [--tdiverse] [--qdiverse] [--negative]
         [--threads THREADS]
     pypef hybrid directevo --wt WT_FASTA --params PARAM_FILE
-        [--model MODEL]
-        [--input CSV_FILE] [--y_wt WT_FITNESS] [--numiter NUM_ITER]
+        [--model MODEL] [--llm LLM] [--pdb PDB_FILE]
+        [--input CSV_FILE] [--numiter NUM_ITER]
         [--numtraj NUM_TRAJ] [--temp TEMPERATURE]
         [--negative] [--usecsv] [--csvaa] [--drop THRESHOLD]
-    pypef hybrid train_and_save --input CSV_FILE --params PARAM_FILE --wt WT_FASTA
-        [--fit_size REL_LEARN_FIT_SIZE] [--test_size REL_TEST_SIZE]
-        [--threads THREADS] [--sep CSV_COLUMN_SEPARATOR]
-        [--fitness_key FITNESS_KEY] [--rnd_state RND_STATE]
     pypef hybrid low_n --input ENCODED_CSV_FILE
     pypef hybrid extrapolation --input ENCODED_CSV_FILE
         [--conc]
@@ -177,7 +171,7 @@ Usage:
         [--ddiverse] [--tdiverse] [--qdiverse]
         [--regressor TYPE] [--nofft] [--negative] [--params PARAM_FILE] [--threads THREADS]
     pypef ml --encoding ENCODING_TECHNIQUE directevo --model MODEL --wt WT_FASTA
-        [--input CSV_FILE] [--y_wt WT_FITNESS] [--numiter NUM_ITER] [--numtraj NUM_TRAJ] [--temp TEMPERATURE]
+        [--input CSV_FILE] [--numiter NUM_ITER] [--numtraj NUM_TRAJ] [--temp TEMPERATURE]
         [--nofft] [--negative] [--usecsv] [--csvaa] [--drop THRESHOLD] [--params PARAM_FILE]
     pypef ml low_n --input ENCODED_CSV_FILE
         [--regressor TYPE]
@@ -208,6 +202,8 @@ Options:
                                     (line trimming) [default: 0.5].
   --label                           Label the plot instances [default: False].
   -l --ls LEARNING_SET              Input learning set in .fasta format.
+  --ls_proportion LS_PROPORTION     Proportion of the learning (training) set to the total dataset size (training + 
+                                    testing); float, e.g., 0.8.
   --llm LLM                         LLM model to use for hybrid modeling next to DCA (options are 'ESM1v' and 'ProSST').
   -m --model MODEL                  Model (pickle file) for plotting of validation or for
                                     performing predictions.
@@ -239,8 +235,6 @@ Options:
                                     MLP CV R.: mlp, Ridge CV R.: ridge (or l2),
                                     LassoLars CV R.: lassolars (or l1) [default: pls].
   --rnd_splits RND_SPLITS           Number of random splits for Low N testing [default: 5].
-  --rnd_state RND_STATE             Sets the random state for reproduction, only implemented
-                                    for hybrid train_and_save [default: 42].
   -s --save NUMBER                  Number of models to be saved as pickle files [default: 5].
   --sep CSV_COLUMN_SEPARATOR        CSV Column separator [default: ;].
   --show                            Show achieved model performances from Model_Results.txt.
@@ -270,7 +264,6 @@ Options:
   --version                         Show version [default: False].
   -w --wt WT_FASTA                  Input wild-type sequence file (in FASTA format).
   --wt_pos WT_POSITION              Row position of encoded wild-type in encoding CSV file (0-indexed) [default: 0].
-  -y --y_wt WT_FITNESS              Fitness value (y) of wild-type [default: 1.0].
   encode                            Encoding [default: False].
   hybrid                            Hybrid modeling based on DCA-derived sequence encoding [default: False].
   ml                                Pure machine learning modeling based on encoded sequences [default: False].
@@ -287,12 +280,11 @@ Options:
                                     A2M format [default: False].
 """
 
-
-from sys import argv, version_info
+from sys import version_info
 from pypef import __version__
-if version_info[0] < 3 or version_info[1] < 9:
+if version_info[0] < 3 or version_info[1] < 10:
     raise SystemError(f"The current version of PyPEF (v {__version__}) requires at "
-                      f"least Python 3.9 or higher versions of Python.")
+                      f"least Python 3.10 or higher versions of Python.")
 
 import time
 from datetime import timedelta
@@ -336,6 +328,7 @@ schema = Schema({
     Optional('--label'): bool,
     Optional('--llm'): Or(None, str),
     Optional('--ls'): Or(None, str),
+    Optional('--ls_proportion'): Or(None, Use(float)),
     Optional('--model'): Or(None, str),
     Optional('--msa'): Or(None, str),
     Optional('--mutation_sep'): Or(None, str),
@@ -372,7 +365,6 @@ schema = Schema({
     Optional('--ts'): Or(None, str),
     Optional('--wt'): Or(None, str),
     Optional('--wt_pos'): Use(int),
-    Optional('--y_wt'): Or(None, Use(float)),
     Optional('aaidx'): bool,
     Optional('param_inference'): bool,
     Optional('hybrid'): bool,
@@ -388,8 +380,7 @@ schema = Schema({
     Optional('reformat_csv'): bool,
     Optional('save_msa_info'): bool,
     Optional('shift_pos'): bool,
-    Optional('sto2a2m'): bool,
-    Optional('train_and_save'): bool,
+    Optional('sto2a2m'): bool
 })
 
 
@@ -417,13 +408,13 @@ def validate(args):
         exit(e)
 
 
-def run_main():
+def run_main(argv=None):
     """
     Entry point for pip-installed version.
     Arguments are created from Docstring using docopt that 
     creates an argument dict.
     """
-    arguments = docopt(__doc__, version=__version__)
+    arguments = docopt(__doc__, argv=argv, version=__version__)
     start_time = time.time()
     logger.debug(f'main.py __name__: {__name__}, version: {__version__}')
     logger.debug(str(argv)[1:-1].replace("\'", "").replace(",", ""))
