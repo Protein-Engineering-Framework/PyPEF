@@ -7,7 +7,7 @@ import sys
 from io import StringIO 
 import os
 from PySide6 import QtCore, QtWidgets
-from PySide6.QtCore import QSize
+from PySide6.QtCore import QSize, Signal, QThread
 pypef_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 sys.path.append(pypef_root)
 from pypef import __version__
@@ -23,6 +23,21 @@ EXEC_API_OR_CLI = ['cli', 'api'][0]
 
 print(sys.executable)
 print('Backend:', EXEC_API_OR_CLI)
+
+
+class ApiWorker(QThread):
+    finished = Signal(str)
+
+    def __init__(self, cmd: str, parent=None):
+        super().__init__(parent)
+        self.cmd = cmd
+
+    def run(self):
+        try:
+            result = run_main(self.cmd)
+        except Exception as e:
+            result = f"Error: {str(e)}"
+        self.finished.emit(result)
 
 
 class Capturing(list):
@@ -372,7 +387,34 @@ class MainWindow(QtWidgets.QWidget):
         )
         self.button_supervised_predict_onehot.clicked.connect(self.pypef_onehot_supervised_predict)
         self.button_supervised_predict_onehot.setStyleSheet(button_style)
-
+        # All buttons #######
+        self.all_buttons = [
+            self.button_work_dir,
+            self.button_help,
+            self.button_mklsts,
+            self.button_mkps,
+            self.button_dca_inference_gremlin,
+            self.button_dca_inference_gremlin_msa_info,
+            self.button_dca_test_dca,
+            self.button_dca_predict_dca,
+            self.button_hybrid_train_dca,
+            self.button_hybrid_train_test_dca,
+            self.button_hybrid_test_dca,
+            self.button_hybrid_predict_dca,
+            self.button_hybrid_train_dca_llm,
+            self.button_hybrid_train_test_dca_llm,
+            self.button_hybrid_test_dca_llm,
+            self.button_hybrid_predict_dca_llm,
+            self.button_supervised_train_dca,
+            self.button_supervised_train_test_dca,
+            self.button_supervised_test_dca,
+            self.button_supervised_predict_dca,
+            self.button_supervised_train_onehot,
+            self.button_supervised_train_test_onehot,
+            self.button_supervised_test_onehot,
+            self.button_supervised_predict_onehot
+        ]
+        ######################
 
         # Layout widgets ####################################################################
         # int fromRow, int fromColumn, int rowSpan, int columnSpan
@@ -433,56 +475,15 @@ class MainWindow(QtWidgets.QWidget):
             self.process = QtCore.QProcess(self)
             self.process.setProcessChannelMode(QtCore.QProcess.MergedChannels)
             self.process.readyReadStandardOutput.connect(self.on_readyReadStandardOutput)
-            self.process.started.connect(lambda: self.button_work_dir.setEnabled(False))
-            self.process.finished.connect(lambda: self.button_work_dir.setEnabled(True))            
-            self.process.started.connect(lambda: self.button_help.setEnabled(False))
-            self.process.finished.connect(lambda: self.button_help.setEnabled(True))
-            self.process.started.connect(lambda: self.button_mklsts.setEnabled(False))
-            self.process.finished.connect(lambda: self.button_mklsts.setEnabled(True))
-            self.process.started.connect(lambda: self.button_mkps.setEnabled(False))
-            self.process.finished.connect(lambda: self.button_mkps.setEnabled(True))
-            self.process.started.connect(lambda: self.button_dca_inference_gremlin.setEnabled(False))
-            self.process.finished.connect(lambda: self.button_dca_inference_gremlin.setEnabled(True))
-            self.process.started.connect(lambda: self.button_dca_inference_gremlin_msa_info.setEnabled(False))
-            self.process.finished.connect(lambda: self.button_dca_inference_gremlin_msa_info.setEnabled(True))
-            self.process.started.connect(lambda: self.button_dca_test_dca.setEnabled(False))
-            self.process.finished.connect(lambda: self.button_dca_test_dca.setEnabled(True))
-            self.process.started.connect(lambda: self.button_dca_predict_dca.setEnabled(False))
-            self.process.finished.connect(lambda: self.button_dca_predict_dca.setEnabled(True))
-            self.process.started.connect(lambda: self.button_hybrid_train_dca.setEnabled(False))
-            self.process.finished.connect(lambda: self.button_hybrid_train_dca.setEnabled(True))
-            self.process.started.connect(lambda: self.button_hybrid_train_test_dca.setEnabled(False))
-            self.process.finished.connect(lambda: self.button_hybrid_train_test_dca.setEnabled(True))
-            self.process.started.connect(lambda: self.button_hybrid_test_dca.setEnabled(False))
-            self.process.finished.connect(lambda: self.button_hybrid_test_dca.setEnabled(True))
-            self.process.started.connect(lambda: self.button_hybrid_predict_dca.setEnabled(False))
-            self.process.finished.connect(lambda: self.button_hybrid_predict_dca.setEnabled(True))
-            self.process.started.connect(lambda: self.button_hybrid_train_dca_llm.setEnabled(False))
-            self.process.finished.connect(lambda: self.button_hybrid_train_dca_llm.setEnabled(True))
-            self.process.started.connect(lambda: self.button_hybrid_train_test_dca_llm.setEnabled(False))
-            self.process.finished.connect(lambda: self.button_hybrid_train_test_dca_llm.setEnabled(True))
-            self.process.started.connect(lambda: self.button_hybrid_test_dca_llm.setEnabled(False))
-            self.process.finished.connect(lambda: self.button_hybrid_test_dca_llm.setEnabled(True))
-            self.process.started.connect(lambda: self.button_hybrid_predict_dca_llm.setEnabled(False))
-            self.process.finished.connect(lambda: self.button_hybrid_predict_dca_llm.setEnabled(True))
-            self.process.started.connect(lambda: self.button_supervised_train_dca.setEnabled(False))
-            self.process.finished.connect(lambda: self.button_supervised_train_dca.setEnabled(True))
-            self.process.started.connect(lambda: self.button_supervised_train_test_dca.setEnabled(False))
-            self.process.finished.connect(lambda: self.button_supervised_train_test_dca.setEnabled(True))
-            self.process.started.connect(lambda: self.button_supervised_test_dca.setEnabled(False))
-            self.process.finished.connect(lambda: self.button_supervised_test_dca.setEnabled(True))
-            self.process.started.connect(lambda: self.button_supervised_predict_dca.setEnabled(False))
-            self.process.finished.connect(lambda: self.button_supervised_predict_dca.setEnabled(True))
-            self.process.started.connect(lambda: self.button_supervised_train_onehot.setEnabled(False))
-            self.process.finished.connect(lambda: self.button_supervised_train_onehot.setEnabled(True))
-            self.process.started.connect(lambda: self.button_supervised_train_test_onehot.setEnabled(False))
-            self.process.finished.connect(lambda: self.button_supervised_train_test_onehot.setEnabled(True))
-            self.process.started.connect(lambda: self.button_supervised_test_onehot.setEnabled(False))
-            self.process.finished.connect(lambda: self.button_supervised_test_onehot.setEnabled(True))
-            self.process.started.connect(lambda: self.button_supervised_predict_onehot.setEnabled(False))
-            self.process.finished.connect(lambda: self.button_supervised_predict_onehot.setEnabled(True))
+            self.process.started.connect(lambda: self.toggle_buttons(False))
+            self.process.finished.connect(lambda: self.toggle_buttons(True))
 
 
+
+    def toggle_buttons(self, enabled: bool):
+        for btn in self.all_buttons:
+            btn.setEnabled(enabled)
+        
     def start_process(self, button):
         self.logTextBox.widget.clear()
         self.c += 1
@@ -490,10 +491,12 @@ class MainWindow(QtWidgets.QWidget):
         self.logTextBox.widget.appendPlainText("Job: " + str(self.c) + " " + "=" * 104)
         if EXEC_API_OR_CLI == 'api':
             button.setEnabled(False)
+            self.toggle_buttons(False)
     
     def end_process(self, button):
         if EXEC_API_OR_CLI == 'api':
             button.setEnabled(True)
+            self.toggle_buttons(True)
         self.version_text.setText("Finished...")
         self.textedit_out.append("=" * 104 + " Job: " + str(self.c) + "\n")
 
@@ -893,9 +896,9 @@ class MainWindow(QtWidgets.QWidget):
 
     def exec_pypef(self, cmd):
         if EXEC_API_OR_CLI == 'api':
-            return self.exec_pypef_api(cmd)
+            self.exec_pypef_api2(cmd)
         elif EXEC_API_OR_CLI == 'cli':
-            return self.exec_pypef_cli(cmd)
+            self.exec_pypef_cli(cmd)
         else:
             raise SystemError("Choose between 'api' or 'cli'!")
 
@@ -904,7 +907,11 @@ class MainWindow(QtWidgets.QWidget):
         self.process.start(f'python', ['-u', f'{self.pypef_root}/run.py'] + cmd.split(' '))
         self.process.finished.connect(self.process_finished)
 
-    def exec_pypef_api(self, cmd: str):
+    def exec_pypef_api2(self, cmd: str):
+        """
+        Backup function if threading function (exec_pypef_api) does not work.
+        Freezes during run.
+        """
         self.textedit_out.append(f'Executing command:\n\t{cmd}')
         try:
             with Capturing() as captured_output:
@@ -914,8 +921,22 @@ class MainWindow(QtWidgets.QWidget):
         except Exception as e: # anything
             self.textedit_out.append(f"Provided wrong inputs! Error:\n\t{e}")
 
+    def exec_pypef_api(self, cmd: str):
+        """
+        Threaded API function.
+        """
+        self.textedit_out.append(f"Executing command:\n\t{cmd}")
+        self.thread = QThread()
+        self.worker = ApiWorker(cmd=cmd)
+        self.worker.moveToThread(self.thread)
+        self.thread.started.connect(self.worker.run)
+        self.worker.finished.connect(self.thread.quit)
+        self.worker.finished.connect(self.worker.deleteLater)
+        self.thread.finished.connect(self.thread.deleteLater)        
+        self.thread.start()
+
     def process_finished(self):
-        self.version_text.setText("Finished...") 
+        self.version_text.setText("Finished...")
 
 
 if __name__ == "__main__":
