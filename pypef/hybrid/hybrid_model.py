@@ -396,11 +396,9 @@ class DCALLMHybridModel:
         # LoRA training on y_llm_ttrain --> Testing on y_llm_ttest 
         x_llm_ttrain_b, scores_ttrain_b = (
             get_batches(self.x_llm_ttrain, batch_size=self.batch_size, dtype=int), 
-            #get_batches(self.attn_llm_ttrain, batch_size=self.batch_size, dtype=int), 
             get_batches(self.y_ttrain, batch_size=self.batch_size, dtype=float)
         )
 
-        #x_llm_ttest_b = get_batches(self.x_llm_ttest, batch_size=self.batch_size, dtype=int)
         if self.llm_key == 'prosst':
             y_llm_ttest = self.llm_inference_function(
                 xs=self.x_llm_ttest,
@@ -457,8 +455,7 @@ class DCALLMHybridModel:
                 self.llm_attention_mask,  
                 self.structure_input_ids,
                 n_epochs=50, 
-                device=self.device,
-                #seed=self.seed
+                device=self.device
             )
             y_llm_lora_ttrain = self.llm_inference_function(
                 xs=self.x_llm_ttrain,
@@ -486,8 +483,7 @@ class DCALLMHybridModel:
                 self.llm_model,
                 self.llm_optimizer,  
                 n_epochs=5, 
-                device=self.device,
-                #seed=self.seed
+                device=self.device
             )
             y_llm_lora_ttrain = self.llm_inference_function(
                 xs=x_llm_ttrain_b,

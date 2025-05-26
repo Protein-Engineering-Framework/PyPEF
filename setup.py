@@ -39,7 +39,11 @@ setup(
     url='https://github.com/niklases/PyPEF',
     py_modules=['pypef'],
     packages=find_packages(include=['pypef', 'pypef.*']),
-    package_data={'pypef': ['ml/AAindex/*', 'ml/AAindex/Refined_cluster_indices_r0.93_r0.97/*']},
+    package_data={'pypef': [
+        'ml/AAindex/*', 
+        'ml/AAindex/Refined_cluster_indices_r0.93_r0.97/*',
+        'llm/prosst_structure/static/*'
+        ]},
     include_package_data=True,
     install_requires=[cleaned_requirements],
     python_requires='>= 3.10, < 3.13',

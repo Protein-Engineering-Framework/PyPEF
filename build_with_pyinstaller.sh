@@ -5,6 +5,8 @@ pip install -e .
 pyinstaller \
   --console \
   --noconfirm \
+  --collect-data pypef \
+  --collect-all pypef \
   --collect-data torch \
   --collect-data biotite \
   --collect-all biotite \
