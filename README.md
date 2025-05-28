@@ -72,10 +72,19 @@ A quick file setup and run test can be performed running files in [scripts/Setup
 <a name="docker-installation"></a>
 ### Setup and Run Docker Image
 
-Build the image using the stored [Dockerfile](./Dockerfile)
-```bash
-docker build -t pypef . # --progress=plain --no-cache
-```
+Pull from Docker Hub or build the image using the stored [Dockerfile](./Dockerfile):
+
+- pulling from Docker Hub by specifying the version tag
+  ```bash
+  # docker pull niklases/pypef:VERSION_TAG, e.g.
+  docker pull niklases/pypef:0.4.2
+  ```
+
+- building image from Dockerfile
+  ```bash
+  docker build -t pypef . # --progress=plain --no-cache
+  ```
+
 
 A chained container command using the built Docker image can be run with e.g.:
 ```bash
