@@ -80,7 +80,7 @@ docker build -t pypef . # --progress=plain --no-cache
 A chained container command using the built Docker image can be run with e.g.:
 ```bash
 docker run --gpus=all -v ./datasets/:/datasets --workdir /datasets/AVGFP pypef /bin/bash -c \
-    "python /app/run.py mklsts --wt P42212_F64L.fasta --input avGFP.csv --ls_proportion 0.01 &&  \
+    "python /app/run.py mklsts --wt P42212_F64L.fasta --input avGFP.csv --ls_proportion 0.01 && \
      python /app/run.py hybrid --ls LS.fasl --ts TS.fasl --params GREMLIN --llm prosst --wt P42212_F64L.fasta --pdb GFP_AEQVI.pdb"
 
 ```

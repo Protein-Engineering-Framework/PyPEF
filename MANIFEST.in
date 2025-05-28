@@ -1,3 +1,5 @@
 include README.md
 include requirements.txt
 include pypef/AAindex/*.txt
+include pypef/llm/prosst_structure/static/*.npy
+include pypef/llm/prosst_structure/static/*.pt

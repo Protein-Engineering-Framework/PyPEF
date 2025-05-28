@@ -1,0 +1,62 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pypef"
+dynamic = ["version", "readme"]
+authors = [
+    { name = "Niklas Siedhoff", email = "niklas.siedhoff@rwth-aachen.de" },
+    { name = "Alexander-Maurice Illig" }
+]
+description = "A tool for performing data-driven protein engineering by building machine learning models from protein variant fitness data."
+requires-python = ">=3.10, <3.13"
+license = { text = "CC BY-SA 4.0" }
+keywords = ["Pythonic Protein Engineering Framework"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence"
+]
+dependencies = [
+    "numpy",
+    "pandas",
+    "tqdm",
+    "docopt",
+    "matplotlib",
+    "scipy",
+    "adjustText",
+    "scikit-learn",
+    "biopython",
+    "biotite",
+    "schema",
+    "pathos",
+    "peft",
+    "torch",
+    "torch-geometric"
+]
+
+[tool.setuptools.dynamic]
+version = {attr = "pypef.__version__"}
+readme = {file = ["README.md"]}
+
+[project.urls]
+Homepage = "https://github.com/niklases/PyPEF"
+
+[project.scripts]
+pypef = "pypef.main:run_main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["pypef*"]
+
+[tool.setuptools.package-data]
+pypef = [
+    "ml/AAindex/*",
+    "ml/AAindex/Refined_cluster_indices_r0.93_r0.97/*",
+    "llm/prosst_structure/static/*"
+]
