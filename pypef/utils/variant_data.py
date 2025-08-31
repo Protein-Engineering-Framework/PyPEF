@@ -1,21 +1,11 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-# Created on 05 October 2020
-# @authors: Niklas Siedhoff, Alexander-Maurice Illig
-# @contact: <niklas.siedhoff@rwth-aachen.de>
 # PyPEF - Pythonic Protein Engineering Framework
 # https://github.com/niklases/PyPEF
-# Licensed under Creative Commons Attribution-ShareAlike 4.0 International Public License (CC BY-SA 4.0)
-# For more information about the license see https://creativecommons.org/licenses/by-nc/4.0/legalcode
-
-# PyPEF – An Integrated Framework for Data-Driven Protein Engineering
-# Journal of Chemical Information and Modeling, 2021, 61, 3463-3476
-# https://doi.org/10.1021/acs.jcim.1c00099
 
 from __future__ import annotations
 import os
 import numpy as np
 import pandas as pd
+import warnings
 
 import logging
 logger = logging.getLogger('pypef.utils.variant_data')
@@ -473,3 +463,16 @@ def read_csv_and_shift_pos_ints(
     data = np.array([new_col, column_2]).T
     new_df = pd.DataFrame(data, columns=['variant', 'fitness'])
     new_df.to_csv(infile[:-4] + '_new' + infile[-4:], sep=';', index=False)
+
+
+def get_mismatches(seq_a: str, seq_b: str):
+    n = 0
+    mismatches = ""
+    if len(seq_a) != len(seq_b):
+        logger.warning("Sequence length's do not match!")
+        raise RuntimeError(f"{seq_a}\n{len(seq_a)}\n{seq_b}\n{len(seq_b)}")
+    for i_a, aa in enumerate(seq_a):
+        if aa != seq_b[i_a]:
+            mismatches += f"{aa}{i_a + 1}{seq_b[i_a]},"
+            n += 1
+    return n, mismatches[:-1]

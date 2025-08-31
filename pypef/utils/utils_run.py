@@ -1,16 +1,5 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-# Created on 05 October 2020
-# @authors: Niklas Siedhoff, Alexander-Maurice Illig
-# @contact: <niklas.siedhoff@rwth-aachen.de>
 # PyPEF - Pythonic Protein Engineering Framework
 # https://github.com/niklases/PyPEF
-# Licensed under Creative Commons Attribution-ShareAlike 4.0 International Public License (CC BY-SA 4.0)
-# For more information about the license see https://creativecommons.org/licenses/by-nc/4.0/legalcode
-
-# PyPEF – An Integrated Framework for Data-Driven Protein Engineering
-# Journal of Chemical Information and Modeling, 2021, 61, 3463-3476
-# https://doi.org/10.1021/acs.jcim.1c00099
 
 
 import logging
@@ -35,11 +24,11 @@ from pypef.utils.prediction_sets import (
     create_split_files, make_combinations_double_all_diverse,
     make_combinations_triple_all_diverse, make_combinations_quadruple_all_diverse,
     make_ssm_singles
-)   # not yet implemented: make_combinations_double_all_diverse_and_all_positions
-
+)
+from pypef.utils.split import DatasetSplitter
 from pypef.utils.directed_evolution import DirectedEvolution
 from pypef.utils.sto2a2m import convert_sto2a2m
-
+from pypef.utils.ssm import SSM
 from pypef.ml.regression import OneHotEncoding, AAIndexEncoding, full_aaidx_txt_path
 from pypef.hybrid.hybrid_model import plmc_or_gremlin_encoding
 
@@ -49,45 +38,93 @@ def run_pypef_utils(arguments):
         wt_sequence = get_wt_sequence(arguments['--wt'])
         t_drop = float(arguments['--drop'])
         ls_proportion = arguments['--ls_proportion']
-
         logger.info(f'Length of provided sequence: {len(wt_sequence)} amino acids.')
-        logger.info(f'Training set proportion (--ls_proportion): {ls_proportion}.')
+        if True in [
+            arguments['--random'], arguments['--modulo'], 
+            arguments['--cont'], arguments['--plot']
+        ]:
+            logger.info(f'Ignoring set proportion (--ls_proportion).')
+        else:
+            logger.info(f'Training set proportion (--ls_proportion): {ls_proportion}.')
+            
         df = drop_rows(arguments['--input'], amino_acids, t_drop, 
                        arguments['--sep'], arguments['--mutation_sep'])
         no_rnd = arguments['--numrnd']
-
         single_variants, single_values, higher_variants, higher_values = get_variants(
             df, amino_acids, wt_sequence, arguments['--mutation_sep']
         )
         if len(single_variants) == 0:
             logger.info('Found no single substitution variants for possible recombination!')
-        sub_ls, val_ls, sub_ts, val_ts = make_sub_ls_ts(
-            single_variants, single_values, 
-            higher_variants, higher_values, 
-            ls_proportion
-        )
-        logger.info('Tip: You can edit your LS and TS datasets just by '
-                    'cutting/pasting between the LS and TS fasta datasets.')
 
-        make_fasta_ls_ts('LS.fasl', wt_sequence, sub_ls, val_ls)
-        make_fasta_ls_ts('TS.fasl', wt_sequence, sub_ts, val_ts)
-
-        try:
-            no_rnd = int(no_rnd)
-        except ValueError:
-            no_rnd = 0
-        if no_rnd != 0:
-            random_set_counter = 1
-            no_rnd = int(no_rnd)
-            while random_set_counter <= no_rnd:
-                sub_ls, val_ls, sub_ts, val_ts = make_sub_ls_ts_randomly(
-                    single_variants, single_values,
-                    higher_variants, higher_values,
-                    ls_proportion
-                )
-                make_fasta_ls_ts('LS_random_' + str(random_set_counter) + '.fasl', wt_sequence, sub_ls, val_ls)
-                make_fasta_ls_ts('TS_random_' + str(random_set_counter) + '.fasl', wt_sequence, sub_ts, val_ts)
-                random_set_counter += 1
+        if True in [
+            arguments['--random'], arguments['--modulo'], 
+            arguments['--cont'], arguments['--plot']
+        ]:
+            ds = DatasetSplitter(df, mutation_separator=arguments['--mutation_sep'])
+            if arguments['--random']:
+                train_data, test_data = ds.get_random_df_split_data(include_multis=True)
+                cv_technique = 'random'
+            elif arguments['--modulo']:
+                train_data, test_data = ds.get_modulo_df_split_data()
+                cv_technique = 'modulo'
+            elif arguments['--cont']:
+                train_data, test_data = ds.get_continuous_df_split_data()
+                cv_technique = 'continuous'
+            elif arguments['--plot']:
+                ds.print_shapes()
+                ds.plot_distributions() 
+            if not arguments['--plot']:
+                for i_cv, (train_set, test_set) in enumerate(zip(train_data, test_data)):
+                    (
+                        single_variants_train, single_values_train, 
+                        multi_variants_train, multi_values_train
+                    ) = get_variants(
+                        train_set, amino_acids, wt_sequence, 
+                        arguments['--mutation_sep'], verbose=False
+                    )
+                    (
+                        single_variants_test, single_values_test, 
+                        multi_variants_test, multi_values_test
+                    ) = get_variants(
+                        test_set, amino_acids, wt_sequence, 
+                        arguments['--mutation_sep'], verbose=False
+                    )
+                    make_fasta_ls_ts(
+                        f'LS_{cv_technique}_{i_cv + 1 }.fasl', wt_sequence, 
+                        single_variants_train + multi_variants_train, 
+                        single_values_train + multi_values_train
+                    )
+                    make_fasta_ls_ts(
+                        f'TS_{cv_technique}_{i_cv + 1 }.fasl', wt_sequence, 
+                        single_variants_test + multi_variants_test, 
+                        single_values_test + multi_values_test
+                    )
+        else:
+            sub_ls, val_ls, sub_ts, val_ts = make_sub_ls_ts(
+                single_variants, single_values, 
+                higher_variants, higher_values, 
+                ls_proportion
+            )
+            logger.info('Tip: You can edit your LS and TS datasets just by '
+                        'cutting/pasting between the LS and TS fasta datasets.')
+            make_fasta_ls_ts('LS.fasl', wt_sequence, sub_ls, val_ls)
+            make_fasta_ls_ts('TS.fasl', wt_sequence, sub_ts, val_ts)
+            try:
+                no_rnd = int(no_rnd)
+            except ValueError:
+                no_rnd = 0
+            if no_rnd != 0:
+                random_set_counter = 1
+                no_rnd = int(no_rnd)
+                while random_set_counter <= no_rnd:
+                    sub_ls, val_ls, sub_ts, val_ts = make_sub_ls_ts_randomly(
+                        single_variants, single_values,
+                        higher_variants, higher_values,
+                        ls_proportion
+                    )
+                    make_fasta_ls_ts('LS_default_random_' + str(random_set_counter) + '.fasl', wt_sequence, sub_ls, val_ls)
+                    make_fasta_ls_ts('TS_default_random_' + str(random_set_counter) + '.fasl', wt_sequence, sub_ts, val_ts)
+                    random_set_counter += 1
 
     elif arguments['mkps']:
         wt_sequence = get_wt_sequence(arguments['--wt'])
@@ -342,3 +379,12 @@ def run_pypef_utils(arguments):
             csv_file=arguments['--input'],
             encoding_type=arguments['--encoding']
         )
+    elif arguments['predict_ssm']:
+        SSM(
+            wt_seq=get_wt_sequence(arguments['--wt']),
+            model=arguments['--llm'],
+            pdb=arguments['--pdb'],
+            params_file=arguments['--params']
+        )
+    else:
+        raise RuntimeError("Unknown run option!")

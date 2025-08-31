@@ -1,6 +1,5 @@
-
-# Niklas Siedhoff
 # PyPEF - Pythonic Protein Engineering Framework
+# https://github.com/niklases/PyPEF
 
 # Using (training, testing/infering) ProSST model(s) published under 
 # GNU GENERAL PUBLIC LICENSE: GPL-3.0 license

@@ -1,16 +1,5 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-# Created on 05 October 2020
-# @authors: Niklas Siedhoff, Alexander-Maurice Illig
-# @contact: <niklas.siedhoff@rwth-aachen.de>
 # PyPEF - Pythonic Protein Engineering Framework
 # https://github.com/niklases/PyPEF
-# Licensed under Creative Commons Attribution-ShareAlike 4.0 International Public License (CC BY-SA 4.0)
-# For more information about the license see https://creativecommons.org/licenses/by-nc/4.0/legalcode
-
-# PyPEF – An Integrated Framework for Data-Driven Protein Engineering
-# Journal of Chemical Information and Modeling, 2021, 61, 3463-3476
-# https://doi.org/10.1021/acs.jcim.1c00099
 
 """
 Code taken from GREMLIN repository available at https://github.com/sokrypton/GREMLIN_CPP/
@@ -60,6 +49,9 @@ import pandas as pd
 from tqdm import tqdm
 import torch
 
+from pypef.llm.utils import get_batches
+from pypef.utils.variant_data import get_mismatches
+
 
 class GREMLIN:
     """
@@ -76,6 +68,8 @@ class GREMLIN:
             eff_cutoff=0.8,
             opt_iter=100,
             max_msa_seqs: int | None = 10000,
+            msa_start: None | int = None,
+            msa_end: None | int = None,
             seqs: list[str] | np.ndarray[str] | None =None,
             device: str | None = None
     ):
@@ -95,7 +89,7 @@ class GREMLIN:
                 else "cpu"
             )
         self.device = device    
-        logger.info(f'Using {self.device.upper()} for GREMLIN computations...')   
+        logger.info(f'Using {self.device.upper()} device for GREMLIN computations...')   
         self.char_alphabet = char_alphabet
         self.allowed_chars = "ARNDCQEGHILKMFPSTWYV-"
         self.allowed_chars += self.allowed_chars.lower()
@@ -109,12 +103,20 @@ class GREMLIN:
         else:
             self.max_msa_seqs = max_msa_seqs
         self.states = len(self.char_alphabet)
+        self.msa_start = msa_start
+        if msa_end == 0:
+            msa_end = None
+        self.msa_end = msa_end
         logger.info('Loading MSA...')
         if seqs is None:
             self.seqs, self.seq_ids = self.get_sequences_from_msa(alignment)
         else:
             self.seqs = seqs
             self.seq_ids = np.array([n for n in range(len(self.seqs))])
+        self.first_msa_seq = self.seqs[0]
+        if self.msa_start is not None or self.msa_end is not None:
+            logger.info(f'Trimmed sequence length.. first sequence is printed here as '
+                  f'example (Length: {len(self.first_msa_seq)}): {self.first_msa_seq}') 
         logger.info(f'Found {len(self.seqs)} sequences in the MSA...')
         self.msa_ori = self.get_msa_ori()
         logger.info(f'MSA shape: {np.shape(self.msa_ori)}')
@@ -125,7 +127,7 @@ class GREMLIN:
             self.wt_seq = "".join([self.char_alphabet[i] for i in self.msa_ori[0]])
             logger.info(f"No wild-type sequence provided: The first sequence "
                         f"in the MSA is considered the wild-type sequence "
-                        f"(Length: {len(self.wt_seq)}):\n{self.wt_seq}\n")
+                        f"(Length: {len(self.wt_seq)}): {self.wt_seq}")
         if len(self.wt_seq) != self.n_col_ori:
             raise SystemError(f"Length of (provided) wild-type sequence ({len(self.wt_seq)}) "
                               f"does not match number of MSA columns ({self.n_col_ori}), "
@@ -143,6 +145,7 @@ class GREMLIN:
         self.optimize = optimize
         if self.optimize:
             self.run_optimization()
+        self.wt_score = self.get_wt_score()
         self.x_wt = self.collect_encoded_sequences(np.atleast_1d(self.wt_seq))
 
     def get_sequences_from_msa(self, msa_file: str):
@@ -164,7 +167,14 @@ class GREMLIN:
         with open(msa_file, 'r') as fh:
             alignment = AlignIO.read(fh, "fasta")
         for record in alignment:
-            sequences.append(str(record.seq))
+            seq = str(record.seq)
+            if self.msa_start is not None and self.msa_end is not None:
+                seq = seq[self.msa_start:self.msa_end]
+            elif self.msa_start is not None:
+                seq = seq[self.msa_start:]
+            elif self.msa_end is not None:
+                seq = seq[:self.msa_end]
+            sequences.append(seq)
             seq_ids.append(str(record.id))
         assert len(sequences) == len(seq_ids), f"{len(sequences)}, {len(seq_ids)}"
         return np.array(sequences), np.array(seq_ids)
@@ -225,7 +235,7 @@ class GREMLIN:
         non_gaps = np.where(np.sum(tmp.T, -1).T / msa_ori.shape[0] < self.gap_cutoff)[0]
         gaps = np.where(np.sum(tmp.T, -1).T / msa_ori.shape[0] >= self.gap_cutoff)[0]
         self.gaps_1_indexed = [int(g + 1) for g in gaps]
-        logger.info(f'Gap positions (removed from MSA; 1-indexed):\n{self.gaps_1_indexed}')
+        logger.info(f'Gap positions (removed from MSA; 1-indexed): {self.gaps_1_indexed}')
         ncol_trimmed = len(non_gaps)
         logger.info(f'Positions remaining: {ncol_trimmed} of {np.shape(msa_ori)[1]} '
                     f'({(ncol_trimmed / np.shape(msa_ori)[1]) * 100 :.2f}%)')
@@ -364,14 +374,14 @@ class GREMLIN:
 
         self.mt_v, self.vt_v = torch.zeros_like(self.v), torch.zeros_like(self.v)
         self.mt_w, self.vt_w = torch.zeros_like(self.w), torch.zeros_like(self.w)
-        logger.info(f'Initial loss: {self._loss()}')
+        logger.info(f'Initial loss: {self._loss():.5f}')
         for i in range(self.opt_iter):
             self.opt_adam_step()
             try:
                 if (i + 1) % int(self.opt_iter / 10) == 0:
-                    logger.info(f'Loss step {i + 1}: {self._loss()}')
+                    logger.info(f'Loss step {i + 1}: {self._loss():.5f}')
             except ZeroDivisionError:
-                logger.info(f'Loss step {i + 1}: {self._loss()}')
+                logger.info(f'Loss step {i + 1}: {self._loss():.5f}')
         
         self.v = self.v.detach().cpu().numpy()
         self.w = self.w.detach().cpu().numpy()
@@ -416,6 +426,7 @@ class GREMLIN:
     def get_scores(self, seqs, v=None, w=None, v_idx=None, encode=False, h_wt_seq=0.0, recompute_z=False):
         """
         Computes the GREMLIN score for a given sequence or list of sequences.
+        For now, only runs on CPU.
         """
         if v is None and w is None:
             if self.optimize:
@@ -426,7 +437,20 @@ class GREMLIN:
         if v_idx is None:
             v_idx = self.v_idx
         seqs_int = self.seq2int(seqs)
-
+        wt_seq_len = len(self.wt_seq)
+        if np.shape(seqs_int)[1] != wt_seq_len:
+            raise RuntimeError(
+                f"Input sequence shape (length: {np.shape(seqs_int)[1]}) does not match GREMLIN "
+                f"MSA shape (common sequence length: {wt_seq_len}) inferred from the MSA."
+            )
+        # Check nums of mutations to MSA first/WT sequence and gives warning if too apart from MSA seq
+        for i, seq in enumerate(seqs):
+            n_mismatches, mismatches = get_mismatches(self.wt_seq, seq)
+            if n_mismatches / wt_seq_len > 0.05:
+                logger.warning(
+                    f"Sequence {i + 1}: {mismatches} contains more than 5% sequence mismatches to the "
+                    f"first MSA/\"WT\" sequence. Effect predictions will likely be incorrect!"
+                )
         try:
             if seqs_int.shape[-1] != len(v_idx):  # The input sequence length ({seqs_int.shape[-1]}) 
                 # does not match the common gap-trimmed MSA sequence length (len(v_idx)
@@ -473,16 +497,24 @@ class GREMLIN:
     def get_wt_score(self, wt_seq=None, encode=False):
         if wt_seq is None:
             wt_seq = self.wt_seq
-        wt_seq = np.array(wt_seq, dtype=str)
-        return self.get_scores(wt_seq, encode=encode)
+        wt_seq = np.atleast_1d(np.array(wt_seq, dtype=str))
+        return self.get_scores(wt_seq, encode=encode)[0]
 
     def collect_encoded_sequences(self, seqs, v=None, w=None, v_idx=None):
         """
         Wrapper function for encoding input sequences using the self.get_scores
         function with encode set to True.
         """
-        xs = self.get_scores(seqs, v, w, v_idx, encode=True)
-        return xs
+        xs = []
+        sequences_batched = get_batches(
+            seqs, batch_size=1000, dtype=str, 
+            keep_remaining=True, verbose=True
+        )
+        sequences_batched = np.atleast_2d(sequences_batched)
+
+        for seq_batch in sequences_batched:
+            xs.append(self.get_scores(seq_batch, v, w, v_idx, encode=True))
+        return xs[0]
 
     @staticmethod
     def normalize(apc_mat):
@@ -701,7 +733,7 @@ def save_corr_csv(gremlin: GREMLIN, min_distance: int = 0, sort_by: str = 'apc')
     )
     df_mtx_sorted_mindist.to_csv(f"coevolution_{sort_by}_sorted.csv", sep=',')
     logger.info(f"Saved coevolution CSV data as "
-                f"{os.path.abspath(f'coevolution_{sort_by}_sorted.csv')}")
+          f"{os.path.abspath(f'coevolution_{sort_by}_sorted.csv')}")
 
 
 def plot_predicted_ssm(gremlin: GREMLIN):
@@ -711,22 +743,20 @@ def plot_predicted_ssm(gremlin: GREMLIN):
     M1A, M1C, M1E, ..., D2A, D2C, D2E, ..., ..., T300V, T300W, T300Y
     """
     wt_sequence = gremlin.wt_seq
-    wt_score = gremlin.get_wt_score()[0]
+    wt_score = gremlin.get_wt_score()
     aas = "".join(sorted(gremlin.char_alphabet.replace("-", "")))
     variantss, variant_sequencess, variant_scoress = [], [], []
     logger.info("Predicting all SSM effects using the unsupervised GREMLIN model...")
     for i, aa_wt in enumerate(tqdm(wt_sequence)):
-        variants, variant_sequences, variant_scores = [], [], []
+        variants, variant_sequences = [], []
         for aa_sub in aas:
             variant = aa_wt + str(i + 1) + aa_sub
             variant_sequence = wt_sequence[:i] + aa_sub + wt_sequence[i + 1:]
-            variant_score = gremlin.get_scores(variant_sequence)[0]
             variants.append(variant)
             variant_sequences.append(variant_sequence)
-            variant_scores.append(variant_score - wt_score)
         variantss.append(variants)
         variant_sequencess.append(variant_sequences)
-        variant_scoress.append(variant_scores)
+        variant_scoress.append(gremlin.get_scores(variant_sequences) - wt_score)
 
     fig, ax = plt.subplots(figsize=(2 * len(wt_sequence) / len(aas), 3))
     ax.imshow(np.array(variant_scoress).T)
@@ -745,6 +775,8 @@ def plot_predicted_ssm(gremlin: GREMLIN):
     ax.set_yticks(range(len(aas)), aas, size=6)
     plt.tight_layout()
     plt.savefig('SSM_landscape.png', dpi=500)
+    plt.clf()
+    plt.close('all')
     pd.DataFrame(
         {
             'Variant': np.array(variantss).flatten(),

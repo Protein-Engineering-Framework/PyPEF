@@ -1,14 +1,17 @@
-# Niklas Siedhoff
 # PyPEF - Pythonic Protein Engineering Framework
+# https://github.com/niklases/PyPEF
 
-# Using (training, testing/infering) ProSST model(s) published under 
+# Using (training, testing/infering) ProSST model(s) published under
 # GNU GENERAL PUBLIC LICENSE: GPL-3.0 license
 # Code repository: https://github.com/ai4protein/ProSST
-# Mingchen Li, Pan Tan, Xinzhu Ma, Bozitao Zhong, Huiqun Yu, Ziyi Zhou, Wanli Ouyang, Bingxin Zhou, Liang Hong, Yang Tan
+# Mingchen Li, Pan Tan, Xinzhu Ma, Bozitao Zhong, Huiqun Yu, Ziyi Zhou,
+# Wanli Ouyang, Bingxin Zhou, Liang Hong, Yang Tan
 # ProSST: Protein Language Modeling with Quantized Structure and Disentangled Attention
-# bioRxiv 2024.04.15.589672; doi: https://doi.org/10.1101/2024.04.15.589672 
+# bioRxiv 2024.04.15.589672; doi: https://doi.org/10.1101/2024.04.15.589672
 
 import logging
+
+from pypef.llm.utils import load_model_and_tokenizer
 logger = logging.getLogger('pypef.llm.prosst_lora_tune')
 
 import os
@@ -18,7 +21,6 @@ import torch
 import numpy as np
 from scipy.stats import spearmanr
 from tqdm import tqdm
-from transformers import AutoModelForMaskedLM, AutoTokenizer
 from peft import LoraConfig, get_peft_model
 from Bio import SeqIO, BiopythonParserWarning
 warnings.filterwarnings(action='ignore', category=BiopythonParserWarning)
@@ -31,7 +33,10 @@ from pypef.utils.helpers import get_device
 def prosst_tokenize_sequences(sequences, vocab, verbose=True):
     sequences = np.atleast_1d(sequences).tolist()
     x_sequences = []
-    for sequence in tqdm(sequences, desc='Tokenizing sequences for ProSST modeling', disable=not verbose):
+    for sequence in tqdm(
+        sequences, desc='Tokenizing sequences for ProSST modeling', 
+        disable=not verbose
+    ):
         x_sequence = []
         for aa in sequence:
             x_sequence.append(vocab[aa])
@@ -40,14 +45,15 @@ def prosst_tokenize_sequences(sequences, vocab, verbose=True):
 
 
 def get_logits_from_full_seqs(
-        xs, 
-        model, 
-        input_ids, 
-        attention_mask, 
+        xs,
+        model,
+        input_ids,
+        attention_mask,
         structure_input_ids,
         train: bool = False,
-        verbose: bool = True,
-        device: str | None = None
+        verbose: bool = False,
+        device: str | None = None,
+        replace_nan_with_zeros: bool = False
 ):
     if device is None:
         device = get_device()
@@ -71,8 +77,9 @@ def get_logits_from_full_seqs(
     logits = torch.log_softmax(outputs.logits[:, 1:-1], dim=-1).squeeze()
     for i_s, sequence in enumerate(
         tqdm(
-            xs, disable=not verbose, 
-            desc='ProSST inference: getting sequence logits'
+            xs,
+            desc=f'ProSST inference: getting sequence logits ({device.upper()})',
+            disable=not verbose
         )
     ):
         for i_aa, x_aa in enumerate(sequence):
@@ -85,11 +92,37 @@ def get_logits_from_full_seqs(
             log_probs = torch.sum(torch.Tensor(seq_log_probs)).reshape(1)
         else:
             log_probs = torch.cat((
-                log_probs, 
+                log_probs,
                 torch.sum(torch.Tensor(seq_log_probs)).reshape(1)
                 ), 0
             )
+    if replace_nan_with_zeros:
+        logger.warning("Replacing NaN's with zeros in predictions...")
+        log_probs[torch.isnan(log_probs)] = 0.0
     return log_probs
+
+
+def prosst_infer(
+        xs,
+        model,
+        input_ids,
+        attention_mask,
+        structure_input_ids,
+        verbose: bool = False,
+        device: str | None = None,
+        replace_nan_with_zeros: bool = False
+):
+    return get_logits_from_full_seqs(
+        xs,
+        model,
+        input_ids,
+        attention_mask,
+        structure_input_ids,
+        train = False,
+        verbose = verbose,
+        device = device,
+        replace_nan_with_zeros=replace_nan_with_zeros
+    )
 
 
 def checkpoint(model, filename):
@@ -102,19 +135,21 @@ def load_model(model, filename):
 
 
 def prosst_train(
-        x_sequence_batches, score_batches, loss_fn, model, optimizer,  
+        x_sequence_batches, score_batches, loss_fn, model, optimizer,
         input_ids, attention_mask, structure_input_ids,
-        n_epochs=3, device: str | None = None, seed: int | None = None, early_stop: int = 50):
+        n_epochs=50, device: str | None = None, seed: int | None = None,
+        early_stop: int = 50, verbose: bool = True, 
+        n_batch_grad_accumulations: int = 1, raise_error_on_train_fail: bool = True):
     if seed is not None:
         torch.manual_seed(seed)
     if device is None:
         device = get_device()
     logger.info(f"ProSST training using {device.upper()} device "
-          f"(N_Train={len(torch.flatten(score_batches))})...")
+         f"(N_Train={len(torch.flatten(score_batches))})...")
     x_sequence_batches = x_sequence_batches.to(device)
     score_batches = score_batches.to(device)
-    pbar_epochs = tqdm(range(1, n_epochs + 1))
-    epoch_spearman_1 = 0.0
+    pbar_epochs = tqdm(range(1, n_epochs + 1), disable=not verbose)
+    epoch_spearman_1 = -1.0
     did_not_improve_counter = 0
     best_model = None
     best_model_epoch = np.nan
@@ -125,24 +160,28 @@ def prosst_train(
             pbar_epochs.set_description(f'Epoch {epoch}/{n_epochs}')
         model.train()
         y_preds_detached = []
-        pbar_batches = tqdm(zip(x_sequence_batches, score_batches), 
-                            total=len(x_sequence_batches), leave=False)
+        pbar_batches = tqdm(
+            zip(x_sequence_batches, score_batches),
+            total=len(x_sequence_batches), leave=False, disable=not verbose
+        )
         for batch, (seqs_b, scores_b) in enumerate(pbar_batches):
             y_preds_b = get_logits_from_full_seqs(
-                seqs_b, model, input_ids, attention_mask, structure_input_ids, 
+                seqs_b, model, input_ids, attention_mask, structure_input_ids,
                 train=True, verbose=False
             )
             y_preds_detached.append(y_preds_b.detach().cpu().numpy().flatten())
-            loss = loss_fn(scores_b, y_preds_b)
+            loss = loss_fn(scores_b, y_preds_b) / n_batch_grad_accumulations
             loss.backward()
-            optimizer.step()
-            optimizer.zero_grad()
+            if (batch + 1) % n_batch_grad_accumulations == 0 or (batch + 1) == len(pbar_batches):
+                optimizer.step()
+                optimizer.zero_grad()
             pbar_batches.set_description(
-                f"Epoch: {epoch}. Loss: {loss.detach():>1f}  "
-                f"[batch: {batch+1}/{len(x_sequence_batches)} | "
-                f"sequence: {(batch + 1) * len(seqs_b):>5d}/{len(x_sequence_batches) * len(seqs_b)}]  "
+                f"Epoch: {epoch}. Loss: {loss.detach():>1f} "
+                f"[batch: {batch + 1}/{len(x_sequence_batches)} | "
+                f"sequence: {(batch + 1) * len(seqs_b):>5d}/{len(x_sequence_batches) * len(seqs_b)}] "
+                f"({device.upper()})"
             )
-        epoch_spearman_2 = spearmanr(score_batches.cpu().numpy().flatten(), 
+        epoch_spearman_2 = spearmanr(score_batches.cpu().numpy().flatten(),
                                      np.array(y_preds_detached).flatten())[0]
         if epoch_spearman_2 == np.nan:
             raise SystemError(
@@ -150,7 +189,7 @@ def prosst_train(
                 f"Y_true: {score_batches.cpu().numpy().flatten()}, "
                 f"Y_pred: {np.array(y_preds_detached)}"
             )
-        if epoch_spearman_2 > epoch_spearman_1:
+        if epoch_spearman_2 > epoch_spearman_1 or epoch == 0:
             if best_model is not None:
                 if os.path.isfile(best_model):
                     os.remove(best_model)
@@ -170,48 +209,55 @@ def prosst_train(
                 logger.info(f'\nEarly stop at epoch {epoch}...')
                 break
         loss_total = loss_fn(
-            torch.flatten(score_batches).to('cpu'), 
+            torch.flatten(score_batches).to('cpu'),
             torch.flatten(torch.Tensor(np.array(y_preds_detached).flatten()))
         )
         pbar_epochs.set_description(
             f'Epoch {epoch}/{n_epochs} [SpearCorr: {epoch_spearman_2:.3f}, Loss: {loss_total:.3f}] '
             f'(Best epoch: {best_model_epoch}: {best_model_perf:.3f})')
-    try:
+    if best_model is None:
+        msg = ("Failed to train a model (probably due to the input "
+               "data characteristics and loss/correlation being NaN).")
+        if raise_error_on_train_fail:
+            raise RuntimeError(msg)
+        else:
+            logger.warning(f"{msg} Continuing nonetheless (using failed model "
+                           f"and replacing NaN's with zeros)...")
+            y_preds_train = get_logits_from_full_seqs(
+                x_sequence_batches.flatten(start_dim=0, end_dim=1),
+                model, input_ids, attention_mask, structure_input_ids, train=False, verbose=False
+            )
+            y_preds_train[torch.isnan(y_preds_train)] = 0.0
+    else:        
         logger.info(f"Loading best model as {best_model}...")
-    except UnboundLocalError:
-        raise RuntimeError
-    load_model(model, best_model)
-    y_preds_train = get_logits_from_full_seqs(
-        x_sequence_batches.flatten(start_dim=0, end_dim=1), 
-        model, input_ids, attention_mask, structure_input_ids, train=False, verbose=False)
-    #logger.info(f"Train-->Train Performance (N={len(score_batches.cpu().flatten())}): "
-    #            f"{spearmanr(score_batches.cpu().flatten(), y_preds_train.cpu())[0]:.3f}")
+        load_model(model, best_model)
+        y_preds_train = get_logits_from_full_seqs(
+            x_sequence_batches.flatten(start_dim=0, end_dim=1),
+            model, input_ids, attention_mask, structure_input_ids, train=False, verbose=False
+        )
     return y_preds_train.cpu()
 
 
 def get_prosst_models():
-    prosst_base_model = AutoModelForMaskedLM.from_pretrained(
-        "AI4Protein/ProSST-2048", trust_remote_code=True)
-    tokenizer = AutoTokenizer.from_pretrained(
-        "AI4Protein/ProSST-2048", trust_remote_code=True)
+    prosst_base_model, tokenizer = load_model_and_tokenizer("AI4Protein/ProSST-2048")
     peft_config = LoraConfig(r=8, target_modules=["query", "value"])
     prosst_lora_model = get_peft_model(prosst_base_model, peft_config)
-    optimizer = torch.optim.Adam(prosst_lora_model.parameters(), lr=0.01)  
+    optimizer = torch.optim.Adam(prosst_lora_model.parameters(), lr=0.01)
     return prosst_base_model, prosst_lora_model, tokenizer, optimizer
 
 
-def get_structure_quantizied(pdb_file, tokenizer, wt_seq):
-    structure_sequence = PdbQuantizer()(pdb_file=pdb_file)
+def get_structure_quantizied(pdb_file, tokenizer, wt_seq, verbose: bool = True):
+    structure_sequence = PdbQuantizer(verbose=verbose)(pdb_file=pdb_file)
     structure_sequence_offset = [i + 3 for i in structure_sequence]
     tokenized_res = tokenizer([wt_seq], return_tensors='pt')
     input_ids = tokenized_res['input_ids']
     attention_mask = tokenized_res['attention_mask']
-    structure_input_ids = torch.tensor([1, *structure_sequence_offset, 2], 
-                                       dtype=torch.long).unsqueeze(0)
+    structure_input_ids = torch.tensor([1, *structure_sequence_offset, 2],
+                                     dtype=torch.long).unsqueeze(0)
     return input_ids, attention_mask, structure_input_ids
 
 
-def prosst_setup(wt_seq, pdb_file, sequences, device: str | None = None):
+def prosst_setup(wt_seq, pdb_file, sequences, device: str | None = None, verbose: bool = True):
     if wt_seq is None:
         raise SystemError(
             "Running ProSST requires a wild-type sequence "
@@ -235,16 +281,18 @@ def prosst_setup(wt_seq, pdb_file, sequences, device: str | None = None):
     prosst_base_model = prosst_base_model.to(device)
     prosst_optimizer = torch.optim.Adam(prosst_lora_model.parameters(), lr=0.0001)
     input_ids, prosst_attention_mask, structure_input_ids = get_structure_quantizied(
-        pdb_file, prosst_tokenizer, wt_seq)
+        pdb_file, prosst_tokenizer, wt_seq, verbose=verbose
+    )
     x_llm_train_prosst = prosst_tokenize_sequences(
-        sequences=sequences, vocab=prosst_vocab)
+        sequences=sequences, vocab=prosst_vocab, verbose=verbose
+    )
     llm_dict_prosst = {
         'prosst': {
             'llm_base_model': prosst_base_model,
             'llm_model': prosst_lora_model,
             'llm_optimizer': prosst_optimizer,
             'llm_train_function': prosst_train,
-            'llm_inference_function': get_logits_from_full_seqs,
+            'llm_inference_function': prosst_infer,
             'llm_loss_function': corr_loss,
             'x_llm' : x_llm_train_prosst,
             'llm_attention_mask': prosst_attention_mask,

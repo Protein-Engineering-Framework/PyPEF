@@ -36,7 +36,7 @@ pypef="python3 $path/pypef/main.py"                                             
 ##########################################################################################################################
 # threads are only used for some parallelization of AAindex and DCA-based sequence encoding                              # 
 # if pypef/settings.py defines USE_RAY = True                                                                            #
-threads=12                                                                                                               #
+threads=1                                                                                                                #
 ##########################################################################################################################
 
 ### threads=1 shows progress bar where possible
@@ -188,7 +188,7 @@ $pypef ml -e onehot -m ONEHOT -p 37_ANEH_variants_prediction_set.fasta
 echo
 $pypef ml -e dca -m MLPLMC -p 37_ANEH_variants_prediction_set.fasta --params ANEH_72.6.params --threads $threads
 echo
-$pypef ml -e dca -m MLgremlin -p 37_ANEH_variants_prediction_set.fasta --params GREMLIN
+$pypef ml -e dca -m MLGREMLIN -p 37_ANEH_variants_prediction_set.fasta --params GREMLIN
 echo
 
 $pypef mkps -i 37_ANEH_variants.csv -w Sequence_WT_ANEH.fasta --drecomb --trecomb --qarecomb --qirecomb --ddiverse
@@ -199,7 +199,7 @@ $pypef ml -e onehot -m ONEHOT --pmult --drecomb --trecomb --qarecomb --qirecomb 
 echo
 $pypef ml -e dca -m MLPLMC --params ANEH_72.6.params --pmult --drecomb --trecomb --qarecomb --qirecomb --ddiverse --threads $threads
 echo
-$pypef ml -e dca -m MLgremlin --params GREMLIN --pmult --drecomb --trecomb --qarecomb --qirecomb --ddiverse
+$pypef ml -e dca -m MLGREMLIN --params GREMLIN --pmult --drecomb --trecomb --qarecomb --qirecomb --ddiverse
 echo
 
 $pypef ml -e aaidx directevo -m FAUJ880104 -w Sequence_WT_ANEH.fasta --negative
@@ -208,7 +208,7 @@ $pypef ml -e onehot directevo -m ONEHOT -w Sequence_WT_ANEH.fasta --negative
 echo
 $pypef ml -e dca directevo -m MLPLMC -w Sequence_WT_ANEH.fasta --negative --params ANEH_72.6.params
 echo
-$pypef ml -e dca directevo -m MLgremlin -w Sequence_WT_ANEH.fasta --negative --params GREMLIN
+$pypef ml -e dca directevo -m MLGREMLIN -w Sequence_WT_ANEH.fasta --negative --params GREMLIN
 echo
 $pypef ml -e aaidx directevo -m FAUJ880104 -w Sequence_WT_ANEH.fasta --numiter 10 --numtraj 8 --negative
 echo
@@ -216,7 +216,7 @@ $pypef ml -e onehot directevo -m ONEHOT -w Sequence_WT_ANEH.fasta --numiter 10 -
 echo
 $pypef ml -e dca directevo -m MLPLMC -w Sequence_WT_ANEH.fasta --numiter 10 --numtraj 8 --negative --params ANEH_72.6.params
 echo
-$pypef ml -e dca directevo -m MLgremlin -w Sequence_WT_ANEH.fasta --numiter 10 --numtraj 8 --negative --params GREMLIN
+$pypef ml -e dca directevo -m MLGREMLIN -w Sequence_WT_ANEH.fasta --numiter 10 --numtraj 8 --negative --params GREMLIN
 echo
 $pypef ml -e aaidx directevo -m FAUJ880104 -i 37_ANEH_variants.csv -w Sequence_WT_ANEH.fasta --temp 0.1 --usecsv --csvaa --negative
 echo
@@ -224,7 +224,7 @@ $pypef ml -e onehot directevo -m ONEHOT -i 37_ANEH_variants.csv -w Sequence_WT_A
 echo
 $pypef ml -e dca directevo -m MLPLMC -i 37_ANEH_variants.csv -w Sequence_WT_ANEH.fasta --temp 0.1 --usecsv --csvaa --negative --params ANEH_72.6.params
 echo
-$pypef ml -e dca directevo -m MLgremlin -i 37_ANEH_variants.csv -w Sequence_WT_ANEH.fasta --temp 0.1 --usecsv --csvaa --negative --params GREMLIN
+$pypef ml -e dca directevo -m MLGREMLIN -i 37_ANEH_variants.csv -w Sequence_WT_ANEH.fasta --temp 0.1 --usecsv --csvaa --negative --params GREMLIN
 echo
 
 $pypef ml -e aaidx -l LS.fasl -t TS.fasl --regressor pls --nofft
@@ -371,7 +371,7 @@ echo
 # ml only TS
 $pypef ml -e dca -m MLPLMC -t TS.fasl --params uref100_avgfp_jhmmer_119_plmc_42.6.params --threads $threads
 echo
-$pypef ml -e dca -m MLgremlin -t TS.fasl --params GREMLIN --threads $threads
+$pypef ml -e dca -m MLGREMLIN -t TS.fasl --params GREMLIN --threads $threads
 echo
 
 echo
@@ -420,7 +420,7 @@ $pypef ml extrapolation -i avGFP_dca_encoded.csv --conc --regressor ridge
 echo
 
 # Direct Evo
-$pypef ml -e dca directevo -m MLgremlin --wt P42212_F64L.fasta --params GREMLIN
+$pypef ml -e dca directevo -m MLGREMLIN --wt P42212_F64L.fasta --params GREMLIN
 echo
 $pypef ml -e dca directevo -m MLPLMC --wt P42212_F64L.fasta --params PLMC
 echo
@@ -439,6 +439,13 @@ echo
 $pypef hybrid -m HYBRIDGREMLIN -t TS.fasl --params GREMLIN
 echo 
 
+# SSM: predict_ssm
+$pypef predict_ssm -w P42212_F64L.fasta --params GREMLIN
+echo
+$pypef predict_ssm -w P42212_F64L.fasta --llm esm
+echo
+$pypef predict_ssm -w P42212_F64L.fasta --llm prosst --pdb GFP_AEQVI.pdb
+echo
 
 $pypef encode -i avGFP.csv -e dca -w P42212_F64L.fasta --params uref100_avgfp_jhmmer_119_plmc_42.6.params --threads $threads
 echo
@@ -485,15 +492,13 @@ echo
 
 $pypef hybrid --ls LS.fasl --ts TS.fasl --params GREMLIN --llm prosst --wt P42212_F64L.fasta  --pdb GFP_AEQVI.pdb
 echo
-$pypef hybrid -m HYBRIDGREMLINPROSST --ts TS.fasl --params GREMLIN --llm esm --llm prosst --wt P42212_F64L.fasta  --pdb GFP_AEQVI.pdb
+$pypef hybrid -m HYBRIDGREMLINPROSST --ts TS.fasl --params GREMLIN --llm prosst --wt P42212_F64L.fasta  --pdb GFP_AEQVI.pdb
 echo
 
 $pypef hybrid directevo -m HYBRIDGREMLINESM1V -w P42212_F64L.fasta --params GREMLIN --llm esm
-ExitOnExitCode
-Write-Host
+echo
 $pypef hybrid directevo -m HYBRIDGREMLINPROSST -w P42212_F64L.fasta --params GREMLIN --llm prosst --pdb GFP_AEQVI.pdb
-ExitOnExitCode
-Write-Host
+echo
 
 # Takes long.. better delete 7 out of the 8 recomb txt files
 #$pypef hybrid -m HYBRIDGREMLINESM1V -w P42212_F64L.fasta --params GREMLIN --llm esm --pmult --drecomb
@@ -504,9 +509,6 @@ $pypef hybrid -m HYBRIDGREMLINESM1V -w P42212_F64L.fasta --params GREMLIN --llm 
 echo
 $pypef hybrid -m HYBRIDGREMLINPROSST -w P42212_F64L.fasta --params GREMLIN --llm prosst --pdb GFP_AEQVI.pdb -p avGFP_prediction_set.fasta
 echo
-
-
-
 
 $pypef hybrid low_n -i avGFP_dca_encoded.csv
 echo

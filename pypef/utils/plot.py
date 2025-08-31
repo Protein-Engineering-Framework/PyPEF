@@ -1,16 +1,5 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-# Created on 05 October 2020
-# @authors: Niklas Siedhoff, Alexander-Maurice Illig
-# @contact: <niklas.siedhoff@rwth-aachen.de>
 # PyPEF - Pythonic Protein Engineering Framework
 # https://github.com/niklases/PyPEF
-# Licensed under Creative Commons Attribution-ShareAlike 4.0 International Public License (CC BY-SA 4.0)
-# For more information about the license see https://creativecommons.org/licenses/by-nc/4.0/legalcode
-
-# PyPEF – An Integrated Framework for Data-Driven Protein Engineering
-# Journal of Chemical Information and Modeling, 2021, 61, 3463-3476
-# https://doi.org/10.1021/acs.jcim.1c00099
 
 import os
 import numpy as np
@@ -35,14 +24,18 @@ def plot_y_true_vs_y_pred(
     Plots predicted versus true values using the hybrid model for prediction.
     Function called by function predict_ps.
     """
-    _prec, _acc, _bacc, rec, _f1, _mcc, _auroc, _aps = get_binarized_classification_performances(y_true, y_pred)
+    _prec, _acc, _bacc, rec, _f1, _mcc, _auroc, _aps = (
+        get_binarized_classification_performances(y_true, y_pred)
+    )
     if hybrid:
         spearman_rho = stats.spearmanr(y_true, y_pred)[0]
         # Recall: Here, top 10 % fit variants are positive labeled (1), rest are labeled negative (0) by default
-        plt.scatter(y_true, y_pred, marker='o', s=20, linewidths=0.5, edgecolor='black', alpha=0.7, c=y_true, vmin=min(y_true), vmax=max(y_true),
-                   label=f'Spearman\'s ' + fr'$\rho$ = {spearman_rho:.3f}' + '\n' 
-                   + r'Recall$_\mathrm{top 10 \%}$' + f' = {rec:.3f}\n'
-                   + fr'($N$ = {len(y_true)})'
+        plt.scatter(
+            y_true, y_pred, 
+            marker='o', s=20, linewidths=0.5, edgecolor='black', alpha=0.7, 
+            c=y_true, vmin=min(y_true), vmax=max(y_true),
+            label=f'Spearman\'s ' + fr'$\rho$ = {spearman_rho:.3f}' + '\n' + 
+                  r'Recall$_\mathrm{top 10 \%}$' + f' = {rec:.3f}\n' + fr'($N$ = {len(y_true)})'
         )
         if name != '':
             file_name = f'DCA_Hybrid_Model_Performance_{name}.png'
@@ -53,12 +46,13 @@ def plot_y_true_vs_y_pred(
             y_true=y_true, y_pred=y_pred
         )
         plt.scatter(
-            y_true, y_pred, marker='o', s=20, linewidths=0.5, edgecolor='black', alpha=0.7, c=y_true, vmin=min(y_true), vmax=max(y_true),
-            label=r'$R^2$' + f' = {r_squared:.3f}' + f'\nRMSE = {rmse:.3f}' + f'\nNRMSE = {nrmse:.3f}' 
-                  + f'\nPearson\'s ' + r'$r$'+f' = {pearson_r:.3f}' 
-                  + f'\nSpearman\'s ' + fr'$\rho$ = {spearman_rho:.3f}' + '\n' 
-                  + r'Recall$_\mathrm{top 10 \%}$' + f' = {rec:.3f}\n'
-                  + fr'($N$ = {len(y_true)})'
+            y_true, y_pred, marker='o', s=20, linewidths=0.5, 
+            edgecolor='black', alpha=0.7, c=y_true, 
+            vmin=min(y_true), vmax=max(y_true),
+            label=r'$R^2$' + f' = {r_squared:.3f}' + f'\nRMSE = {rmse:.3f}' + f'\nNRMSE = {nrmse:.3f}'
+                  + f'\nPearson\'s ' + r'$r$'+f' = {pearson_r:.3f}' + f'\nSpearman\'s ' 
+                  + fr'$\rho$ = {spearman_rho:.3f}' + '\n' + r'Recall$_\mathrm{top 10 \%}$'
+                  + f' = {rec:.3f}\n' + fr'($N$ = {len(y_true)})'
         )
         if name != '':
             file_name = f'ML_Model_Performance_{name}.png'
@@ -88,5 +82,6 @@ def plot_y_true_vs_y_pred(
     #     file_name = f'DCA_Hybrid_Model_LS_TS_Performance({i}).png'
     plt.colorbar()
     plt.savefig(file_name, dpi=500)
+    plt.clf()
     plt.close('all')
     logger.info(f'Saved plot as {os.path.abspath(file_name)}...')

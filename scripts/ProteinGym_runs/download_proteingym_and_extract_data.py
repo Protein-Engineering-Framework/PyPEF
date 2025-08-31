@@ -10,7 +10,7 @@ import json
 
 
 
-def download_proteingym_data(version: str = '1.1'):
+def download_proteingym_data(version: str = '1.3'):
     url = f'https://marks.hms.harvard.edu/proteingym/ProteinGym_v{version}/DMS_substitutions.csv'
     print(f'Getting {url}...')
     urllib.request.urlretrieve(url, os.path.join(os.path.dirname(__file__), '_Description_DMS_substitutions_data.csv'))
@@ -116,12 +116,23 @@ def get_single_or_multi_point_mut_data(csv_description_path, datasets_path=None,
 
 if __name__ == '__main__':
     download_proteingym_data()
-    single_mut_data = get_single_or_multi_point_mut_data(os.path.join(os.path.dirname(__file__), '_Description_DMS_substitutions_data.csv'), single=True)
-    higher_mut_data = get_single_or_multi_point_mut_data(os.path.join(os.path.dirname(__file__), '_Description_DMS_substitutions_data.csv'), single=False)
-    json_output_file_single = os.path.abspath(os.path.join(os.path.dirname(__file__), f"single_point_dms_mut_data.json"))
-    json_output_file_higher = os.path.abspath(os.path.join(os.path.dirname(__file__), f"higher_point_dms_mut_data.json"))
+    single_mut_data = get_single_or_multi_point_mut_data(
+        os.path.join(os.path.dirname(__file__), '_Description_DMS_substitutions_data.csv'), 
+        single=True
+    )
+    higher_mut_data = get_single_or_multi_point_mut_data(
+        os.path.join(os.path.dirname(__file__), '_Description_DMS_substitutions_data.csv'), 
+        single=False
+    )
+    json_output_file_single = os.path.abspath(
+        os.path.join(os.path.dirname(__file__), f"single_point_dms_mut_data.json")
+    )
+    json_output_file_higher = os.path.abspath(
+        os.path.join(os.path.dirname(__file__), f"higher_point_dms_mut_data.json")
+    )
     with open(json_output_file_single, 'w') as fp:
         json.dump(single_mut_data, fp, indent=4)
     with open(json_output_file_higher, 'w') as fp:
         json.dump(higher_mut_data, fp, indent=4)
-    print(f"Saved path data information as JSON files at {json_output_file_single} and {json_output_file_higher}.")
+    print(f"Saved path data information as JSON files at "
+          f"{json_output_file_single} and {json_output_file_higher}.")

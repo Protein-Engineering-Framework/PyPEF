@@ -9,6 +9,7 @@ Python3127/*
 python-3.12.7-amd64.exe
 run_pypef_gui.bat
 run_pypef_gui.sh
+qt_window.spec
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -40,6 +41,7 @@ scripts/ProteinGym_runs/single_point_mut_performance_violin.png
 scripts/ProteinGym_runs/multi_point_mut_performance_violin.png
 scripts/ProteinGym_runs/single_point_mut_performance.png
 scripts/ProteinGym_runs/multi_point_mut_performance.png
+scripts/ProteinGym_runs/model_saves/*
 
 scripts/ESM_finetuning/DMS_msa_files/
 scripts/ESM_finetuning/DMS_ProteinGym_substitutions/
@@ -360,6 +362,26 @@ datasets/ANEH/Predictions_Hybrid_ESM1v_Top37_ANEH_variants_prediction_set.txt
 datasets/ANEH/Pickles/HYBRIDGREMLINESM1V
 datasets/ANEH/SSM_landscape.png
 datasets/ANEH/SSM_landscape.csv
+datasets/ANEH/ANEH_72.6.params
+datasets/ANEH/HYBRIDPLMC_DE_trajectories.png
+datasets/ANEH/MLGREMLIN_DE_trajectories.png
+datasets/ANEH/MLPLMC_DE_trajectories.png
+datasets/ANEH/Predictions_MLGREMLIN_37_ANEH_variants_prediction_set.txt
+datasets/ANEH/Predictions_MLPLMC_37_ANEH_variants_prediction_set.txt
+datasets/ANEH/Diverse_Double_Split/Predictions_MLGREMLIN_TopDiverse_Double_Split.txt
+datasets/ANEH/Diverse_Double_Split/Predictions_MLPLMC_TopDiverse_Double_Split.txt
+datasets/ANEH/Pickles/HYBRIDGREMLIN
+datasets/ANEH/Pickles/HYBRIDPLMC
+datasets/ANEH/Pickles/MLGREMLIN
+datasets/ANEH/Pickles/MLPLMC
+datasets/ANEH/Recomb_Double_Split/Predictions_MLGREMLIN_TopRecomb_Double_Split.txt
+datasets/ANEH/Recomb_Double_Split/Predictions_MLPLMC_TopRecomb_Double_Split.txt
+datasets/ANEH/Recomb_Quadruple_Split/Predictions_MLGREMLIN_TopRecomb_Quadruple_Split.txt
+datasets/ANEH/Recomb_Quadruple_Split/Predictions_MLPLMC_TopRecomb_Quadruple_Split.txt
+datasets/ANEH/Recomb_Quintuple_Split/Predictions_MLGREMLIN_TopRecomb_Quintuple_Split.txt
+datasets/ANEH/Recomb_Quintuple_Split/Predictions_MLPLMC_TopRecomb_Quintuple_Split.txt
+datasets/ANEH/Recomb_Triple_Split/Predictions_MLGREMLIN_TopRecomb_Triple_Split.txt
+datasets/ANEH/Recomb_Triple_Split/Predictions_MLPLMC_TopRecomb_Triple_Split.txt
 
 datasets/AVGFP/apc.png
 datasets/AVGFP/avGFP_aaidx_encoded.csv
@@ -455,3 +477,19 @@ datasets/AVGFP/HYBRIDGREMLINESM1V_DE_trajectories.png
 datasets/AVGFP/Recomb_Double_Split/Predictions_Hybrid_ESM1v_TopRecomb_Double_Split.txt
 datasets/AVGFP/Recomb_Double_Split/Predictions_Hybrid_ProSST_TopRecomb_Double_Split.txt
 datasets/AVGFP/avGFP_shortened.csv
+datasets/AVGFP/DCA_Hybrid_Model_Performance_GREMLIN_ESM.png
+datasets/AVGFP/DCA_Hybrid_Model_Performance_Hybrid_ESM1v_ESM.png
+datasets/AVGFP/ML_Model_Performance_ONEHOT_onehot.png
+datasets/AVGFP/ML_Model_Performance_ONEHOT_PLS.png
+datasets/AVGFP/Predictions_Hybrid_ESM1v_avGFP_prediction_set.txt
+datasets/AVGFP/Predictions_Hybrid_ProSST_avGFP_prediction_set.txt
+datasets/AVGFP/Predictions_MLGREMLIN_avGFP_prediction_set.txt
+datasets/AVGFP/Predictions_ONEHOT_avGFP_prediction_set.txt
+datasets/AVGFP/CV_performance/ONEHOT_PLS_5-fold-CV.png
+datasets/AVGFP/CV_performance/ONEHOT_PLS_CV_Results.txt
+datasets/AVGFP/HYBRIDPLMC_DE_trajectories.png
+datasets/AVGFP/MLGREMLIN_DE_trajectories.png
+datasets/AVGFP/MLPLMC_DE_trajectories.png
+datasets/AVGFP/Predictions_GREMLIN_TopTS.txt
+datasets/AVGFP/Predictions_PLMC_TopTS.txt
+datasets/AVGFP/uref100_avgfp_jhmmer_119_plmc_42.6.params

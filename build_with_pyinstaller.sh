@@ -1,10 +1,11 @@
 #!/bin/bash
-pip install -r requirements.txt
-pip install -U pyinstaller pyside6
-pip install -e .
+set -e
+pip install pyinstaller
+pip install -e .[gui]
 pyinstaller \
   --console \
   --noconfirm \
+  --paths "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)" \
   --collect-data pypef \
   --collect-all pypef \
   --collect-data torch \
@@ -13,5 +14,6 @@ pyinstaller \
   --collect-data torch_geometric \
   --collect-all torch_geometric \
   --hidden-import torch_geometric \
-  gui/PyPEFGUIQtWindow.py
-  #  --add-data=X/:X/. \
+  --hidden-import docopt \
+  --exclude-module PyQt5 \
+  pypef/gui/qt_window.py

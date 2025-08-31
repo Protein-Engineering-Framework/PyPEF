@@ -1,16 +1,5 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-# Created on 05 October 2020
-# @authors: Niklas Siedhoff, Alexander-Maurice Illig
-# @contact: <niklas.siedhoff@rwth-aachen.de>
 # PyPEF - Pythonic Protein Engineering Framework
 # https://github.com/niklases/PyPEF
-# Licensed under Creative Commons Attribution-ShareAlike 4.0 International Public License (CC BY-SA 4.0)
-# For more information about the license see https://creativecommons.org/licenses/by-nc/4.0/legalcode
-
-# PyPEF – An Integrated Framework for Data-Driven Protein Engineering
-# Journal of Chemical Information and Modeling, 2021, 61, 3463-3476
-# https://doi.org/10.1021/acs.jcim.1c00099
 
 # docstring for argument parsing using docopts
 """
@@ -122,6 +111,7 @@ Converting a STO alignment file to A2M format:
 
 Usage:
     pypef mklsts --wt WT_FASTA --input CSV_FILE
+        [--random] [--modulo] [--cont] [--plot]
         [--drop THRESHOLD] [--sep CSV_COLUMN_SEPARATOR] [--mutation_sep MUTATION_SEPARATOR]
         [--numrnd NUMBER] [--ls_proportion LS_PROPORTION]
     pypef mkps --wt WT_FASTA [--input CSV_FILE]
@@ -130,6 +120,10 @@ Usage:
     pypef param_inference
         [--msa MSA_FILE] [--params PARAM_FILE]
         [--wt WT_FASTA] [--opt_iter N_ITER]
+    pypef predict_ssm --wt WT_FASTA
+        [--params PARAM_FILE]
+        [--llm LLM] 
+        [--pdb PDB_FILE]
     pypef save_msa_info --msa MSA_FILE --wt WT_FASTA
         [--opt_iter N_ITER]
     pypef encode --input CSV_FILE --encoding ENCODING_TECHNIQUE --wt WT_FASTA
@@ -141,7 +135,8 @@ Usage:
     pypef shift_pos --input CSV_FILE --offset OFFSET
         [--sep CSV_COLUMN_SEPARATOR] [--mutation_sep MUTATION_SEPARATOR] [--fitness_key FITNESS_KEY]
     pypef sto2a2m --sto STO_MSA_FILE [--inter_gap INTER_GAP] [--intra_gap INTRA_GAP]
-    pypef hybrid --params PARAM_FILE
+    pypef hybrid 
+        [--params PARAM_FILE]
         [--model MODEL]
         [--ts TEST_SET] [--ps PREDICTION_SET]
         [--ls LEARNING_SET] [--label] 
@@ -183,6 +178,8 @@ Options:
   --all                             Finally training on all data [default: False].
   --conc                            Concatenating mutational level variants for predicting variants
                                     from next higher level [default: False].
+  --cont                            Continuous splits in five-fold cross-validation fashion that 
+                                    split the data based on the positions of mutations.
   --csvaa                           Directed evolution csv amino acid substitutions,
                                     requires flag "--usecsv" [default: False].
   --ddiverse                        Create/predict double natural diverse variants [default: False].
@@ -207,6 +204,8 @@ Options:
   --llm LLM                         LLM model to use for hybrid modeling next to DCA (options are 'ESM1v' and 'ProSST').
   -m --model MODEL                  Model (pickle file) for plotting of validation or for
                                     performing predictions.
+  --modulo                          Modulo-like splits in five-fold cross-validation fashion that 
+                                    split the data based on the positions of mutations.
   --msa MSA_FILE                    Multiple sequence alignment (MSA) in FASTA or A2M format for
                                     inferring DCA parameters.
   --mutation_sep MUTATION_SEP       Mutation separator [default: /].
@@ -224,6 +223,9 @@ Options:
                                     and couplings [default: 100].
   --params PARAM_FILE               Input PLMC couplings parameter file.
   --pdb PDB_FILE                    Input protein structure file in PDB format used for ProSST LLM modeling.
+  --plot                            Plot different five-fold dataset split distributions performed when using
+                                    the flags --random, --modulo, --cont with the mklsts command.
+  --random                          Random splits in five-fold cross-validation fashion.
   -u --pmult                        Predict for all prediction files in folder for recombinants
                                     or for diverse variants [default: False].
   -p --ps PREDICTION_SET            Prediction set for performing predictions using a trained Model.
@@ -270,6 +272,8 @@ Options:
   MODELS                            Number of saved models to show [default: 5].
   onehot                            OneHot-based encoding [default: False].
   param_inference                   Inferring DCA params using the GREMLIN approach [default: False].
+  predict_ssm                       Getting all possible amino acid single substutions across the wild type sequence
+                                    and predicting all up to 19 variants per wild type sequence position.
   reformat_csv                      Reformat input CSV with indicated column and mutation separators to default
                                     CSV style (column separator ';' and mutation separator '/') [default: False.]
   save_msa_info                     Optimize local fields and couplings of MSA based on GREMLIN DCA approach and
@@ -282,7 +286,7 @@ Options:
 
 from sys import version_info
 from pypef import __version__
-if version_info[0] < 3 or version_info[1] < 10:
+if version_info[0] < 3 or (version_info[0] == 3 and version_info[1] < 10):
     raise SystemError(f"The current version of PyPEF (v {__version__}) requires at "
                       f"least Python 3.10 or higher versions of Python.")
 
@@ -314,6 +318,7 @@ logger.addHandler(ch)
 schema = Schema({
     Optional('--all'): bool,
     Optional('--conc'): bool,
+    Optional('--cont'): bool,
     Optional('--csvaa'): bool,
     Optional('--ddiverse'): bool,
     Optional('--drecomb'): bool,
@@ -330,6 +335,7 @@ schema = Schema({
     Optional('--ls'): Or(None, str),
     Optional('--ls_proportion'): Or(None, Use(float)),
     Optional('--model'): Or(None, str),
+    Optional('--modulo'): bool,
     Optional('--msa'): Or(None, str),
     Optional('--mutation_sep'): Or(None, str),
     Optional('--negative'): bool,
@@ -342,7 +348,9 @@ schema = Schema({
     Optional('--params'): Or(None, str),
     Optional('--pdb'): Or(None, str),    
     Optional('--pmult'): bool,
+    Optional('--plot'): bool,
     Optional('--ps'): Or(None, str),
+    Optional('--random'): bool,
     Optional('--qdiverse'): bool,
     Optional('--qarecomb'): bool,
     Optional('--qirecomb'): bool,
@@ -367,6 +375,7 @@ schema = Schema({
     Optional('--wt_pos'): Use(int),
     Optional('aaidx'): bool,
     Optional('param_inference'): bool,
+    Optional('predict_ssm'): bool,
     Optional('hybrid'): bool,
     Optional('directevo'): bool,
     Optional('encode'): bool,

@@ -1,16 +1,5 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-# Created on 05 October 2020
-# @authors: Niklas Siedhoff, Alexander-Maurice Illig
-# @contact: <niklas.siedhoff@rwth-aachen.de>
 # PyPEF - Pythonic Protein Engineering Framework
 # https://github.com/niklases/PyPEF
-# Licensed under Creative Commons Attribution-ShareAlike 4.0 International Public License (CC BY-SA 4.0)
-# For more information about the license see https://creativecommons.org/licenses/by-nc/4.0/legalcode
-
-# PyPEF – An Integrated Framework for Data-Driven Protein Engineering
-# Journal of Chemical Information and Modeling, 2021, 61, 3463-3476
-# https://doi.org/10.1021/acs.jcim.1c00099
 
 """
 Modules for creating training and test sets
@@ -75,12 +64,9 @@ def drop_rows(
         raise FileNotFoundError(
             f"Specify the input CSV file containing the variant-fitness data. "
             f"Required CSV format: variant{csv_sep}fitness.")
-
     label = df_raw.iloc[:, 1]
     sequence = df_raw.iloc[:, 0]
-
     dropping_rows = []
-
     for i, row in enumerate(label):
         try:
             row = float(row)
@@ -88,7 +74,6 @@ def drop_rows(
                 dropping_rows.append(i)
         except ValueError:
             dropping_rows.append(i)
-
     for i, variant in enumerate(sequence):
         try:
             if mutation_sep in variant:
@@ -108,18 +93,15 @@ def drop_rows(
                 elif variant not in ['wt', 'wild_type']:
                     if variant[0] not in amino_acids or variant[-1] not in amino_acids:
                         dropping_rows.append(i)
-
         except TypeError:
             raise TypeError('You might consider checking the input .csv for empty first two columns,'
                             ' e.g. in the last row.')
 
     logger.info(f'No. of dropped rows: {len(dropping_rows)}. '
                 f'Total given variants (if provided plus WT): {len(df_raw)}')
-
     df = df_raw.drop(dropping_rows)
     df.dropna(inplace=True)
     df.reset_index(drop=True, inplace=True)
-
     return df
 
 
@@ -127,11 +109,12 @@ def get_variants(
         df,
         amino_acids,
         wild_type_sequence,
-        mutation_sep: str = '/'
+        mutation_sep: str = '/',
+        verbose=True
 ):
     """
     Gets variants and divides and counts the variant data for single substituted
-    and higher substituted variants. Raises NameError if variant naming is not
+    and higher substituted variants. Raises RuntimeError if variant naming is not
     matching the given wild-type sequence, e.g. if variant A17C would define
     a substitution at residue Ala-17 to Cys but the wild-type sequence has no Ala
     at position 17.
@@ -172,7 +155,7 @@ def get_variants(
                     new = int(re.findall(r'\d+', splits)[0])
                     if splits[0] in amino_acids:
                         if splits[0] != wild_type_sequence[new - 1]:
-                            raise NameError(
+                            raise RuntimeError(
                                 'Position of amino acids in given sequence does not match the given '
                                 'positions in the input data! E.g. see position {} and position {} being {} '
                                 'in the given sequence'.format(variant, new, wild_type_sequence[new - 1])
@@ -199,9 +182,9 @@ def get_variants(
                 if variant[0] in amino_acids:
                     try:
                         if variant[0] != wild_type_sequence[num - 1]:
-                            raise NameError('Position of amino acids in given sequence does not match the given '
-                                            'positions in the input data! E.g. see position {} and position {} being {}'
-                                            ' in the given sequence.'.format(variant, num, wild_type_sequence[num - 1]))
+                            raise RuntimeError('Position of amino acids in given sequence does not match the given '
+                                               'positions in the input data! E.g. see position {} and position {} being {} '
+                                                'in the given sequence.'.format(variant, num, wild_type_sequence[num - 1]))
                     except IndexError:
                         raise IndexError("Found variant sequence position {} in data which "
                                          "is out of range of wild-type sequence length.".format(str(num)))
@@ -213,12 +196,13 @@ def get_variants(
                 single_variants.append([full_variant])
                 if i not in index_lower:
                     index_lower.append(i)
-    logger.info(
-        'Single (for mklsts if provided plus WT): {}, Double: {}, Triple: {}, Quadruple: {}, Quintuple: {}, '
-        'Sextuple: {}, Septuple: {}, Octuple: {}, Nonuple: {}, Decuple: {}, Higher (>Decuple): {}'.format(
-            single, double, triple, quadruple, quintuple, sextuple, septuple, octuple, nonuple, decuple, higher
+    if verbose:
+        logger.info(
+            'Single (for mklsts if provided plus WT): {}, Double: {}, Triple: {}, Quadruple: {}, Quintuple: {}, '
+            'Sextuple: {}, Septuple: {}, Octuple: {}, Nonuple: {}, Decuple: {}, Higher (>Decuple): {}'.format(
+                single, double, triple, quadruple, quintuple, sextuple, septuple, octuple, nonuple, decuple, higher
+            )
         )
-    )
     for vals in y[index_higher]:
         higher_values.append(vals)
     for vals in y[index_lower]:

@@ -1,7 +1,5 @@
-
-
-# Niklas Siedhoff
 # PyPEF - Pythonic Protein Engineering Framework
+# https://github.com/niklases/PyPEF
 
 # Code taken from PyTorch Scatter
 # https://github.com/rusty1s/pytorch_scatter

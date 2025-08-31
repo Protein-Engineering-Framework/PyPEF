@@ -1,13 +1,12 @@
-
-# Niklas Siedhoff
 # PyPEF - Pythonic Protein Engineering Framework
+# https://github.com/niklases/PyPEF
 
-# Using (training, testing/infering) ProSST model(s) published under 
+# Using (training, testing/infering) ProSST model(s) published under
 # GNU GENERAL PUBLIC LICENSE: GPL-3.0 license
 # Code repository: https://github.com/ai4protein/ProSST
 # Mingchen Li, Pan Tan, Xinzhu Ma, Bozitao Zhong, Huiqun Yu, Ziyi Zhou, Wanli Ouyang, Bingxin Zhou, Liang Hong, Yang Tan
 # ProSST: Protein Language Modeling with Quantized Structure and Disentangled Attention
-# bioRxiv 2024.04.15.589672; doi: https://doi.org/10.1101/2024.04.15.589672 
+# bioRxiv 2024.04.15.589672; doi: https://doi.org/10.1101/2024.04.15.589672
 
 
 import biotite
@@ -23,29 +22,22 @@ from pathlib import Path
 from torch_geometric.data import Batch, Data
 from tqdm import tqdm
 from sklearn.cluster import KMeans
-from typing import List
+from typing import List, Optional, Tuple
 from biotite.sequence import ProteinSequence
 from biotite.structure import filter_peptide_backbone, get_chains
 from biotite.structure.io import pdb, pdbx
 from biotite.structure.residues import get_residues
-from pathos.threading import ThreadPool
 
 from pypef.llm.prosst_structure.encoder.gvp import AutoGraphEncoder
 from pypef.llm.prosst_structure.scatter import scatter_mean, scatter_sum, scatter_max
 from pypef.utils.helpers import get_device
 
-
-def iter_threading_map(func, data, workers: int = 2):
-    pool = ThreadPool(workers)
-    return pool.imap(func, data)
+import logging
+logger = logging.getLogger('pypef.llm.prosst_structure.quantizer')
 
 
-def threading_map(func, data, workers: int = 2):
-    pool = ThreadPool(workers)
-    return pool.map(func, data)
-
-
-def _normalize(tensor, dim=-1):
+@torch.jit.script
+def _normalize(tensor: torch.Tensor, dim: int = -1) -> torch.Tensor:
     """
     Normalizes a `torch.Tensor` along dimension `dim` without `nan`s.
     """
@@ -54,23 +46,31 @@ def _normalize(tensor, dim=-1):
     )
 
 
-def _rbf(D, D_min=0.0, D_max=20.0, D_count=16, device="cpu"):
+def _rbf(
+    D: torch.Tensor,
+    D_min: float = 0.0,
+    D_max: float = 20.0,
+    D_count: int = 16,
+    D_mu_sigma: Optional[Tuple[torch.Tensor, float]] = None
+) -> torch.Tensor:
     """
-    From https://github.com/jingraham/neurips19-graph-protein-design
+    Returns an RBF embedding of distance tensor `D` along a new axis.
+    If `D_mu_sigma` is provided, uses the precomputed (D_mu, D_sigma) for efficiency.
+    Shape of output: [...dims, D_count]
+    """
+    if D_mu_sigma is None:
+        D_mu = torch.linspace(D_min, D_max, D_count, device=D.device).view(1, -1)
+        D_sigma = (D_max - D_min) / D_count
+    else:
+        D_mu, D_sigma = D_mu_sigma
+        D_mu = D_mu.to(D.device)
 
-    Returns an RBF embedding of `torch.Tensor` `D` along a new axis=-1.
-    That is, if `D` has shape [...dims], then the returned tensor will have
-    shape [...dims, D_count].
-    """
-    D_mu = torch.linspace(D_min, D_max, D_count, device=device)
-    D_mu = D_mu.view([1, -1])
-    D_sigma = (D_max - D_min) / D_count
     D_expand = torch.unsqueeze(D, -1)
-
-    RBF = torch.exp(-(((D_expand - D_mu) / D_sigma) ** 2))
-    return RBF
+    return torch.exp(-((D_expand - D_mu) / D_sigma) ** 2)
 
 
+
+@torch.jit.script
 def _orientations(X_ca):
     forward = _normalize(X_ca[1:] - X_ca[:-1])
     backward = _normalize(X_ca[:-1] - X_ca[1:])
@@ -79,6 +79,7 @@ def _orientations(X_ca):
     return torch.cat([forward.unsqueeze(-2), backward.unsqueeze(-2)], -2)
 
 
+@torch.jit.script
 def _sidechains(X):
     n, origin, c = X[:, 0], X[:, 1], X[:, 2]
     c, n = _normalize(c - origin), _normalize(n - origin)
@@ -99,6 +100,13 @@ def _positional_embeddings(edge_index, num_embeddings=16, period_range=[2, 1000]
     angles = d.unsqueeze(-1) * frequency
     E = torch.cat((torch.cos(angles), torch.sin(angles)), -1)
     return E
+
+
+def move_data_to_device(data, device='cpu'):
+    for key, item in data:
+        if torch.is_tensor(item):
+            data[key] = item.to(device)
+    return data
 
 
 def generate_graph(pdb_file, max_distance=10):
@@ -145,7 +153,7 @@ def generate_graph(pdb_file, max_distance=10):
     ca_coords = coords[:, 1]
     node_s = torch.zeros(len(ca_coords), 20)
     # build graph and max_distance
-    distances = spa.distance_matrix(ca_coords, ca_coords)
+    distances = torch.from_numpy(spa.distance_matrix(ca_coords, ca_coords)).float()
     edge_index = torch.tensor(np.array(np.where(distances < max_distance)))
     # remove loop
     mask = edge_index[0] != edge_index[1]
@@ -180,8 +188,68 @@ def generate_graph(pdb_file, max_distance=10):
         distances=distances,
         aa_seq=one_letter_seq,
     )
-
     return data
+
+def quick_get_anchor_graph(
+    anchor_node,
+    distances,
+    nearest_indices,
+    graph_data,
+    max_distance=10,
+    pure_subgraph=False,
+    device='cuda'
+):
+    k_neighbors_indices = nearest_indices[anchor_node]
+    k_neighbors_indices = k_neighbors_indices[k_neighbors_indices != -1]
+
+    if k_neighbors_indices.numel() > 40:
+        k_neighbors_indices = k_neighbors_indices[:40]
+
+    k_neighbors_indices = k_neighbors_indices.sort().values
+
+    sub_matrix = distances.index_select(0, k_neighbors_indices).index_select(1, k_neighbors_indices)
+    sub_edge_index = (sub_matrix < max_distance).nonzero(as_tuple=False)
+    sub_edge_index = sub_edge_index[sub_edge_index[:, 0] != sub_edge_index[:, 1]]
+    original_edge_index = k_neighbors_indices[sub_edge_index]
+
+    # Fast flat comparison: avoid torch.isin
+    N = graph_data.num_nodes
+    graph_edges = graph_data.edge_index.t()
+    flat_graph_edges = graph_edges[:, 0] * N + graph_edges[:, 1]
+    flat_candidate_edges = original_edge_index[:, 0] * N + original_edge_index[:, 1]
+
+    flat_graph_edges_sorted, sort_idx = flat_graph_edges.sort()
+    search_results = torch.searchsorted(flat_graph_edges_sorted, flat_candidate_edges)
+    valid_mask = (search_results < flat_graph_edges_sorted.shape[0]) & (
+        flat_graph_edges_sorted[search_results] == flat_candidate_edges
+    )
+    edge_to_feature_idx = sort_idx[search_results[valid_mask]]
+
+    # Subset features
+    new_node_s = graph_data.node_s[k_neighbors_indices]
+    new_node_v = graph_data.node_v[k_neighbors_indices]
+    new_edge_s = graph_data.edge_s[edge_to_feature_idx]
+    new_edge_v = graph_data.edge_v[edge_to_feature_idx]
+
+    if pure_subgraph:
+        return Data(
+            edge_index=sub_edge_index.t().contiguous(),
+            edge_s=new_edge_s,
+            edge_v=new_edge_v,
+            node_s=new_node_s,
+            node_v=new_node_v,
+        )
+    else:
+        index_map_tensor = -torch.ones(graph_data.num_nodes, dtype=torch.long, device=device)
+        index_map_tensor[k_neighbors_indices] = torch.arange(k_neighbors_indices.size(0), device=device)
+        return Data(
+            index_map=index_map_tensor,
+            edge_index=sub_edge_index.t().contiguous(),
+            edge_s=new_edge_s,
+            edge_v=new_edge_v,
+            node_s=new_node_s,
+            node_v=new_node_v,
+        )
 
 
 def generate_pos_subgraph(
@@ -191,69 +259,37 @@ def generate_pos_subgraph(
     max_distance=10,
     anchor_nodes=None,
     pure_subgraph=False,
+    device='cpu'
 ):
     distances = graph_data.distances
     subgraph_dict = {}
+
     if subgraph_depth is None:
         subgraph_depth = 50
-    sorted_indices = np.argsort(distances, axis=1)[:, :50]
-    mask = distances[np.arange(distances.shape[0])[:, None], sorted_indices] < 10
-    nearest_indices = np.where(mask, sorted_indices, -1)
 
-    def quick_get_anchor_graph(anchor_node):
-        k_neighbors_indices = nearest_indices[anchor_node][
-            nearest_indices[anchor_node] != -1
-        ]
-        if len(k_neighbors_indices) > 30:
-            k_neighbors_indices = k_neighbors_indices[:40]
-        k_neighbors_indices = np.array(sorted(k_neighbors_indices.tolist()))
-        sub_matrix = distances[k_neighbors_indices][:, k_neighbors_indices]
-        sub_edge_index = np.transpose(np.nonzero(sub_matrix < max_distance))
+    # Get indices of k-nearest neighbors (up to subgraph_depth)
+    sorted_indices = torch.argsort(distances, dim=1)[:, :subgraph_depth]
+    row_indices = torch.arange(distances.size(0)).unsqueeze(1)
+    mask = distances[row_indices, sorted_indices] < max_distance
+    nearest_indices = torch.where(mask, sorted_indices, torch.full_like(sorted_indices, -1))
 
-        mask = sub_edge_index[:, 0] != sub_edge_index[:, 1]
-        sub_edge_index = sub_edge_index[mask]
-        original_edge_index = k_neighbors_indices[sub_edge_index]
-        matches = np.all(
-            np.transpose(graph_data.edge_index.numpy())[:, None] == original_edge_index,
-            axis=2,
-        )
-        edge_to_feature_idx = np.nonzero(matches.any(axis=1))[0]
-
-        new_node_s = graph_data.node_s[k_neighbors_indices]
-        new_node_v = graph_data.node_v[k_neighbors_indices]
-        new_edge_s = graph_data.edge_s[edge_to_feature_idx]
-        new_edge_v = graph_data.edge_v[edge_to_feature_idx]
-
-        if pure_subgraph:
-            return Data(
-                edge_index=torch.tensor(sub_edge_index).T,
-                edge_s=new_edge_s,
-                edge_v=new_edge_v,
-                node_s=new_node_s,
-                node_v=new_node_v,
-            )
-        else:
-            new_index_mapping = {
-                int(old_id): new_id for new_id, old_id in enumerate(k_neighbors_indices)
-            }
-            return Data(
-                index_map=new_index_mapping,
-                edge_index=torch.tensor(sub_edge_index).T,
-                edge_s=new_edge_s,
-                edge_v=new_edge_v,
-                node_s=new_node_s,
-                node_v=new_node_v,
-            )
-    
-    #bar = tqdm(list(range(len(graph_data.aa_seq))), desc="Generating subgraphs")
-    # for anchor_node in bar:
-    for anchor_node in list(range(len(graph_data.aa_seq))):
-        #bar.set_postfix_str(f"Anchor node: {anchor_node}")
+    for anchor_node in range(len(graph_data.aa_seq)):
         if anchor_node % subgraph_interval != 0:
             continue
-        subgraph_dict[anchor_node] = quick_get_anchor_graph(anchor_node)
-        
+        subgraph = quick_get_anchor_graph(
+            anchor_node,
+            distances,
+            nearest_indices,
+            graph_data,
+            max_distance=max_distance,
+            pure_subgraph=pure_subgraph,
+            device=device
+        )
+        subgraph_dict[anchor_node] = subgraph
+
     return subgraph_dict
+
+
 
 
 def load_structure(fpath, chain=None):
@@ -337,18 +373,22 @@ def extract_seq_from_pdb(pdb_file, chain=None):
     return seq
 
 
-def convert_graph(graph):
+def convert_graph(graph, device='cpu'):
     graph = Data(
-        node_s=graph.node_s.to(torch.float32),
-        node_v=graph.node_v.to(torch.float32),
-        edge_index=graph.edge_index.to(torch.int64),
-        edge_s=graph.edge_s.to(torch.float32),
-        edge_v=graph.edge_v.to(torch.float32),
+        node_s=graph.node_s.to(dtype=torch.float32, device=device),
+        node_v=graph.node_v.to(dtype=torch.float32, device=device),
+        edge_index=graph.edge_index.to(dtype=torch.int64, device=device),
+        edge_s=graph.edge_s.to(dtype=torch.float32, device=device),
+        edge_v=graph.edge_v.to(dtype=torch.float32, device=device),
     )
+    if hasattr(graph, 'distances') and isinstance(graph.distances, np.ndarray):
+        graph.distances = torch.tensor(graph.distances, dtype=torch.float32, device=device)
+    if hasattr(graph, 'aa_seq') and isinstance(graph.aa_seq, list):
+        pass # Leave as is
     return graph
 
 
-def predict_structure(model, cluster_models, dataloader, device):
+def predict_structure(model, cluster_models, dataloader, device='cpu'):
     epoch_iterator = dataloader
     struc_label_dict = {}
     cluster_model_dict = {}
@@ -359,7 +399,7 @@ def predict_structure(model, cluster_models, dataloader, device):
         with open(cluster_model_path, 'rb') as fh:
             cluster_centers = np.load(fh, allow_pickle=False)
         kmeans_ = {
-            'algorithm': 'lloyd', 'copy_x': True, 'init': 'k-means++', 'n_init': 'auto', 
+            'algorithm': 'lloyd', 'copy_x': True, 'init': 'k-means++', 'n_init': 'auto',
             'max_iter': 1, 'n_clusters': 2048, 'random_state': 0, 'tol': 0.0001, 'verbose': 0
         }
         kmeans_model = KMeans().set_params(**kmeans_)
@@ -385,7 +425,7 @@ def predict_structure(model, cluster_models, dataloader, device):
     return struc_label_dict
 
 
-def get_embeds(model, dataloader, device, pooling="mean"):
+def get_embeds(model, dataloader, device='cpu', pooling="mean"):
     epoch_iterator = tqdm(dataloader, desc='')
     embeds = []
     with torch.no_grad():
@@ -414,19 +454,21 @@ def process_pdb_file(
     subgraph_depth,
     subgraph_interval,
     max_distance,
-    #threads=64,
+    device: str = 'cpu',
+    verbose: bool = True
 ):
     result_dict, subgraph_dict = {}, {}
     result_dict["name"] = Path(pdb_file).name
     # build graph, maybe lack of some atoms
     try:
         graph = generate_graph(pdb_file, max_distance)
+        graph = move_data_to_device(graph, device=device)
     except Exception as e:
-        print(f"Error in processing {pdb_file}")
+        logger.warning(f"Error in processing {pdb_file}")
         result_dict["error"] = str(e)
         return None, result_dict, 0
 
-    # multi thread for subgraph
+    # multi thread for subgraph (removed)
     result_dict["aa_seq"] = graph.aa_seq
     anchor_nodes = list(range(0, len(graph.node_s), subgraph_interval))
 
@@ -438,17 +480,17 @@ def process_pdb_file(
             max_distance,
             anchor_node,
             pure_subgraph=True,
+            device=device
         )[anchor_node]
-        subgraph = convert_graph(subgraph)
+        subgraph = convert_graph(subgraph, device=device)
         return anchor_node, subgraph
-    
-    #processed_anchor_nodes = tqdm(iter_threading_map(process_subgraph, anchor_nodes, threads))
-    #for anchor, subgraph in processed_anchor_nodes:
-    #    subgraph_dict[anchor] = subgraph
-    
-    for anchor_node in tqdm(anchor_nodes, desc='Getting structure embeddings'):
-         anchor, subgraph = process_subgraph(anchor_node)
-         subgraph_dict[anchor] = subgraph
+    for anchor_node in tqdm(
+        anchor_nodes, 
+        desc=f'Getting ProSST structure embeddings ({device.upper()})', 
+        disable=not verbose
+    ):
+        anchor, subgraph = process_subgraph(anchor_node)
+        subgraph_dict[anchor] = subgraph
 
     subgraph_dict = dict(sorted(subgraph_dict.items(), key=lambda x: x[0]))
     subgraphs = list(subgraph_dict.values())
@@ -460,7 +502,8 @@ def pdb_conventer(
     subgraph_depth,
     subgraph_interval,
     max_distance,
-    #threads=64,
+    device:str = 'cpu',
+    verbose: bool = True
 ):
     error_proteins, error_messages = [], []
     dataset, results, node_counts = [], [], []
@@ -471,7 +514,8 @@ def pdb_conventer(
             subgraph_depth,
             subgraph_interval,
             max_distance,
-            #threads=threads,
+            device=device,
+            verbose=verbose
         )
 
         if pdb_subgraphs is None:
@@ -484,7 +528,7 @@ def pdb_conventer(
 
     # save the error file
     if error_proteins:
-        print("Error proteins: ", error_proteins)
+        logger.warning("Error proteins: ", error_proteins)
 
     def collate_fn(batch):
         batch_graphs = []
@@ -501,14 +545,12 @@ def pdb_conventer(
                     item,
                 ]
             )
-
     return data_loader(), results
 
 
 class PdbQuantizer:
     def __init__(
         self,
-        #structure_vocab_size=2048,
         max_distance=10,
         subgraph_depth=None,
         subgraph_interval=1,
@@ -517,19 +559,24 @@ class PdbQuantizer:
         cluster_dir=None,
         cluster_model=None,
         device=None,
-        #threads=64,
+        verbose: bool = True
     ) -> None:
-        #assert structure_vocab_size in [20, 64, 128, 512, 1024, 2048, 4096]
-        #self.threads = threads
         self.max_distance = max_distance
         self.subgraph_depth = subgraph_depth
         self.subgraph_interval = subgraph_interval
         self.anchor_nodes = anchor_nodes
+        if device is None:
+            self.device = get_device()
+        else:
+            self.device = device
+        self.verbose = verbose
         if model_path is None:
-            self.model_path = str(Path(__file__).parent / "static" / "AE.pt")
+            if self.device == 'cpu':
+                self.model_path = str(Path(__file__).parent / "static" / "AE_CPU.pt")
+            else:
+                self.model_path = str(Path(__file__).parent / "static" / "AE.pt")
         else:
             self.model_path = model_path
-        #self.structure_vocab_size = structure_vocab_size
 
         if cluster_dir is None:
             self.cluster_dir = str(Path(__file__).parent / "static")
@@ -539,11 +586,6 @@ class PdbQuantizer:
         else:
             self.cluster_dir = cluster_dir
             self.cluster_model = cluster_model
-
-        if device is None:
-            self.device = get_device()
-        else:
-            self.device = device
 
         # Load model
         node_dim = (256, 32)
@@ -571,14 +613,14 @@ class PdbQuantizer:
             self.subgraph_depth,
             self.subgraph_interval,
             self.max_distance,
-            #threads=self.threads,
+            device=self.device,
+            verbose=self.verbose
         )
-        sturctures = predict_structure(
+        structures = predict_structure(
             self.model, self.cluster_models, data_loader, self.device
         )
-        for _, structure_labels in sturctures.items():
+        for _, structure_labels in structures.items():
             if return_residue_seq:
                 return results[0]["aa_seq"], structure_labels
             else:
                 return structure_labels
-

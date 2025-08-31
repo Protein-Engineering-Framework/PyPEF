@@ -1,8 +1,8 @@
 ## Table of Contents
 [PyPEF: Pythonic Protein Engineering Framework](#pypef-pythonic-protein-engineering-framework)
   - [Quick Installation](#quick-installation)
+    - [GUI](#gui)
     - [Setup and Run Docker Image](#setup-and-run-docker-image)
-    - [GUI Installation](#gui-installation)
   - [Requirements](#requirements)
   - [Running Examples](#running-examples)
   - [Tutorial](#tutorial)
@@ -23,26 +23,29 @@
 # PyPEF: Pythonic Protein Engineering Framework
 [![PyPI version](https://img.shields.io/pypi/v/PyPEF?color=blue)](https://pypi.org/project/pypef/)
 [![Python version](https://img.shields.io/pypi/pyversions/PyPEF)](https://www.python.org/downloads/)
-[![Build](https://github.com/niklases/PyPEF/actions/workflows/build.yml/badge.svg)](https://github.com/niklases/PyPEF/actions/?query=workflow:build)
+[![Build](https://github.com/niklases/PyPEF/actions/workflows/ci.yml/badge.svg)](https://github.com/niklases/PyPEF/actions/?query=workflow:ci)
 [![PyPI Downloads](https://static.pepy.tech/badge/pypef)](https://pepy.tech/projects/pypef)
 
-a framework written in Python 3 for performing sequence-based machine learning-assisted protein engineering to predict a protein's fitness from its sequence (and structure) using different forms of sequence encodings and LLM embeddings:
+a framework written in Python 3 for performing sequence-based machine learning-assisted protein engineering to predict a protein's fitness from its sequence (and structure, if the used protein language model (PLM) token embedding considers that) using different forms of sequence encodings and PLM embeddings:
 
 - One-hot encoding
 - Amino acid descriptor sets (taken from AAindex database) encoding
-- Direct coupling analysis (amino acid coevolution based on multiple sequence alignments) encoding
+- Direct coupling analysis (amino acid coevolution based on multiple sequence alignments) based encoding
 - LLM embeddings (currently, [ESM1v](https://github.com/facebookresearch/esm) and [ProSST](https://github.com/ai4protein/ProSST))
-
-Written by Niklas Siedhoff and Alexander-Maurice Illig.
 
 <p align="center">
     <img src=".github/imgs/ML_Model_Performance_DCA_GREMLIN.png" alt="drawing" width="500"/>
 </p>
 
-Protein engineering by rational or random approaches generates data that can aid the construction of self-learned sequence-function landscapes to predict beneficial variants by using probabilistic methods that can screen the unexplored sequence space with uncertainty *in silico*. Such predictive methods can be applied for increasing the success/effectivity of an engineering campaign while partly offering the prospect to reveal (higher-order) epistatic mutation effects. Here we present an engineering framework termed PyPEF for assisting the unsupervised optimization, supervised training, and testing of protein fitness models for predicting beneficial combinations of (identified) amino acid substitutions using machine learning approaches.
-As training input, the developed framework requires the variant sequences and the corresponding screening results (fitness labels) of the variants as CSV files (or FASTA-Like ("FASL") data files following a self-defined convention). Using linear or nonlinear regression methods (partial least squares (PLS), Ridge, Lasso, Elastic net, support vector machines (SVR), random forest (RF), and multilayer perceptron (MLP)-based regression), PyPEF trains on the given learning data while optimizing model hyperparameters (default: five-fold cross-validation) and can compute model performances on left-out test data. As sequences are encoded using amino acid descriptor sets taken from the [AAindex database](https://www.genome.jp/aaindex/), finding the best index-dependent encoding for a specific test set can be seen as a hyperparameter search on the test set. In addition, one-hot and [direct coupling analysis (DCA)](https://en.wikipedia.org/wiki/Direct_coupling_analysis)-based feature generation are implemented as sequence encoding techniques, which often outperform AAindex-based encoding techniques. While one-hot encodings fail for positional extrapolation, DCA-based sequence encoding offers positional extrapolation capabilities and is hence better suited for most generalization tasks. In addition, a hybrid, combined model of the unsupervised and supervised DCA model provides even better performance and robust predictions, even when training with only a few data points (e.g. 50-100 variant fitness labels). Furthermore, a mixed hybrid DCA model combined with LLM models  predictions show even increased overall performance across the [ProteinGym](https://proteingym.org/) datasets tested.
+When incorporating DCA and PLM features, both models are fine-tuned via few-shot learning on a subset of the training data. Subsequently, a weighted ensemble of the original (unsupervised) and fine-tuned model outputs is constructed. The ensemble weights are optimized using differential evolution, with the objective function based on performance metrics (Spearman rank correlation) evaluated on the held-out validation split of the training set.
 
-Finally, the selected (un-) trained (pure or hybrid) model can be used to perform directed evolution walks *in silico* (see [Church-lab implementation](https://github.com/churchlab/UniRep) or the [reimplementation](https://github.com/ivanjayapurna/low-n-protein-engineering)) or to predict natural diverse or recombinant variant sequences that subsequently are to be designed and validated in the wet-lab.
+<p align="center">
+<img src=".github/imgs/splitting_workflow.png" alt="drawing" width="1000"/>
+</p>
+
+<a name="installation"></a>
+## Quick Installation
+A quick installation of the PyPEF command line framework using PyPI for Linux and Windows and Python >= 3.10 can be performed with:
 
 
 <p align="center">
@@ -65,6 +68,25 @@ After successful installation, PyPEF should work by calling `pypef` in the shell
 pypef --help
 ```
 
+<a name="gui"></a>
+### GUI
+
+```
+pip install -U pypef[gui]
+```
+
+After installation, a rudimentary graphical user interface (GUI) can be invoked using the command
+
+```bash
+pypef-gui      # loading takes some seconds
+# or
+pypef-gui-cli  # command for keeping background debug/tqdm progress information in terminal (only Windows OS-specific)
+```
+
+<p align="center">
+  <img src=".github/imgs/pypef_gui_screenshot.png" alt="drawing" width="1000"/>
+</p>
+
 The detailed routine for setting up a new virtual environment with Anaconda, installing the necessary Python packages for that environment, and running the Jupyter notebook tutorial can be found below in the Tutorial section.
 A quick file setup and run test can be performed running files in [scripts/Setup](scripts/Setup) containing a Batch script for Windows and a Bash script for Linux (the latter requires conda, i.e. Miniconda3 or Anaconda3, already being installed).
 
@@ -76,12 +98,12 @@ Pull from Docker Hub or build the image using the stored [Dockerfile](./Dockerfi
 
 - pulling from Docker Hub by specifying the version tag
   ```bash
-  # docker pull niklases/pypef:VERSION_TAG, e.g.
-  docker pull niklases/pypef:0.4.2
+  # docker pull niklases/pypef:VERSION_TAG, or :latest, e.g.
+  docker pull niklases/pypef:latest
   ```
-  a chained container command using the built Docker image can be run with e.g.:
+  a chained container command using the pulled Docker image can be run with e.g.:
   ```bash
-  docker run --gpus=all -v ./datasets/:/datasets --workdir /datasets/AVGFP niklases/pypef:0.4.2 /bin/bash -c \
+  docker run --gpus=all -v ./datasets/:/datasets --workdir /datasets/AVGFP niklases/pypef:latest /bin/bash -c \
       "python /app/run.py mklsts --wt P42212_F64L.fasta --input avGFP.csv --ls_proportion 0.01 && \
        python /app/run.py param_inference --msa uref100_avgfp_jhmmer_119.a2m --wt P42212_F64L.fasta && \
        python /app/run.py hybrid --ls LS.fasl --ts TS.fasl --params GREMLIN --llm prosst --wt P42212_F64L.fasta --pdb GFP_AEQVI.pdb"
@@ -98,30 +120,6 @@ Pull from Docker Hub or build the image using the stored [Dockerfile](./Dockerfi
        python /app/run.py hybrid --ls LS.fasl --ts TS.fasl --params GREMLIN --llm prosst --wt P42212_F64L.fasta --pdb GFP_AEQVI.pdb"
   ```
 
-
-<a name="gui-installation"></a>
-### GUI Installation
-
-A rudimentary graphical user interface (GUI) can be installed using the gui_setup.bat and gui_setup.sh scripts for Windows and Linux, respectively (which install PyPEF from PyPI and download and finally run `./gui/PyPEFGUIQtWindow.py`). Run these commands in a directory without any whitespaces:
-
-Windows (PowerShell)
-```powershell
-Invoke-WebRequest https://raw.githubusercontent.com/niklases/PyPEF/refs/heads/main/gui_setup.bat -OutFile gui_setup.bat
-Invoke-WebRequest https://raw.githubusercontent.com/niklases/PyPEF/refs/heads/main/gui/PyPEFGUIQtWindow.py -OutFile ( New-Item -Path ".\gui\PyPEFGUIQtWindow.py" -Force )
-.\gui_setup.bat
-```
-
-Linux
-```bash
-wget https://raw.githubusercontent.com/niklases/PyPEF/refs/heads/main/gui_setup.sh -O gui_setup.sh
-mkdir -p ./gui/ && wget https://raw.githubusercontent.com/niklases/PyPEF/refs/heads/main/gui/PyPEFGUIQtWindow.py -O ./gui/PyPEFGUIQtWindow.py
-chmod a+x ./gui_setup.sh && ./gui_setup.sh
-```
-
-<p align="center">
-  <img src=".github/imgs/pypef_gui_screenshot.png" alt="drawing" width="1000"/>
-</p>
-
 <a name="requirements"></a>
 ## Requirements
 - Python >=3.10
@@ -137,7 +135,7 @@ chmod a+x ./gui_setup.sh && ./gui_setup.sh
     - biopython
     - biotite
     - schema
-    - docopt
+    - docopt-ng
     - adjustText
 
 and optionally ray[default] and scikit-learn-intelex. LLM/DCA-related tasks can be accelerated using a GPU for computations. As PyTorch is shipped with its own CUDA runtime, for running on GPU, only a recent NVIDIA driver and a CUDA-compatible GPU is needed (a compatibility list can be found at [NVIDIA website](https://developer.nvidia.com/cuda-gpus) and [Wikipedia](https://en.wikipedia.org/wiki/CUDA#GPUs_supported)) next to an installed CUDA toolkit version that fits the GPU driver version (see [download link](https://developer.nvidia.com/cuda-downloads) and [release notes](https://docs.nvidia.com/cuda/cuda-toolkit-release-notes/index.html), Table 2). 
@@ -154,6 +152,7 @@ If errors occur with third-party packages, you can check the required Python ver
 [![Python version](https://img.shields.io/pypi/pyversions/torch-geometric?label=torch-geometric%3A%20python)](https://github.com/pyg-team/pytorch_geometric)
 [![Python version](https://img.shields.io/pypi/pyversions/scikit-learn?label=scikit-learn%3A%20python)](https://github.com/scikit-learn/scikit-learn)
 [![Python version](https://img.shields.io/pypi/pyversions/peft?label=peft%3A%20python)](https://github.com/huggingface/peft)
+[![Python version](https://img.shields.io/pypi/pyversions/pynvml?label=pynvml%3A%20python)](https://pypi.org/project/pynvml)
 [![Python version](https://img.shields.io/pypi/pyversions/matplotlib?label=matplotlib%3A%20python)](https://github.com/matplotlib/matplotlib)
 [![Python version](https://img.shields.io/pypi/pyversions/tqdm?label=tqdm%3A%20python)](https://github.com/tqdm/tqdm)
 [![Python version](https://img.shields.io/pypi/pyversions/biopython?label=biopython%3A%20python)](https://github.com/biopython/biopython)
@@ -509,17 +508,7 @@ pypef hybrid -p PS.fasta --params PLMC
 
 using the plmc parameters.
 
-Other well-performing zero-shot prediction methods with available source code are:
-
-- ESM-1v/ESM-2 (https://github.com/facebookresearch/esm)
-- ProteinMPNN (https://github.com/dauparas/ProteinMPNN)
-- DeepSequence (https://github.com/debbiemarkslab/DeepSequence)
-- EVcouplings (plmc-DCA, https://github.com/debbiemarkslab/EVcouplings)
-- EVE (https://github.com/OATML/EVE)
-- Tranception (https://github.com/OATML-Markslab/Tranception)
-- VESPA (https://github.com/Rostlab/VESPA)
-  
-This list is by no means complete, see ProteinGym [repository](https://github.com/OATML-Markslab/ProteinGym) and [website](https://proteingym.org/) for a more detailed overview of available methods and achieved performances (as well as for getting many benchmark data sets).
+Other well-performing zero-shot prediction methods with available source code can be obtained from the ProteinGym [repository](https://github.com/OATML-Markslab/ProteinGym) and [website](https://proteingym.org/) that provide a more detailed overview of available methods and achieved performances (as well as many benchmark data sets).
 
 The performance of the GREMLIN model used is shown in the following for predicting single substitution effects (blue), including Hybrid model performances with N_Train = {100, 200, 1000}.
 Hybrid GREMLIN-LLM low-N-tuned models using [ESM1v](https://github.com/facebookresearch/esm) and [ProSST](https://github.com/ai4protein/ProSST) achieved increased performances compared to the pure DCA-tuned hybrid model for ProteinGym datasets tested using the scripts located at [scripts/ProteinGym_runs](scripts/ProteinGym_runs):
@@ -531,12 +520,20 @@ Hybrid GREMLIN-LLM low-N-tuned models using [ESM1v](https://github.com/facebookr
     <img src=".github/imgs/mut_performance.png" alt="drawing" width="1000"/>
 </p>
 
+For estimating model performances for different splitting techniques (random, modulo, continuous), a faster-to-compute subset (limited sequence length and number of variant-fitness pairs) of the ProteinGym data was evaluated (example dataset split technique-dependent data distribution and performances on the ProteinGym subset):
+
+<p align="center">
+    <img src=".github/imgs/A0A247D711_LISMN_Stadelmann_2021_pos_aa_distr.png" alt="drawing" width="750"/>
+</p>
+<p align="center">
+    <img src=".github/imgs/crossval_pgym_violin.png" alt="drawing" width="750"/>
+</p>
+
+The official supervised ProteinGym benchmark runs can be performed using scripts provided at [scripts/ProteinGym_runs/official](scripts/ProteinGym_runs/official). However, these benchmark runs are time-consuming, as cross-validation must be performed for each dataset and across all the split methods being evaluated.
+
 <a name="api-usage"></a>
-
-
-
 ## API Usage for Sequence Encoding
-For script-based encoding of sequences using PyPEF and the available AAindex-, OneHot- or DCA-based techniques, the classes and corresponding functions can be imported, i.e. `OneHotEncoding`, `AAIndexEncoding`, `GREMLIN` (DCA),  `PLMC` (DCA), and `DCAHybridModel`. In addition, implemented functions for CV-based tuning of regression models can be used to train and validate models, eventually deriving them to obtain performances on retained data for testing. An exemplary script and a Jupyter notebook for CV-based (low-*N*) tuning of models and using them for testing is provided at [scripts/Encoding_low_N/api_encoding_train_test.py](scripts/Encoding_low_N/api_encoding_train_test.py) and [scripts/Encoding_low_N/api_encoding_train_test.ipynb](scripts/Encoding_low_N/api_encoding_train_test.ipynb), respectively.
+For script-based encoding of sequences using PyPEF and the available AAindex-, OneHot- or DCA-based techniques, the classes and corresponding functions can be imported, i.e. `OneHotEncoding`, `AAIndexEncoding`, `GREMLIN` (DCA),  `PLMC` (DCA), and `DCALLMHybridModel`. In addition, implemented functions for CV-based tuning of regression models can be used to train and validate models, eventually deriving them to obtain performances on retained data for testing. An exemplary script and a Jupyter notebook for CV-based (low-*N*) tuning of models and using them for testing is provided at [scripts/Encoding_low_N/api_encoding_train_test.py](scripts/Encoding_low_N/api_encoding_train_test.py) and [scripts/Encoding_low_N/api_encoding_train_test.ipynb](scripts/Encoding_low_N/api_encoding_train_test.ipynb), respectively.
 
 <p align="center">
     <img src=".github/imgs/low_N_avGFP_extrapolation.png" alt="drawing" width="500"/>

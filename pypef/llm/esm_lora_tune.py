@@ -1,5 +1,5 @@
-# Niklas Siedhoff
 # PyPEF - Pythonic Protein Engineering Framework
+# https://github.com/niklases/PyPEF
 
 # Using (training, testing/infering) ESM model(s) (e.g. ESM1v) published under 
 # MIT License
@@ -28,14 +28,17 @@ from tqdm import tqdm
 from peft import LoraConfig, get_peft_model
 from transformers import logging as hf_logging
 hf_logging.set_verbosity_error()
-from transformers import EsmForMaskedLM, EsmTokenizer
 
 from pypef.utils.helpers import get_device
+from pypef.llm.utils import corr_loss, load_model_and_tokenizer
 
 
 def get_esm_models():
-    base_model = EsmForMaskedLM.from_pretrained(f'facebook/esm1v_t33_650M_UR90S_3')
-    tokenizer = EsmTokenizer.from_pretrained(f'facebook/esm1v_t33_650M_UR90S_3')
+    base_model, tokenizer = load_model_and_tokenizer(
+        f'facebook/esm1v_t33_650M_UR90S_3'
+        # Just sticking to AutoModelForMaskedLM and AutoTokenizer 
+        # instead to EsmForMaskedLM and EsmTokenizer
+    )  
     peft_config = LoraConfig(r=8, target_modules=["query", "value"])
     lora_model = get_peft_model(base_model, peft_config)
     optimizer = torch.optim.Adam(lora_model.parameters(), lr=0.01)
@@ -78,53 +81,10 @@ def get_y_pred_scores(encoded_sequences, attention_masks,
             log_probs = torch.cat(
                 (log_probs, torch.sum(torch.Tensor(seq_log_probs)).reshape(1)), 0)
     return log_probs
-
-
-def corr_loss(y_true: torch.Tensor, y_pred: torch.Tensor):
-    res_true = y_true - torch.mean(y_true)
-    res_pred = y_pred - torch.mean(y_pred)
-    cov = torch.mean(res_true * res_pred)
-    var_true = torch.mean(res_true**2)
-    var_pred = torch.mean(res_pred**2)
-    sigma_true = torch.sqrt(var_true)
-    sigma_pred = torch.sqrt(var_pred)
-    return - cov / (sigma_true * sigma_pred)
-
-
-def get_batches(a, dtype, batch_size=5, 
-                keep_numpy: bool = False, keep_remaining=False, verbose: bool = False):
-    a = np.asarray(a, dtype=dtype)
-    orig_shape = np.shape(a)
-    remaining = len(a) % batch_size
-    if remaining != 0:
-        if len(a) > batch_size:
-            a = a[:-remaining]
-            a_remaining = a[-remaining:]
-        else:
-            logger.info(f"Batch size greater than or equal to total array length: "
-                  f"returning full array (of shape: {np.shape(a)})...")
-            if keep_remaining:
-                return list(a)
-            else:
-                return a
-    if len(orig_shape) == 2:
-        a = a.reshape(np.shape(a)[0] // batch_size, batch_size, np.shape(a)[1])
-    else:  # elif len(orig_shape) == 1:
-        a = a.reshape(np.shape(a)[0] // batch_size, batch_size)
-    new_shape = np.shape(a)
-    if verbose:
-        logger.info(f'{orig_shape} -> {new_shape}  (dropped {remaining})')
-    if keep_remaining: # Returning a list
-        a = list(a)
-        logger.info('Adding dropped back to batches as last batch...')
-        a.append(a_remaining)
-        return a
-    if keep_numpy:
-        return a
-    return torch.Tensor(a).to(dtype)
     
 
-def esm_test(xs, attention_mask, scores, loss_fn, model, device: str | None = None):
+def esm_test(xs, attention_mask, scores, loss_fn, model, 
+             device: str | None = None, verbose: bool = True):
     if device is None:
         device = get_device()
     attention_masks = torch.Tensor(np.full(
@@ -135,7 +95,7 @@ def esm_test(xs, attention_mask, scores, loss_fn, model, device: str | None = No
         torch.Tensor(xs).to(device), attention_masks.to(device), 
         torch.Tensor(scores).to(torch.float).to(device)
     )
-    pbar_epochs = tqdm(zip(xs, attention_masks, scores), total=len(xs))
+    pbar_epochs = tqdm(zip(xs, attention_masks, scores), total=len(xs), disable=not verbose)
     for i ,(xs_b, attns_b, scores_b) in enumerate(pbar_epochs):
         xs_b, attns_b = xs_b.to(torch.int64), attns_b.to(torch.int64)
         with torch.no_grad():
@@ -153,11 +113,12 @@ def esm_test(xs, attention_mask, scores, loss_fn, model, device: str | None = No
         pbar_epochs.set_description(
             f"Testing: Batch {i + 1}/{len(xs)} | Batch loss: {batch_loss:.4f} (SpearCorr: "
             f"{batch_scorr:.4f})| Total loss: {total_loss:.4f} (SpearCorr: {total_scorr:.4f})")
-    logger.info(f"Test performance: Loss: {total_loss:.4f}, SpearCorr: {total_scorr:.4f}")
+    logger.info(f"Test performance: Loss: {total_loss:.4f}, SpearCorr: {total_scorr:.4f} "
+                f"({device.upper()})")
     return torch.flatten(scores).detach().cpu(), torch.flatten(y_preds_total).detach().cpu()
 
 
-def esm_infer(xs, attention_mask, model, device: str | None = None, verbose=True):
+def esm_infer(xs, attention_mask, model, device: str | None = None, verbose=False):
     if device is None:
         device = get_device()
     attention_masks = torch.Tensor(np.full(
@@ -166,7 +127,8 @@ def esm_infer(xs, attention_mask, model, device: str | None = None, verbose=True
         logger.info(f'Infering ESM model for predictions using {device.upper()} device...')
     for i , (xs_b, am_b) in enumerate(tqdm(
         zip(xs, attention_masks), total=len(xs), 
-        desc="ESM inference - processing sequences", disable=not verbose
+        desc=f"ESM inference - processing sequences ({device.upper()})",
+        disable=not verbose
     )):
         xs_b = xs_b.to(torch.int64)
         with torch.no_grad():
@@ -178,8 +140,11 @@ def esm_infer(xs, attention_mask, model, device: str | None = None, verbose=True
     return torch.flatten(y_preds_total)
 
 
-def esm_train(xs, attention_mask, scores, loss_fn, model, optimizer, n_epochs=3, 
-              device: str | None = None, seed: int | None = None):
+def esm_train(
+        xs, attention_mask, scores, loss_fn, model, optimizer, n_epochs=3, 
+        device: str | None = None, seed: int | None = None, 
+        n_batch_grad_accumulations: int = 1, verbose: bool = True
+):
     if seed is not None:
         torch.manual_seed(seed)
     if device is None:
@@ -190,7 +155,7 @@ def esm_train(xs, attention_mask, scores, loss_fn, model, optimizer, n_epochs=3,
     attention_masks = torch.Tensor(np.full(
         shape=np.shape(xs), fill_value=attention_mask)).to(torch.int64)
     xs, attention_masks, scores = xs.to(device), attention_masks.to(device), scores.to(device) 
-    pbar_epochs = tqdm(range(1, n_epochs + 1))
+    pbar_epochs = tqdm(range(1, n_epochs + 1), disable=not verbose)
     loss = np.nan
     for epoch in pbar_epochs:
         try:
@@ -198,28 +163,32 @@ def esm_train(xs, attention_mask, scores, loss_fn, model, optimizer, n_epochs=3,
         except AttributeError:
             pbar_epochs.set_description(f'Epoch: {epoch}/{n_epochs}')
         model.train()
-        pbar_batches = tqdm(zip(xs, attention_masks, scores), total=len(xs), leave=False)
+        pbar_batches = tqdm(
+            zip(xs, attention_masks, scores), 
+            total=len(xs), leave=False, disable=not verbose
+        )
         for batch, (xs_b, attns_b, scores_b) in enumerate(pbar_batches):
             xs_b, attns_b = xs_b.to(torch.int64), attns_b.to(torch.int64)
             y_preds_b = get_y_pred_scores(xs_b, attns_b, model, device=device)
-            loss = loss_fn(scores_b, y_preds_b)
+            loss = loss_fn(scores_b, y_preds_b) / n_batch_grad_accumulations
             loss.backward()
-            optimizer.step()
-            optimizer.zero_grad()
+            if (batch + 1) % n_batch_grad_accumulations == 0 or (batch + 1) == len(pbar_batches):
+                optimizer.step()
+                optimizer.zero_grad()
             pbar_batches.set_description(
                 f"Epoch: {epoch}. Loss: {loss.detach():>1f}  "
-                f"[batch: {batch+1}/{len(xs)} | "
-                f"sequence: {(batch + 1) * len(xs_b):>5d}/{len(xs) * len(xs_b)}]  "
+                f"[batch: {batch+1}/{len(xs)} | sequence: "
+                f"{(batch + 1) * len(xs_b):>5d}/{len(xs) * len(xs_b)}] ({device.upper()})"
             )
     y_preds_b = y_preds_b.detach()
     model.train(False)
 
 
-def esm_setup(sequences, device: str | None = None):
+def esm_setup(sequences, device: str | None = None, verbose: bool = True):
     esm_base_model, esm_lora_model, esm_tokenizer, esm_optimizer = get_esm_models()
     esm_base_model = esm_base_model.to(device)
     x_esm, esm_attention_mask = esm_tokenize_sequences(
-        sequences, esm_tokenizer, max_length=len(sequences[0]))
+        sequences, esm_tokenizer, max_length=len(sequences[0]), verbose=verbose)
     llm_dict_esm = {
         'esm1v': {
             'llm_base_model': esm_base_model,

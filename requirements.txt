@@ -1,7 +1,7 @@
 numpy
 pandas
 tqdm
-docopt
+docopt-ng
 matplotlib
 scipy
 adjustText
@@ -11,6 +11,7 @@ biotite
 schema
 pathos
 peft
+pynvml
 #scikit-learn-intelex
 #ray[default]
 --extra-index-url https://download.pytorch.org/whl/cu128
