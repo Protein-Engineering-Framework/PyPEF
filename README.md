@@ -1,3 +1,10 @@
+
+> ⚠️ **Important:**  This repository is a mirror of 
+>
+> https://github.com/niklases/PyPEF
+>
+> where (active) development is taking place
+
 ## Table of Contents
 [PyPEF: Pythonic Protein Engineering Framework](#pypef-pythonic-protein-engineering-framework)
   - [Quick Installation](#quick-installation)
