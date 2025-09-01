@@ -1,0 +1,26 @@
+defaults:
+  - override hydra/job_logging: disabled  # Prevents creation of .log file from Hydra
+
+DMS_idx: ???
+split_method: ???
+llm: ???
+DMS_reference_file_path: ../data/DMS_substitutions.csv
+DMS_data_folder_singles: ../data/cv_folds_singles_substitutions
+DMS_data_folder_multiples: ../data/cv_folds_multiples_substitutions
+DMS_MSA_data_path: ../data/DMS_msa_files
+DMS_PDB_data_path: ../data/ProteinGym_AF2_structures
+output_scores_folder: model_scores/supervised_substitutions
+
+seed: 2024
+progress_bar: false
+overwrite: false
+
+# Disables Hydra logging functionality
+hydra:
+  output_subdir: null
+  job:
+    chdir: false
+  run:
+    dir: .
+
+  

@@ -27,4 +27,4 @@ chmod a+x ./run_over_all.sh
 ./run_over_all.sh split_method=fold_random_5
 ```
 
-All steps can also performed with running `do_all.sh` (writes output to output.log, where running `python remove_tqdm_lines_log.py` is handy for removing the tqdm progress bars from the output log for eased log reading).
+All steps can also performed with running `do_all.sh` (if writing output to output.log, running `python remove_tqdm_lines_log.py` is handy for removing the tqdm progress bars from the output log for eased log reading).

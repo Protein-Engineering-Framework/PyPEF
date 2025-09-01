@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 
 
 split_method=fold_random_5
@@ -11,4 +12,5 @@ cd ..
 ./get_py_packages.sh
 
 cd benchmark_runs
-./run_over_all.sh split_method=$split_method > output.log 2>&1 &
+./run_over_all.sh split_method=$split_method # > output.log 2>&1 &
+

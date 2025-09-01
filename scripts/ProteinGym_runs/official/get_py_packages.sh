@@ -1,7 +1,9 @@
 #!/bin/bash
 
-gh repo clone niklases/pypef
-cd PyPEF
+wget https://github.com/niklases/PyPEF/archive/refs/heads/main.zip
+unzip main.zip && rm main.zip
+cd PyPEF-main/
 pip install -r requirements.txt
 pip install hydra-core
 pip install .
+cd ..

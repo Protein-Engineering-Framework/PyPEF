@@ -493,3 +493,10 @@ datasets/AVGFP/MLPLMC_DE_trajectories.png
 datasets/AVGFP/Predictions_GREMLIN_TopTS.txt
 datasets/AVGFP/Predictions_PLMC_TopTS.txt
 datasets/AVGFP/uref100_avgfp_jhmmer_119_plmc_42.6.params
+
+scripts/ProteinGym_runs/official/data/cv_folds_multiples_substitutions/*
+scripts/ProteinGym_runs/official/data/cv_folds_singles_substitutions/*
+scripts/ProteinGym_runs/official/data/DMS_msa_files/*
+scripts/ProteinGym_runs/official/data/ProteinGym_AF2_structures/*
+scripts/ProteinGym_runs/official/data/DMS_substitutions.csv
+scripts/ProteinGym_runs/official/benchmark_runs/output.log

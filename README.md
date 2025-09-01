@@ -47,15 +47,6 @@ When incorporating DCA and PLM features, both models are fine-tuned via few-shot
 ## Quick Installation
 A quick installation of the PyPEF command line framework using PyPI for Linux and Windows and Python >= 3.10 can be performed with:
 
-
-<p align="center">
-  <img src=".github/imgs/splitting_workflow.png" alt="drawing" width="1000"/>
-</p>
-
-<a name="installation"></a>
-## Quick Installation
-A quick installation of the PyPEF command line framework using PyPI for Linux and Windows and Python >= 3.10 can be performed with:
-
 ```bash
 pip install -U pypef
 # optionally, for GPU support (see requirements section below):
