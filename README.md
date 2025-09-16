@@ -271,14 +271,9 @@ bash Anaconda3-2023.03-1-Linux-x86_64.sh
 ```
 
 After accepting all steps, the conda setup should also be written to your `~/.bashrc`file, so that you can call anaconda typing `conda`.
-Next, to download this repository click Code > Download ZIP and unzip the zipped file, e.g. with `unzip PyPEF-main.zip`, or just clone this repository using your bash shell to your local machine `git clone https://github.com/niklases/PyPEF`.
-To set up a new environment with conda you can either create the conda environment from the provided YAML file inside the PyPEF directory (`cd PyPEF` or `cd PyPEF-main` dependent on the downloaded file name and chose YAML file for your operating system):
+Next, to download this repository click Code > Download ZIP and unzip the zipped file, e.g. with `unzip PyPEF-main.zip`, or just clone this repository using your bash shell to your local machine `git clone https://github.com/niklases/PyPEF` and change the directory to the cloned repo (`cd PyPEF` or `cd PyPEF-main` dependent on the downloaded file name).
 
-```
-conda env create --file linux_env.yml
-```
-
-or you can create a new environment yourself. You just need to specify the name of the environment and the Python version, e.g.:
+It is recommended to create a new Python environment:
 
 ```
 conda create --name pypef python=3.10
