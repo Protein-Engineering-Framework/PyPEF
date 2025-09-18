@@ -285,7 +285,7 @@ To activate the environment you can define:
 conda activate pypef
 ```
 
-After activating the environment you can install required packages after changing the directory to the PyPEF directory (`cd PyPEF` or `cd PyPEF-main`) and install required packages with pip if you did not use the YAML file for creating the environment (if using conda, packages will be installed in anaconda3/envs/pypef/lib/python3.10/site-packages):
+After activating the environment you can install required packages after changing the directory to the PyPEF directory (`cd PyPEF` or `cd PyPEF-main`) and install required packages with pip (if using conda, packages will be installed in anaconda3/envs/pypef/lib/python3.10/site-packages):
 
 ```
 python3 -m pip install -r requirements.txt
@@ -295,7 +295,7 @@ Note that the package [Ray](https://github.com/ray-project/ray) which we use for
 
 Now, after installing required packages, you should be able to directly run pypef in the command-line interface.
 
-To run the tutorial after installing required packages either from the conda YAML environment file, the TEXT requirement file, or after installing packages using the pip version of PyPEF, open a Jupyter notebook. If you have installed Anaconda, Jupyter notebook and other commonly used packages for scientific computing and data science should be already installed in Python. If not, you can also install Jupyter via `python3 -m pip install ipython jupyter`. To use the pypef environment as a specified kernel inside the Jupyter notebook, you need to install `ipykernel` and set the kernel name:
+To run the tutorial after installing required packages, open a Jupyter notebook. If you have installed Anaconda, Jupyter notebook and other commonly used packages for scientific computing and data science should be already installed in Python. If not, you can also install Jupyter via `python3 -m pip install ipython jupyter`. To use the pypef environment as a specified kernel inside the Jupyter notebook, you need to install `ipykernel` and set the kernel name:
 
 ```
 python3 -m pip install ipykernel jupyter
