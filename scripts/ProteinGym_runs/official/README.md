@@ -14,7 +14,7 @@ chmod a+x ./get_py_packages.sh
 ./get_py_packages.sh
 ```
 
-Example random_fold run for first dataset `DMS_idx=0` (llm options currently implemented: ESM1v (`llm=esm1v`) and ProSST (`llm=prosst`)):
+Example random_fold run for first dataset `DMS_idx=0` (llm options currently implemented: ESM (`llm=esm`) and ProSST (`llm=prosst`)):
 ```bash
 cd benchmark_runs
 python pgym_cv_benchmark.py split_method=fold_random_5 DMS_idx=0 llm=prosst # overwrite=true

@@ -25,7 +25,8 @@ logger = logging.getLogger('pypef.utils.prediction_sets')
 
 import os
 import numpy as np
-from tqdm import tqdm
+
+from pypef.utils.helpers import tqdm
 
 
 def make_fasta_ps(

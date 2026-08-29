@@ -29,7 +29,7 @@ warnings.filterwarnings(action='ignore', category=UserWarning, module='sklearn')
 
 class DirectedEvolution:
     # Class attributes (None)
-    def __init__(  # Instance attributes
+    def __init__(
             self,
             ml_or_hybrid: str,
             encoding: str,
@@ -49,47 +49,6 @@ class DirectedEvolution:
     ):
         """
         Runs in silico directed evolution and plots and writes trajectories.
-
-        Parameters
-        ----------
-        ml_or_hybrid: str
-            'ml' or 'hybrid'
-        encoding: str
-            'aaidx' or 'dca'
-        s_wt: str
-            WT sequence, s_wt = get_wt_sequence(arguments['--wt'])
-        single_vars:  list
-            single substituted protein variants; used for recombination
-            of variants. Obtained from the CSV file with get_variants:
-            single_variants, single_values, higher_variants, higher_values = \
-                get_variants(df, amino_acids, s_wt)
-        num_iterations: int
-            Number of tried steps in the evolution process
-        num_trajectories: int
-            Number of independent evolutionary trajectories
-        amino_acids: list
-            Usually the 20 standard amino acids
-        temp: float
-            (Boltzmann) 'Temperature' of the Metropolis-Hastings algorithm for
-            accepting new trajectory variants
-        path: str
-            Just current working directory (os.getcwd())
-        model: str
-            Loaded Pickle file for regression/hybrid modeling.
-        no_fft: bool
-            If True, not using FFT for AAindex-based encoding
-        dca_encoder = None or PLMC object
-            dca_encoder = PLMC(
-                  params_file=arguments['--plmc_params'],
-                  separator=arguments['--sep']
-            )
-        usecsv: bool
-            Using only CSV variants for recombination (but all 20 amino acids)
-        csvaa: bool
-            Using only CSV variants for recombination (but all amino acids that
-            are present CSV)
-        negative: bool
-            More negative variants define improved variants
         """
         self.ml_or_hybrid = ml_or_hybrid
         self.encoding = encoding
@@ -115,20 +74,6 @@ class DirectedEvolution:
             seq: str,
             prev_mut_loc: int
     ):
-        """
-        Parameters
-        ----------
-        seq: str,
-            Initial sequence to be mutated, must not be WT Seq but can
-            also itself be already substituted (iterative sequence substitutions)
-        prev_mut_loc: int
-            Previous position mutated, new position will be randomly chosen within
-            a range, by default: new_pos = previous_pos +- 8
-
-        Produces a mutant sequence (integer representation), given an initial sequence
-        and the previous position of mutation.
-
-        """
         try:
             os.mkdir('EvoTraj')
         except FileExistsError:
@@ -139,24 +84,21 @@ class DirectedEvolution:
         while (rand_loc <= 0) or (rand_loc >= len(seq)):
             rand_loc = random.randint(prev_mut_loc - 8, prev_mut_loc + 8)
         aa_list = self.amino_acids
-        if self.usecsv:     # Only perform directed evolution on positional csv variant data,
-            pos_list = []   # else: aa_list = amino_acids
-            aa_list = []    # overwrite aa_list = self.amino_acids
-            for aa_positions_aa in self.single_vars:  # getting each single variant, e.g. of [['L215F'], ['A217N']]
-                for variant in aa_positions_aa:  # just unpacking the variant, e.g. ['L215F'] -> 'L215F'
+        if self.usecsv:     # Only perform directed evolution on positional csv variant data
+            pos_list = []   
+            aa_list = []    
+            for aa_positions_aa in self.single_vars:  # getting each single variant
+                for variant in aa_positions_aa:
                     pos_int = int(re.findall(r"\d+", variant)[0])
                     if pos_int not in pos_list:
                         pos_list.append(pos_int)
                     if self.csvaa:
-                        new_aa = str(variant[-1:])  # new AA from known variant, e.g. 'F' from 'L215F'
+                        new_aa = str(variant[-1:])  # new AA from known variant
                         if new_aa not in aa_list:
                             aa_list.append(new_aa)
                     else:
                         aa_list = self.amino_acids  # new AA can be any of the 20 standard AA's
-            # Select closest position to single AA positions:
-            # However, this means that it is more probable that starting with lower substitution
-            # positions new substitution positions will likely be shifted towards higher positions.
-            # And for higher substitution positions new substitutions will likely be at lower positions.
+            
             absolute_difference_function = lambda list_value: abs(list_value - rand_loc)
             try:
                 closest_loc = min(pos_list, key=absolute_difference_function)
@@ -164,6 +106,7 @@ class DirectedEvolution:
                 raise ValueError("No positions for recombination found. Likely no single "
                                  "substituted variants were found in provided .csv file.")
             rand_loc = closest_loc - 1   # - 1 as position is shifted by one when starting with 0 index
+        
         rand_aa = random.choice(aa_list)  # find random amino acid to mutate to
         seq_list = list(seq)
         seq_list[rand_loc] = rand_aa  # update sequence to have new amino acid at randomly chosen position
@@ -182,7 +125,7 @@ class DirectedEvolution:
         for i, variant in enumerate(v_traj[1:]):  # [1:] as not checking for WT
             variant_position = int(re.findall(r"\d+", variant)[0]) - 1
             variant_amino_acid = str(variant[-1])
-            assert variant_amino_acid == s_traj[i+1][variant_position]  # checking AA of last trajectory sequence
+            assert variant_amino_acid == s_traj[i+1][variant_position]
 
     def in_silico_de(self):
         """
@@ -195,8 +138,6 @@ class DirectedEvolution:
         Low-N protein engineering with data-efficient deep learning,
         see https://github.com/ivanjayapurna/low-n-protein-engineering/tree/master/directed-evo
         """
-        # iterate through the trial mutation steps for the directed evolution trajectory
-        # m = 1 (only 1 mutation per step) instead of (np.random.poisson(2) + 1)
         v_traj, s_traj, y_traj = [], [], []
         v_traj.append('WT')
         y_traj.append(np.nan)
@@ -204,26 +145,28 @@ class DirectedEvolution:
         accepted = 0
         add_epsilon = 0.0
         wt_prediction = None
-        #if self.ml_or_hybrid == 'hybrid':
-        #   logger.info('Adding 1% of predicted WT fitness to WT-relative variant predictions for hybrid modeling...')
-        for iteration in range(self.num_iterations):  # num_iterations
+
+        for iteration in range(self.num_iterations):
             self.de_step_counter = iteration
 
             if accepted == 0:
-                prior_mutation_location = random.randint(0, len(self.s_wt))  # not really "prior" as first
-            else:  # get prior mutation position
+                prior_mutation_location = random.randint(0, len(self.s_wt))
+            else:
                 prior_mutation_location = int(re.findall(r"\d+", v_traj[-1])[0])
-            prior_y = y_traj[-1]  # prior y, always at [-1]
-            prior_sequence = s_traj[-1]  # prior sequence, always at [-1]
+            
+            prior_y = y_traj[-1]
+            prior_sequence = s_traj[-1]
 
             new_var_seq = self.mutate_sequence(
                 seq=prior_sequence,
                 prev_mut_loc=prior_mutation_location
             )
 
-            new_variant = new_var_seq[0][0]  # int + string char, e.g. '17A'
-            new_full_variant = str(self.s_wt[int(new_variant[:-1])-1]) + new_variant  # full variant name, e.g. 'F17A'
+            new_variant = new_var_seq[0][0]  # e.g., '17A'
+            wt_pos = int(re.findall(r"\d+", new_variant)[0]) - 1
+            new_full_variant = f"{self.s_wt[wt_pos]}{new_variant}"  # full variant name, e.g. 'F17A'
             new_sequence = new_var_seq[0][1]
+
             # encode and predict new sequence fitness
             if self.ml_or_hybrid == 'ml':
                 if wt_prediction is None or wt_prediction == 'skip':
@@ -232,23 +175,26 @@ class DirectedEvolution:
                         rand_pos = random.randint(0, len(self.s_wt) - 1)
                         wt_mut = self.s_wt[rand_pos] + str(rand_pos) + self.s_wt[rand_pos]
                         logger.info(f"Trying to get WT fitness: {wt_mut}...")
-                        wt_prediction = predict(  # AAidx, OneHot, or DCA-based pure ML prediction
+                        wt_prediction = predict(
                             path=self.path,
                             model=self.model,
                             encoding=self.encoding,
-                            variants=np.atleast_1d(wt_mut),   # WT, e.g. F17F
+                            variants=np.atleast_1d(wt_mut),
                             sequences=np.atleast_1d(self.s_wt),
                             no_fft=self.no_fft,
                             couplings_file=self.dca_encoder
                         )
+                    wt_prediction = wt_prediction[0]
+                
                 if self.de_step_counter == 0:
                     logger.info(
                         f"Step {self.de_step_counter}: "
-                        f"WT ({wt_mut}) --> {wt_prediction[0][0]:.3f} WT relative fitness: "
-                        f"{wt_prediction[0][0] - wt_prediction[0][0] + add_epsilon:.3f}"
+                        f"WT ({wt_mut}) --> {wt_prediction[0]:.3f} WT relative fitness: "
+                        f"{wt_prediction[0] - wt_prediction[0] + add_epsilon:.3f}"
                     )
-                    y_traj[0] = wt_prediction[0][0]
-                predictions = predict(  # AAidx, OneHot, or DCA-based pure ML prediction
+                    y_traj[0] = wt_prediction[0]
+                
+                predictions = predict(
                     path=self.path,
                     model=self.model,
                     encoding=self.encoding,
@@ -257,6 +203,8 @@ class DirectedEvolution:
                     no_fft=self.no_fft,
                     couplings_file=self.dca_encoder
                 )
+                if predictions != "skip":
+                    predictions = predictions[0]
 
             else:  # hybrid modeling and prediction
                 if wt_prediction is None or wt_prediction == 'skip':
@@ -267,38 +215,44 @@ class DirectedEvolution:
                         logger.info(f"Trying to get WT fitness: {wt_mut}...")
                         wt_prediction = predict_directed_evolution(
                             encoder=self.dca_encoder,
-                            variant=wt_mut,  # WT, e.g. F17F
+                            variant=wt_mut,
                             variant_sequence=self.s_wt,
                             hybrid_model_data_pkl=self.model
                         )
                 if self.de_step_counter == 0:
                     logger.info(
                         f"Step {self.de_step_counter}: "
-                        f"WT ({wt_mut}) --> {wt_prediction[0][0]:.3f} WT relative fitness: "
-                        f"{wt_prediction[0][0] - wt_prediction[0][0] + add_epsilon:.3f}"
+                        f"WT ({wt_mut}) --> {wt_prediction[0]:.3f} WT relative fitness: "
+                        f"{wt_prediction[0] - wt_prediction[0] + add_epsilon:.3f}"
                     )
-                    # add_epsilon = 0.01 * abs(wt_prediction[0][0]) # Adding 1% to prediction for hybrid modeling!
-                    y_traj[0] = wt_prediction[0][0] - wt_prediction[0][0]
+                    y_traj[0] = wt_prediction[0] - wt_prediction[0]
+                
                 predictions = predict_directed_evolution(
                     encoder=self.dca_encoder,
-                    variant=self.s_wt[int(new_variant[:-1]) - 1] + new_variant,
+                    variant=new_full_variant,
                     variant_sequence=new_sequence,
                     hybrid_model_data_pkl=self.model
                 )
+
             if predictions != 'skip':
-                logger.info(f"Step {self.de_step_counter + 1}: "
-                            f"{self.s_wt[int(new_variant[:-1]) - 1]}{new_variant} --> "
-                            f"{predictions[0][0]:.3f} WT relative fitness: "
-                            f"{predictions[0][0] - wt_prediction[0][0] + add_epsilon:.3f}")
-            else:  # skip if variant cannot be encoded by DCA-based encoding technique
-                logger.info(f"Step {self.de_step_counter + 1}: "                      # 'skip'
-                            f"{self.s_wt[int(new_variant[:-1]) - 1]}{new_variant} --> {predictions}")
+                logger.info(
+                    f"Step {self.de_step_counter + 1}: "
+                    f"{new_full_variant} --> "
+                    f"{predictions[0]:.3f} WT relative fitness: "
+                    f"{predictions[0] - wt_prediction[0] + add_epsilon:.3f}"
+                )
+            else:  # skip if variant cannot be encoded
+                logger.info(
+                    f"Step {self.de_step_counter + 1}: "
+                    f"{new_full_variant} --> {predictions}"
+                )
                 continue
-            new_y = predictions[0][0] - wt_prediction[0][0] + add_epsilon  # Adding 1% to prediction for hybrid modeling!
-            new_var = predictions[0][1]  # new_var == new_variant nonetheless
+
+            new_y = predictions[0] - wt_prediction[0] + add_epsilon
+            new_var = new_full_variant  # Store full variant name (e.g., 'F17A')
+
             # probability function for trial sequence
-            # The lower the fitness (y) of the new variant, the higher are the chances to get excluded
-            with warnings.catch_warnings():  # catching Overflow warning
+            with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
                 try:
                     boltz = np.exp(((new_y - prior_y) / self.temp), dtype=np.longdouble)
@@ -306,12 +260,13 @@ class DirectedEvolution:
                         boltz = np.exp((-(new_y - prior_y) / self.temp), dtype=np.longdouble)
                 except OverflowError:
                     boltz = 1
+            
             p = min(1, boltz)
-            rand_var = random.random()  # random float between 0 and 1
-            if rand_var < p:  # Metropolis-Hastings update selection criterion, else do nothing (do not accept variant)
-                v_traj.append(str(new_var))       # update the variant naming trajectory
-                y_traj.append(new_y)         # update the fitness trajectory records
-                s_traj.append(new_sequence)  # update the sequence trajectory records
+            rand_var = random.random()
+            if rand_var < p:  # Metropolis-Hastings acceptance
+                v_traj.append(str(new_var))  # update variant trajectory with full name
+                y_traj.append(new_y)
+                s_traj.append(new_sequence)
                 accepted += 1
                 logger.info(f'Accepted variant {new_var} (current evolutionary trajectory: {v_traj})')
             else: 
@@ -322,60 +277,55 @@ class DirectedEvolution:
         return v_traj, s_traj, y_traj
 
     def run_de_trajectories(self):
-        """
-        Runs the directed evolution by addressing the in_silico_de
-        function and plots the evolution trajectories.
-        """
-        v_records = []  # initialize list of sequence variant names
-        s_records = []  # initialize list of sequence records
-        y_records = []  # initialize list of fitness score records
-        #   i = counter, iterate through however many mutation trajectories we want to sample
+        v_records = []
+        s_records = []
+        y_records = []
         for i in range(self.num_trajectories):
             self.traj_counter = i
-            # call the directed evolution function, outputting the trajectory
-            # sequence and fitness score records
             v_traj, s_traj, y_traj = self.in_silico_de()
-            v_records.append(v_traj)  # update variant naming full mutagenesis trajectory
-            s_records.append(s_traj)  # update the sequence full mutagenesis trajectory
-            y_records.append(y_traj)  # update the fitness full mutagenesis trajectory
+            v_records.append(v_traj)
+            s_records.append(s_traj)
+            y_records.append(y_traj)
 
         return s_records, v_records, y_records
 
     def plot_trajectories(self):
         """
-        Plots evolutionary trajectories and saves steps
-        in CSV file.
+        Plots evolutionary trajectories and saves steps in CSV file.
         """
         s_records, v_records, y_records = self.run_de_trajectories()
-        # Idea: Standardizing DCA-HybridModel predictions as just trained by Spearman's rho
-        # e.g., meaning that fitness values could differ only at the 6th decimal place and only
-        # predicted fitness ranks matter and not associated fitness values
+        
         logger.info('Plotting evolution trajectories...')
-        fig, ax = plt.subplots(figsize=(10,6))  # figsize=(10, 6)
+        fig, ax = plt.subplots(figsize=(10, 6))
         ax.locator_params(integer=True)
         y_records_ = []
         for i, fitness_array in enumerate(y_records):
             ax.plot(np.arange(1, len(fitness_array) + 1, 1), fitness_array,
                     '-o', alpha=0.7, markeredgecolor='black', label='EvoTraj' + str(i + 1))
             y_records_.append(fitness_array)
+        
         label_x_y_name = []
         traj_max_len = 0
-        # i = 1, 2, 3, .., ; v_record = variant label array
         for i, v_record in enumerate(v_records):
-            # j = 1, 2, 3, ..., ; v = variant name; y_records[i][j] = fitness
             for j, v in enumerate(v_record):
                 if len(v_record) > traj_max_len:
                     traj_max_len = len(v_record)
-                if i == 0:                      # j + 1 -> x-axis position shifted by 1
-                    label_x_y_name.append(ax.text(j + 1, y_records_[i][j], v, size=7))
+                
+                # Format full variant name (e.g. A123C) if short string (e.g. 123C) is passed
+                v_name = v
+                if v != 'WT' and v[0].isdigit():
+                    pos_int = int(re.findall(r"\d+", v)[0]) - 1
+                    v_name = f"{self.s_wt[pos_int]}{v}"
+
+                if i == 0:  # j + 1 -> x-axis position shifted by 1
+                    label_x_y_name.append(ax.text(j + 1, y_records_[i][j], v_name, size=7))
                 else:
                     if v != 'WT':  # only plot 'WT' name once at i == 0
-                        label_x_y_name.append(ax.text(j + 1, y_records_[i][j], v, size=7))
-        # Potentially adjust_text prints stuff if repeated text label shifting 
-        # is needed (in adjust_text versions <= 1.3.0)
+                        label_x_y_name.append(ax.text(j + 1, y_records_[i][j], v_name, size=7))
+        
         adjust_text(label_x_y_name, only_move={'points': 'y', 'text': 'y'}, force_points=0.6)
         ax.legend()
-        plt.xticks(np.arange(1,  traj_max_len + 1, 1), np.arange(1, traj_max_len + 1, 1))
+        plt.xticks(np.arange(1, traj_max_len + 1, 1), np.arange(1, traj_max_len + 1, 1))
 
         plt.ylabel('Predicted fitness')
         plt.xlabel('Mutation trial steps')

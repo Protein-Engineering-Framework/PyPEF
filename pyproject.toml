@@ -6,20 +6,23 @@ build-backend = "setuptools.build_meta"
 name = "pypef"
 dynamic = ["version", "readme"]
 authors = [
-    { name = "Niklas Siedhoff", email = "niklas.siedhoff@rwth-aachen.de" },
-    { name = "Alexander-Maurice Illig" }
+    { name = "Niklas Siedhoff", email = "niklas.siedhoff@rwth-aachen.de" }
 ]
-description = "A tool for performing data-driven protein engineering by building machine learning models from protein variant fitness data."
+description = """\
+A tool for performing data-driven protein engineering by building, testing, and \
+inferring machine learning models trained on protein variant fitness data.\
+"""
 requires-python = ">=3.10"
 license = { text = "CC BY-SA 4.0" }
 keywords = ["Pythonic Protein Engineering Framework"]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 4 - Beta",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Topic :: Scientific/Engineering :: Bio-Informatics",
     "Topic :: Scientific/Engineering :: Artificial Intelligence"
 ]
@@ -37,7 +40,9 @@ dependencies = [
     "schema",
     "pathos",
     "peft",
-    "pynvml",
+    "nvidia-ml-py",
+    "gpytorch",
+    "huggingface_hub[hf_xet]",
     "torch",
     "torch-geometric"
 ]
@@ -66,11 +71,13 @@ include = ["pypef*"]
 pypef = [
     "ml/AAindex/*",
     "ml/AAindex/Refined_cluster_indices_r0.93_r0.97/*",
-    "llm/prosst_structure/static/*"
+    "plm/prosst_structure/static/*",
+    "gui/assets/*"
 ]
 
 [tool.pytest.ini_options]
 markers = [
     "main_script_specific",
-    "pip_specific"
+    "pip_specific",
+    "requires_gpu"
 ]

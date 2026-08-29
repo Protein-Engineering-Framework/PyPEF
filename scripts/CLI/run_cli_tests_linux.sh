@@ -39,6 +39,32 @@ pypef="python3 $path/pypef/main.py"                                             
 threads=1                                                                                                                #
 ##########################################################################################################################
 
+# ANSI Color Codes
+BLUE='\033[0;34m'
+GREEN='\033[0;32m'
+RED='\033[0;31m'
+NC='\033[0m' # No Color
+
+echo "~~~~~~~~~~~~~~~~~~ WHERE ~~~~~~~~~~~~~~~~~~"
+PYPEF_PATH=$(command -v pypef 2>/dev/null || echo "pypef not found in PATH")
+echo -e "${BLUE}${PYPEF_PATH}${NC}"
+echo "~~~~~~~~~~~~~~~~~~ WHERE ~~~~~~~~~~~~~~~~~~"
+
+echo "~~~~~~~~~~~~~~~~~~ GPU CHECK ~~~~~~~~~~~~~~~~~~"
+# sys.exit(0) if CUDA available, sys.exit(1) if False
+python3 -c "import torch, sys; sys.exit(0 if torch.cuda.is_available() else 1)"
+gpuAvailable=$?
+
+if [ $gpuAvailable -eq 0 ]; then
+    echo "GPU available?: True"
+    echo -e "${GREEN}GPU detected! Proceeding with execution...${NC}"
+else
+    echo "GPU available?: False"
+    echo -e "${RED}GPU not available. Sleeping for 10 seconds if user wants to abort here...${NC}"
+    sleep 10
+fi
+echo "~~~~~~~~~~~~~~~~~~ GPU CHECK ~~~~~~~~~~~~~~~~~~"
+
 ### threads=1 shows progress bar where possible
 ### CV-based mlp and rf regression option take a long time and related testing commands are commented out/not included herein
 
@@ -284,6 +310,19 @@ echo
 $pypef hybrid -m HYBRIDGREMLIN -t TS.fasl --params GREMLIN
 echo
 
+### Reproducibility check: with a fixed --seed, hybrid training (train/validation
+### split + differential-evolution beta optimization) must give identical results.
+### Without a seed (default) results vary run to run, so we do NOT assert a value there.
+seed_perf_1=$($pypef hybrid -l LS.fasl -t TS.fasl --params GREMLIN --seed 42 2>&1 | sed -n 's/.*Hybrid performance: \([-0-9.]*\).*/\1/p' | tail -1)
+seed_perf_2=$($pypef hybrid -l LS.fasl -t TS.fasl --params GREMLIN --seed 42 2>&1 | sed -n 's/.*Hybrid performance: \([-0-9.]*\).*/\1/p' | tail -1)
+echo -e "${BLUE}Seeded hybrid reproducibility: run1=${seed_perf_1} run2=${seed_perf_2}${NC}"
+if [ -z "$seed_perf_1" ] || [ "$seed_perf_1" != "$seed_perf_2" ]; then
+    echo -e "${RED}Reproducibility FAILED: seeded (--seed 42) hybrid runs differ (${seed_perf_1} != ${seed_perf_2})${NC}"
+    exit 1
+fi
+echo -e "${GREEN}Reproducibility OK: seeded (--seed 42) hybrid runs are identical (${seed_perf_1}).${NC}"
+echo
+
 $pypef mkps -i 37_ANEH_variants.csv -w Sequence_WT_ANEH.fasta
 echo
 $pypef hybrid -m HYBRIDPLMC -p 37_ANEH_variants_prediction_set.fasta --params ANEH_72.6.params --threads $threads
@@ -308,15 +347,15 @@ $pypef hybrid extrapolation -i 37_ANEH_variants_dca_encoded.csv --conc
 echo
 
 # 0.4.0 features: hybrid DCA-LLM modeling
-$pypef hybrid --ls LS.fasl --ts TS.fasl --params GREMLIN --llm esm
+$pypef hybrid --ls LS.fasl --ts TS.fasl --params GREMLIN --plm esm
 echo
-$pypef hybrid -m HYBRIDGREMLINESM1V --ts TS.fasl --params GREMLIN --llm esm
+$pypef hybrid -m HYBRIDGREMLINESM --ts TS.fasl --params GREMLIN
 echo
 $pypef mkps -i 37_ANEH_variants.csv --wt Sequence_WT_ANEH.fasta
 echo
-$pypef hybrid -m HYBRIDGREMLINESM1V --ps 37_ANEH_variants_prediction_set.fasta --params GREMLIN --llm esm
+$pypef hybrid -m HYBRIDGREMLINESM --ps 37_ANEH_variants_prediction_set.fasta --params GREMLIN
 echo
-$pypef hybrid directevo -m HYBRIDGREMLINESM1V -w Sequence_WT_ANEH.fasta --negative --params GREMLIN
+$pypef hybrid directevo -m HYBRIDGREMLINESM -w Sequence_WT_ANEH.fasta --negative --params GREMLIN
 echo
 
 rm 37_ANEH_variants_plmc_dca_encoded.csv
@@ -442,9 +481,9 @@ echo
 # SSM: predict_ssm
 $pypef predict_ssm -w P42212_F64L.fasta --params GREMLIN
 echo
-$pypef predict_ssm -w P42212_F64L.fasta --llm esm
+$pypef predict_ssm -w P42212_F64L.fasta --plm esm
 echo
-$pypef predict_ssm -w P42212_F64L.fasta --llm prosst --pdb GFP_AEQVI.pdb
+$pypef predict_ssm -w P42212_F64L.fasta --plm prosst --pdb GFP_AEQVI.pdb
 echo
 
 $pypef encode -i avGFP.csv -e dca -w P42212_F64L.fasta --params uref100_avgfp_jhmmer_119_plmc_42.6.params --threads $threads
@@ -475,39 +514,92 @@ echo
 # many single variants for recombination, takes too long
 #$pypef hybrid -m HYBRIDPLMC --params uref100_avgfp_jhmmer_119_plmc_42.6.params --pmult --drecomb --threads $threads  
 #echo
+$pypef hybrid --ps avGFP_prediction_set.fasta --plm esm --wt P42212_F64L.fasta
+echo
+$pypef hybrid --ps avGFP_prediction_set.fasta --plm prosst --wt P42212_F64L.fasta --pdb GFP_AEQVI.pdb
+echo
 $pypef hybrid -m HYBRIDGREMLIN --params GREMLIN --pmult --drecomb
 echo
 
 $pypef hybrid directevo -m HYBRIDPLMC -w P42212_F64L.fasta --params uref100_avgfp_jhmmer_119_plmc_42.6.params
 echo
+$pypef hybrid directevo -m HYBRIDGREMLIN -w P42212_F64L.fasta --params GREMLIN
+echo
 $pypef hybrid directevo -m HYBRIDPLMC -w P42212_F64L.fasta --numiter 10 --numtraj 8 --params uref100_avgfp_jhmmer_119_plmc_42.6.params
 echo
 $pypef hybrid directevo -m HYBRIDPLMC -i avGFP.csv -w P42212_F64L.fasta --temp 0.1 --usecsv --csvaa --params uref100_avgfp_jhmmer_119_plmc_42.6.params
 
+$pypef hybrid --ts TS.fasl --plm esm --wt P42212_F64L.fasta
+echo
+$pypef hybrid --ts TS.fasl --plm prosst --wt P42212_F64L.fasta --pdb GFP_AEQVI.pdb
+echo
+
 # 0.4.0 features: hybrid DCA-LLM modeling
-$pypef hybrid --ls LS.fasl --ts TS.fasl --params GREMLIN --llm esm
+$pypef mklsts -i avGFP.csv -w P42212_F64L.fasta --ls_proportion 0.02
 echo
-$pypef hybrid -m HYBRIDGREMLINESM1V --ts TS.fasl --params GREMLIN --llm esm
+$pypef hybrid --ls LS.fasl --ts TS.fasl --params GREMLIN --plm esm
 echo
-
-$pypef hybrid --ls LS.fasl --ts TS.fasl --params GREMLIN --llm prosst --wt P42212_F64L.fasta  --pdb GFP_AEQVI.pdb
-echo
-$pypef hybrid -m HYBRIDGREMLINPROSST --ts TS.fasl --params GREMLIN --llm prosst --wt P42212_F64L.fasta  --pdb GFP_AEQVI.pdb
+$pypef hybrid -m HYBRIDGREMLINESM --ts TS.fasl --params GREMLIN
 echo
 
-$pypef hybrid directevo -m HYBRIDGREMLINESM1V -w P42212_F64L.fasta --params GREMLIN --llm esm
+$pypef hybrid --ls LS.fasl --ts TS.fasl --params GREMLIN --plm prosst --wt P42212_F64L.fasta  --pdb GFP_AEQVI.pdb
 echo
-$pypef hybrid directevo -m HYBRIDGREMLINPROSST -w P42212_F64L.fasta --params GREMLIN --llm prosst --pdb GFP_AEQVI.pdb
+$pypef hybrid -m HYBRIDGREMLINPROSST --ts TS.fasl --params GREMLIN --wt P42212_F64L.fasta  --pdb GFP_AEQVI.pdb
+echo
+
+$pypef hybrid directevo -m HYBRIDGREMLINESM -w P42212_F64L.fasta --params GREMLIN
+echo
+$pypef hybrid directevo -m HYBRIDGREMLINPROSST -w P42212_F64L.fasta --params GREMLIN --pdb GFP_AEQVI.pdb
 echo
 
 # Takes long.. better delete 7 out of the 8 recomb txt files
-#$pypef hybrid -m HYBRIDGREMLINESM1V -w P42212_F64L.fasta --params GREMLIN --llm esm --pmult --drecomb
+#$pypef hybrid -m HYBRIDGREMLINESM -w P42212_F64L.fasta --params GREMLIN --pmult --drecomb
 #echo
-#$pypef hybrid -m HYBRIDGREMLINPROSST -w P42212_F64L.fasta --params GREMLIN --llm prosst --pdb GFP_AEQVI.pdb --pmult --drecomb
+#$pypef hybrid -m HYBRIDGREMLINPROSST -w P42212_F64L.fasta --params GREMLIN --pdb GFP_AEQVI.pdb --pmult --drecomb
 #echo
-$pypef hybrid -m HYBRIDGREMLINESM1V -w P42212_F64L.fasta --params GREMLIN --llm esm -p avGFP_prediction_set.fasta
+$pypef hybrid -m HYBRIDGREMLINESM -w P42212_F64L.fasta --params GREMLIN -p avGFP_prediction_set.fasta
 echo
-$pypef hybrid -m HYBRIDGREMLINPROSST -w P42212_F64L.fasta --params GREMLIN --llm prosst --pdb GFP_AEQVI.pdb -p avGFP_prediction_set.fasta
+$pypef hybrid -m HYBRIDGREMLINPROSST -w P42212_F64L.fasta --params GREMLIN --pdb GFP_AEQVI.pdb -p avGFP_prediction_set.fasta
+echo
+
+# 0.5.0 features: multi-PLM (DCA+ESM+ProSST), LoRA fine-tuning, and Gaussian-process (GP) optimization.
+# These commands run PLM fine-tuning/GP training and are computationally intensive; use a small
+# learning set to keep the runtime tractable.
+$pypef mklsts -i avGFP.csv -w P42212_F64L.fasta --ls_proportion 0.02
+echo
+# Multiple PLMs can be combined via '+' (also ',' or whitespace): DCA + ESM + ProSST hybrid model
+$pypef hybrid --ls LS.fasl --ts TS.fasl --params GREMLIN --plm esm+prosst --wt P42212_F64L.fasta --pdb GFP_AEQVI.pdb
+echo
+$pypef hybrid -m HYBRIDGREMLINESMPROSST --ts TS.fasl --params GREMLIN --wt P42212_F64L.fasta --pdb GFP_AEQVI.pdb
+echo
+$pypef hybrid -m HYBRIDGREMLINESMPROSST --ps avGFP_prediction_set.fasta --params GREMLIN --wt P42212_F64L.fasta --pdb GFP_AEQVI.pdb
+echo
+# LoRA-based supervised PLM fine-tuning (--lora)
+$pypef hybrid --ls LS.fasl --ts TS.fasl --params GREMLIN --plm esm --lora
+echo
+$pypef hybrid --ls LS.fasl --ts TS.fasl --params GREMLIN --plm prosst --wt P42212_F64L.fasta --pdb GFP_AEQVI.pdb --lora
+echo
+# Gaussian-process (GP) optimization as an alternative to LoRA tuning (--gauss_opt, requires --wt and --pdb)
+$pypef hybrid --ls LS.fasl --ts TS.fasl --params GREMLIN --plm esm --wt P42212_F64L.fasta --pdb GFP_AEQVI.pdb --gauss_opt
+echo
+$pypef hybrid --ls LS.fasl --ts TS.fasl --params GREMLIN --plm prosst --wt P42212_F64L.fasta --pdb GFP_AEQVI.pdb --gauss_opt
+echo
+# Combined multi-PLM GP over both PLM embeddings (--gauss_comb, requires --gauss_opt and two PLMs)
+$pypef hybrid --ls LS.fasl --ts TS.fasl --params GREMLIN --plm esm+prosst --wt P42212_F64L.fasta --pdb GFP_AEQVI.pdb --gauss_opt --gauss_comb
+echo
+
+### Reproducibility check INCLUDING a PLM (and GP training): with a fixed --seed the
+### PLM-based hybrid (zero-shot PLM scores + Gaussian-process optimization + beta adjustment)
+### must be identical run to run. Without --seed these vary (torch/GP RNG), so we only
+### assert reproducibility with a seed, not a specific value (results are hardware/version dependent).
+plm_perf_1=$($pypef hybrid --ls LS.fasl --ts TS.fasl --params GREMLIN --plm esm --wt P42212_F64L.fasta --pdb GFP_AEQVI.pdb --gauss_opt --seed 42 2>&1 | sed -n 's/.*Hybrid performance: \([-0-9.]*\).*/\1/p' | tail -1)
+plm_perf_2=$($pypef hybrid --ls LS.fasl --ts TS.fasl --params GREMLIN --plm esm --wt P42212_F64L.fasta --pdb GFP_AEQVI.pdb --gauss_opt --seed 42 2>&1 | sed -n 's/.*Hybrid performance: \([-0-9.]*\).*/\1/p' | tail -1)
+echo -e "${BLUE}Seeded PLM+GP hybrid reproducibility: run1=${plm_perf_1} run2=${plm_perf_2}${NC}"
+if [ -z "$plm_perf_1" ] || [ "$plm_perf_1" != "$plm_perf_2" ]; then
+    echo -e "${RED}Reproducibility FAILED: seeded (--seed 42) PLM+GP hybrid runs differ (${plm_perf_1} != ${plm_perf_2})${NC}"
+    exit 1
+fi
+echo -e "${GREEN}Reproducibility OK: seeded (--seed 42) PLM+GP hybrid runs are identical (${plm_perf_1}).${NC}"
 echo
 
 $pypef hybrid low_n -i avGFP_dca_encoded.csv

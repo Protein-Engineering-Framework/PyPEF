@@ -8,38 +8,75 @@ on: [push]
 permissions:
   contents: read
 
+env: 
+  CI: "true"
+  PYTHONHASHSEED: "42"
+  CUBLAS_WORKSPACE_CONFIG: ":4096:8"
+  TQDM_DISABLE: "1"
+
 jobs:
   ubuntu:
     name: ubuntu
     runs-on: [ubuntu-latest]
     strategy:
+      fail-fast: false
       matrix:
-        python-version: ["3.10", "3.11", "3.12", "3.13"]
+        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+      # When activated, max-parallel prevents all 4 jobs from hitting Hugging Face at the same time
+      #max-parallel: 2
     env:
      QT_QPA_PLATFORM: offscreen
      DISPLAY: ':99.0'
     steps:
     - uses: actions/checkout@v4
+
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
+    
+    - name: Cache Hugging Face Hub
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/huggingface
+        key: ubuntu-hf-${{ matrix.python-version }}-${{ hashFiles('requirements.txt') }}
+        restore-keys: |
+          ubuntu-hf-${{ matrix.python-version }}-
+          ubuntu-hf-
+
     - name: Display Path and Python version
       run: |
         python -c "import sys, platform; print(sys.version, platform.system())"
+
+    - name: Check package-data integrity (pyproject.toml alone)
+      # Builds a wheel from a git-less / MANIFEST-less copy so that only
+      # pyproject.toml's package-data governs inclusion, then verifies the
+      # bundled .pt/.npy/AAindex data files are present. Catches a broken
+      # package-data path that git-tracking / MANIFEST.in would otherwise mask.
+      run: |
+        python -m pip install --upgrade pip wheel
+        python scripts/CLI/check_wheel_packaging.py
+
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
         pip install flake8 pytest
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+
     - name: Lint with flake8
       run: |
         # stop the build if there are Python syntax errors or undefined names
         flake8 ./pypef --count --select=E9,F63,F7,F82 --show-source --statistics
+
     - name: Export Pythonpath and run tests using the main script
+      env:
+        HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        HUGGING_FACE_HUB_TOKEN: ${{ secrets.HF_TOKEN }} # Compatibility fallback for older transformers versions
       run: |
-        export PYTHONPATH="${PYTHONPATH}:${PWD}" && python -m pytest ./tests/ -v -m "not pip_specific"
-    - name: Export Pythonpath and run tests using pip-installation
+        export PYTHONPATH="${PYTHONPATH}:${PWD}"
+        python -m pytest ./tests/ -v -m "not (pip_specific or requires_gpu)" --log-cli-level=INFO --capture=tee-sys
+
+    - name: Export Pythonpath and run GUI tests using pip-installation
       run: |
         export PYTHONPATH=""
         sudo apt update
@@ -50,43 +87,77 @@ jobs:
         sleep 3
         pip install .[gui]
         echo $(which pypef)
-        python -m pytest ./tests/ -v -m "not main_script_specific" --log-cli-level=INFO
+        # Run from a neutral dir with --import-mode=importlib so `import pypef`
+        # resolves to the pip-installed package, NOT the source tree on the
+        # repo root (which `python -m pytest` from the checkout would put on
+        # sys.path). This makes the pip_specific tests exercise the installed
+        # wheel and its bundled data, as intended.
+        cd "$RUNNER_TEMP"
+        python -m pytest "$GITHUB_WORKSPACE/tests" -v -m "pip_specific" \
+          --import-mode=importlib --log-cli-level=INFO --capture=tee-sys
 
   windows:
     name: windows
     runs-on: [windows-latest]
     strategy:
+      fail-fast: false
       matrix:
-        python-version: ["3.10", "3.11", "3.12", "3.13"]
+        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
     env:
       QT_QPA_PLATFORM: offscreen
     steps:
     - uses: actions/checkout@v4
+
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
+    
+    - name: Cache Hugging Face Hub (Windows)
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/huggingface
+        key: windows-hf-${{ matrix.python-version }}-${{ hashFiles('requirements.txt') }}
+        restore-keys: |
+          windows-hf-${{ matrix.python-version }}-
+
     - name: Display Path and Python version
       run: |
         python -c "import sys, platform; print(sys.version, platform.system())"
+
+    - name: Check package-data integrity (pyproject.toml alone)
+      run: |
+        python -m pip install --upgrade pip wheel
+        python scripts/CLI/check_wheel_packaging.py
+
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
         pip install flake8 pytest
         pip install -r requirements.txt
+
     - name: Lint with flake8
       run: |
         # stop the build if there are Python syntax errors or undefined names
         flake8 .\pypef --count --select=E9,F63,F7,F82 --show-source --statistics
+
     - name: Export Pythonpath and run tests using the main script
       shell: pwsh
+      env: 
+        HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        HUGGING_FACE_HUB_TOKEN: ${{ secrets.HF_TOKEN }}
       run: |
-        $env:PYTHONPATH = "${PWD};${env:PYTHONPATH}";python -m pytest .\tests\ -v -m "not pip_specific"
-    - name: Export Pythonpath and run tests using pip-installation
+        $env:PYTHONPATH = "${PWD};${env:PYTHONPATH}"
+        python -m pytest .\tests\ -v -m "not (pip_specific or requires_gpu)" --log-cli-level=INFO --capture=tee-sys
+
+    - name: Export Pythonpath and run GUI tests using pip-installation
       shell: pwsh
       run: |
         $env:PYTHONPATH = ""
         pip install .[gui]
         echo (Get-Command pypef).Source
-        python -m pytest .\tests -v -m "not main_script_specific" --log-cli-level=INFO
-
+        # Run from a neutral dir with --import-mode=importlib so `import pypef`
+        # resolves to the pip-installed package, not the source tree.
+        cd $env:RUNNER_TEMP
+        python -m pytest "$env:GITHUB_WORKSPACE\tests" -v -m "pip_specific" `
+          --import-mode=importlib --log-cli-level=INFO --capture=tee-sys

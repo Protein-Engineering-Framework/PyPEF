@@ -1,0 +1,27 @@
+numpy
+pandas
+tqdm
+docopt-ng
+matplotlib
+scipy
+adjustText
+scikit-learn
+biopython
+biotite
+schema
+pathos
+peft
+nvidia-ml-py
+gpytorch
+huggingface_hub[hf_xet]
+#scikit-learn-intelex
+#ray[default]
+ipykernel
+jupyter
+pytest
+seaborn
+hydra-core
+pyside6
+--extra-index-url https://download.pytorch.org/whl/cu128
+torch
+torch-geometric

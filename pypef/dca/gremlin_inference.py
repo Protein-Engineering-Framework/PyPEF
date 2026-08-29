@@ -42,14 +42,15 @@ import pickle
 import numpy as np
 import matplotlib.pyplot as plt
 from Bio import AlignIO
-from scipy.spatial.distance import pdist, squareform
+from scipy.spatial.distance import squareform
 from scipy.special import logsumexp
 from scipy.stats import boxcox
 import pandas as pd
-from tqdm import tqdm
 import torch
 
-from pypef.llm.utils import get_batches
+from pypef.utils.helpers import tqdm
+from pypef.plm.utils import get_batches
+from pypef.utils.helpers import get_device
 from pypef.utils.variant_data import get_mismatches
 
 
@@ -59,7 +60,8 @@ class GREMLIN:
     """
     def __init__(
             self,
-            alignment: str | PathLike,
+            alignment: str | PathLike | None = None,
+            sequences: list[str] | np.ndarray[str] | None = None,
             char_alphabet: str = "ARNDCQEGHILKMFPSTWYV-",
             wt_seq=None,
             offset=0,
@@ -70,7 +72,6 @@ class GREMLIN:
             max_msa_seqs: int | None = 10000,
             msa_start: None | int = None,
             msa_end: None | int = None,
-            seqs: list[str] | np.ndarray[str] | None =None,
             device: str | None = None
     ):
         """
@@ -81,13 +82,7 @@ class GREMLIN:
         np.log(np.sum(onehot_cat_msa.T * self.msa_weights, -1).T + pseudo_count).
         """
         if device is None:
-            device = (
-                "cuda"
-                if torch.cuda.is_available()
-                else "mps"
-                if torch.backends.mps.is_available()
-                else "cpu"
-            )
+            device = get_device()
         self.device = device    
         logger.info(f'Using {self.device.upper()} device for GREMLIN computations...')   
         self.char_alphabet = char_alphabet
@@ -108,10 +103,16 @@ class GREMLIN:
             msa_end = None
         self.msa_end = msa_end
         logger.info('Loading MSA...')
-        if seqs is None:
+        if sequences is None:
+            if alignment is None:
+                raise RuntimeError(
+                    "GREMLIN requires input sequences either from given multiple "
+                    "sequence alignment file in FASTA format or from directly provided "
+                    "sequences."
+                )
             self.seqs, self.seq_ids = self.get_sequences_from_msa(alignment)
         else:
-            self.seqs = seqs
+            self.seqs = sequences
             self.seq_ids = np.array([n for n in range(len(self.seqs))])
         self.first_msa_seq = self.seqs[0]
         if self.msa_start is not None or self.msa_end is not None:
@@ -224,7 +225,7 @@ class GREMLIN:
             if i < self.max_msa_seqs:
                 msa_ori.append([self.aa2int(aa.upper()) for aa in seq])
             else:
-                logger.info(f'Reached max. number of MSA sequences ({self.max_msa_seqs})...')
+                logger.info(f'Reached max. number of MSA sequences ({self.max_msa_seqs}), omitting the rest...')
                 break
         msa_ori = np.array(msa_ori)
         return msa_ori
@@ -246,8 +247,11 @@ class GREMLIN:
 
     def get_eff_msa_weights(self, msa):
         """Compute effective weight for each sequence"""
-        # pairwise identity
-        pdistance_msa = pdist(msa, "hamming")  # TODO: to PyTorch?
+        _n, m = msa.shape
+        # p=0 is Hamming dist
+        pdistance_msa = (torch.nn.functional.pdist(
+            torch.tensor(msa, dtype=torch.float32), p=0
+        ).to(self.device) / m).cpu().numpy()
         msa_sm = 1.0 - squareform(pdistance_msa)
         # weight for each sequence
         msa_w = (msa_sm >= self.eff_cutoff).astype(float)
@@ -257,7 +261,6 @@ class GREMLIN:
     @staticmethod
     def flatten_v_w(v, w):
         return torch.cat((v.flatten(), w.flatten()), 0)
-
 
     def opt_adam_step(self, lr=1.0, b1=0.9, b2=0.999):
         """
@@ -289,16 +292,14 @@ class GREMLIN:
         self.vt_w = vt_tmp_w
         self.mt_w = mt_tmp_w
 
-    def sym_w(self, w, device: str | None = None):
+    def sym_w(self, w):
         """
         Symmetrize input matrix of shape (x,y,x,y)
         As the full couplings matrix W might/will be slightly "unsymmetrical"
         it will be symmetrized according to one half being "mirrored".
         """
-        if device is None:
-            device = self.device
         x = w.shape[0]
-        w = w * torch.reshape(1 - torch.eye(x), (x, 1, x, 1)).to(device)
+        w = w * torch.reshape(1 - torch.eye(x), (x, 1, x, 1)).to(self.device)
         w = w + torch.permute(w, (2, 3, 0, 1))
         return w
 
@@ -306,23 +307,20 @@ class GREMLIN:
     def l2_reg(x):
         return torch.sum(torch.square(x))
     
-    def loss(self, v, w, device: str | None = None):
+    def loss(self, v, w):
         ##############################################################
         # SETUP COMPUTE GRAPH
         ##############################################################
-        if device is None:
-            device = self.device
-        v, w = v.to(device), w.to(device)
         # symmetrize w
-        w = self.sym_w(w, device).to(torch.float32)
+        w = self.sym_w(w).to(torch.float32)
 
         ########################################
         # Pseudo-Log-Likelihood
         ########################################
-        vw = v + torch.tensordot(self.oh_msa.to(device), w, dims=2)
+        vw = v + torch.tensordot(self.oh_msa, w, dims=2)
 
         # Hamiltonian
-        h = torch.sum(torch.mul(self.oh_msa.to(device), vw), dim=(1, 2))
+        h = torch.sum(torch.mul(self.oh_msa, vw), dim=(1, 2))
         # partition function Z
         z = torch.sum(torch.logsumexp(vw, dim=2), dim=1)
 
@@ -337,17 +335,11 @@ class GREMLIN:
 
         # loss function to minimize
         loss = (
-            -torch.sum(pll * self.msa_weights.to(device)) / 
-            torch.sum(self.msa_weights.to(device))
+            -torch.sum(pll * self.msa_weights) / 
+            torch.sum(self.msa_weights)
         )
         loss = loss + (l2_v + lw_w) / self.n_eff
         return loss
-    
-    def _loss(self, decimals=2):
-        return  torch.round(
-            self.loss(self.v.detach(), self.w.detach(), device='cpu') * self.n_eff, 
-            decimals=decimals
-        )
 
     def run_optimization(self):
         """
@@ -366,22 +358,35 @@ class GREMLIN:
         self.v = torch.from_numpy(v_ini).to(torch.float32).requires_grad_(True).to(self.device)
         self.w = torch.zeros(
             size=(self.n_col, self.states, self.n_col, self.states)
-            ).to(torch.float32).requires_grad_(True).to(self.device)
+        ).to(torch.float32).requires_grad_(True).to(self.device)
 
         self.msa = torch.Tensor(self.msa_trimmed).to(torch.int64).to(self.device)
-        self.oh_msa = torch.nn.functional.one_hot(self.msa, self.states).to(torch.float32).to(self.device)
-        self.msa_weights = torch.from_numpy(self.msa_weights).to(torch.float32).to(self.device)
+        self.oh_msa = torch.nn.functional.one_hot(
+            self.msa, self.states
+        ).to(torch.float32).to(self.device)
+        self.msa_weights = torch.from_numpy(
+            self.msa_weights
+        ).to(torch.float32).to(self.device)
 
         self.mt_v, self.vt_v = torch.zeros_like(self.v), torch.zeros_like(self.v)
         self.mt_w, self.vt_w = torch.zeros_like(self.w), torch.zeros_like(self.w)
-        logger.info(f'Initial loss: {self._loss():.5f}')
-        for i in range(self.opt_iter):
+        current_loss = self.loss(self.v, self.w).item() * self.n_eff.item()
+        logger.info(f'Initial loss: {current_loss:.5f}')
+        progress = tqdm(list(range(self.opt_iter)))
+        device = str(self.v.device).split(':')[0].upper()
+        progress.set_description(f'MSA-based DCA opt.: Loss step 0: {current_loss:.5f} ({device})')
+        for i in progress:
             self.opt_adam_step()
-            try:
-                if (i + 1) % int(self.opt_iter / 10) == 0:
-                    logger.info(f'Loss step {i + 1}: {self._loss():.5f}')
-            except ZeroDivisionError:
-                logger.info(f'Loss step {i + 1}: {self._loss():.5f}')
+            # Takes about 30% extra time to calculate current_loss at each step vs not computing it at all
+            if (i + 1) % 10 == 0:
+                current_loss = self.loss(self.v, self.w).item() * self.n_eff.item()
+                progress.set_description(
+                    f'MSA-based DCA opt.: Loss step {i + 1}: {current_loss:.5f} ({device})'
+                )
+        current_loss = self.loss(self.v, self.w).item() * self.n_eff.item()
+        progress.set_description(
+            f'MSA-based DCA opt.: Loss step {i + 1}: {current_loss:.5f} ({device})'
+        )
         
         self.v = self.v.detach().cpu().numpy()
         self.w = self.w.detach().cpu().numpy()
@@ -423,7 +428,7 @@ class GREMLIN:
                 "e.g., try GREMLIN('Alignment.fasta', optimize=True)."
             )
 
-    def get_scores(self, seqs, v=None, w=None, v_idx=None, encode=False, h_wt_seq=0.0, recompute_z=False):
+    def get_scores(self, seqs, v=None, w=None, v_idx=None, encode=False, h_wt_seq=0.0, recompute_z=False, verbose=False):
         """
         Computes the GREMLIN score for a given sequence or list of sequences.
         For now, only runs on CPU.
@@ -443,13 +448,20 @@ class GREMLIN:
                 f"Input sequence shape (length: {np.shape(seqs_int)[1]}) does not match GREMLIN "
                 f"MSA shape (common sequence length: {wt_seq_len}) inferred from the MSA."
             )
-        # Check nums of mutations to MSA first/WT sequence and gives warning if too apart from MSA seq
-        for i, seq in enumerate(seqs):
-            n_mismatches, mismatches = get_mismatches(self.wt_seq, seq)
-            if n_mismatches / wt_seq_len > 0.05:
+        if verbose:
+            # Check nums of mutations to MSA first/WT sequence and gives warning if too apart from MSA seq
+            all_mismatches = []
+            for i, seq in enumerate(seqs):
+                n_mismatches, mismatches = get_mismatches(self.wt_seq, seq)
+                if n_mismatches / wt_seq_len > 0.05:
+                    all_mismatches.append(f"Seq {i + 1}: {mismatches}")
+            if all_mismatches:
+                summary = "; ".join(all_mismatches)
+                if len(summary) > 500: 
+                    summary = summary[:500] + '...'
                 logger.warning(
-                    f"Sequence {i + 1}: {mismatches} contains more than 5% sequence mismatches to the "
-                    f"first MSA/\"WT\" sequence. Effect predictions will likely be incorrect!"
+                    f"High mismatch rate (>5%) detected in the following sequences:\n{summary}\n"
+                    "DCA-based effect predictions will likely be incorrect for those sequences!"
                 )
         try:
             if seqs_int.shape[-1] != len(v_idx):  # The input sequence length ({seqs_int.shape[-1]}) 
@@ -510,11 +522,12 @@ class GREMLIN:
             seqs, batch_size=1000, dtype=str, 
             keep_remaining=True, verbose=True
         )
-        sequences_batched = np.atleast_2d(sequences_batched)
+        if type(sequences_batched[0]) == str:  # Only one input seq
+            sequences_batched = [sequences_batched]  # Ensure 2-dim. without numpy function
 
         for seq_batch in sequences_batched:
             xs.append(self.get_scores(seq_batch, v, w, v_idx, encode=True))
-        return xs[0]
+        return np.concatenate(xs, axis=0)
 
     @staticmethod
     def normalize(apc_mat):

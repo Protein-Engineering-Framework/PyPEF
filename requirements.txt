@@ -11,7 +11,9 @@ biotite
 schema
 pathos
 peft
-pynvml
+nvidia-ml-py
+gpytorch
+huggingface_hub[hf_xet]
 #scikit-learn-intelex
 #ray[default]
 --extra-index-url https://download.pytorch.org/whl/cu128

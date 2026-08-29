@@ -38,16 +38,16 @@ a framework written in Python 3 for performing sequence-based machine learning-a
 - One-hot encoding
 - Amino acid descriptor sets (taken from AAindex database) encoding
 - Direct coupling analysis (amino acid coevolution based on multiple sequence alignments) based encoding
-- LLM embeddings (currently, [ESM1v](https://github.com/facebookresearch/esm) and [ProSST](https://github.com/ai4protein/ProSST))
+- PLM embeddings (currently, [ESM](https://github.com/facebookresearch/esm) and [ProSST](https://github.com/ai4protein/ProSST))
 
 <p align="center">
-    <img src=".github/imgs/ML_Model_Performance_DCA_GREMLIN.png" alt="drawing" width="500"/>
+    <img src="https://raw.githubusercontent.com/niklases/PyPEF/main/.github/imgs/ML_Model_Performance_DCA_GREMLIN.png" alt="drawing" width="500"/>
 </p>
 
 When incorporating DCA and PLM features, both models are fine-tuned via few-shot learning on a subset of the training data. Subsequently, a weighted ensemble of the original (unsupervised) and fine-tuned model outputs is constructed. The ensemble weights are optimized using differential evolution, with the objective function based on performance metrics (Spearman rank correlation) evaluated on the held-out validation split of the training set.
 
 <p align="center">
-<img src=".github/imgs/splitting_workflow.png" alt="drawing" width="1000"/>
+<img src="https://raw.githubusercontent.com/niklases/PyPEF/main/.github/imgs/splitting_workflow.png" alt="drawing" width="1000"/>
 </p>
 
 <a name="installation"></a>
@@ -55,9 +55,9 @@ When incorporating DCA and PLM features, both models are fine-tuned via few-shot
 A quick installation of the PyPEF command line framework using PyPI for Linux and Windows and Python >= 3.10 can be performed with:
 
 ```bash
+# For GPU support (e.g., using CUDA 12.8, see requirements section below):
+pip install torch --index-url https://download.pytorch.org/whl/cu128  # --force-reinstall
 pip install -U pypef
-# optionally, for GPU support (see requirements section below):
-# pip install torch --index-url https://download.pytorch.org/whl/cu128
 ```
 
 After successful installation, PyPEF should work by calling `pypef` in the shell:
@@ -82,7 +82,7 @@ pypef-gui-cli  # command for keeping background debug/tqdm progress information 
 ```
 
 <p align="center">
-  <img src=".github/imgs/pypef_gui_screenshot.png" alt="drawing" width="1000"/>
+  <img src="https://raw.githubusercontent.com/niklases/PyPEF/main/.github/imgs/pypef_gui_screenshot.png" alt="drawing" width="1000"/>
 </p>
 
 The detailed routine for setting up a new virtual environment with Anaconda, installing the necessary Python packages for that environment, and running the Jupyter notebook tutorial can be found below in the Tutorial section.
@@ -104,7 +104,7 @@ Pull from Docker Hub or build the image using the stored [Dockerfile](./Dockerfi
   docker run --gpus=all -v ./datasets/:/datasets --workdir /datasets/AVGFP niklases/pypef:latest /bin/bash -c \
       "python /app/run.py mklsts --wt P42212_F64L.fasta --input avGFP.csv --ls_proportion 0.01 && \
        python /app/run.py param_inference --msa uref100_avgfp_jhmmer_119.a2m --wt P42212_F64L.fasta && \
-       python /app/run.py hybrid --ls LS.fasl --ts TS.fasl --params GREMLIN --llm prosst --wt P42212_F64L.fasta --pdb GFP_AEQVI.pdb"
+       python /app/run.py hybrid --ls LS.fasl --ts TS.fasl --params GREMLIN --plm esm+prosst --wt P42212_F64L.fasta --pdb GFP_AEQVI.pdb --gauss_opt"
   ```
 - building image from Dockerfile
   ```bash
@@ -115,49 +115,37 @@ Pull from Docker Hub or build the image using the stored [Dockerfile](./Dockerfi
   docker run --gpus=all -v ./datasets/:/datasets --workdir /datasets/AVGFP pypef /bin/bash -c \
       "python /app/run.py mklsts --wt P42212_F64L.fasta --input avGFP.csv --ls_proportion 0.01 && \
        python /app/run.py param_inference --msa uref100_avgfp_jhmmer_119.a2m --wt P42212_F64L.fasta && \
-       python /app/run.py hybrid --ls LS.fasl --ts TS.fasl --params GREMLIN --llm prosst --wt P42212_F64L.fasta --pdb GFP_AEQVI.pdb"
+       python /app/run.py hybrid --ls LS.fasl --ts TS.fasl --params GREMLIN --plm esm+prosst --wt P42212_F64L.fasta --pdb GFP_AEQVI.pdb --gauss_opt"
   ```
 
 <a name="requirements"></a>
 ## Requirements
 - Python >=3.10
-    - numpy
-    - scipy
-    - pandas
-    - torch
-    - torch-geometric
-    - scikit-learn
-    - peft (Hugging Face transformers)
-    - matplotlib
-    - tqdm
-    - biopython
-    - biotite
-    - schema
-    - docopt-ng
-    - adjustText
+    - numpy [![Python version](https://img.shields.io/pypi/pyversions/numpy?label=numpy%3A%20python)](https://github.com/numpy/numpy)
+    - scipy [![Python version](https://img.shields.io/pypi/pyversions/scipy?label=scipy%3A%20python)](https://github.com/scipy/scipy)
+    - pandas [![Python version](https://img.shields.io/pypi/pyversions/pandas?label=pandas%3A%20python)](https://github.com/pandas-dev/pandas)
+    - torch [![Python version](https://img.shields.io/pypi/pyversions/torch?label=torch%3A%20python)](https://github.com/pytorch/pytorch)
+    - torch-geometric [![Python version](https://img.shields.io/pypi/pyversions/torch-geometric?label=torch-geometric%3A%20python)](https://github.com/pyg-team/pytorch_geometric)
+    - gpytorch [![Python version](https://img.shields.io/pypi/pyversions/gpytorch?label=gpytorch%3A%20python)](https://github.com/cornellius-gp/gpytorch)
+    - scikit-learn [![Python version](https://img.shields.io/pypi/pyversions/scikit-learn?label=scikit-learn%3A%20python)](https://github.com/scikit-learn/scikit-learn)
+    - peft (Hugging Face transformers) [![Python version](https://img.shields.io/pypi/pyversions/peft?label=peft%3A%20python)](https://github.com/huggingface/peft)
+    - nvidia-ml-py [![Python version](https://img.shields.io/pypi/pyversions/nvidia-ml-py?label=nvidia-ml-py%3A%20python)](https://pypi.org/project/nvidia-ml-py)
+    - huggingface_hub[hf_xet] [![Python version](https://img.shields.io/pypi/pyversions/huggingface_hub?label=huggingface_hub%3A%20python)](https://github.com/huggingface/huggingface_hub)
+    - matplotlib [![Python version](https://img.shields.io/pypi/pyversions/matplotlib?label=matplotlib%3A%20python)](https://github.com/matplotlib/matplotlib)
+    - tqdm [![Python version](https://img.shields.io/pypi/pyversions/tqdm?label=tqdm%3A%20python)](https://github.com/tqdm/tqdm)
+    - biopython [![Python version](https://img.shields.io/pypi/pyversions/biopython?label=biopython%3A%20python)](https://github.com/biopython/biopython)
+    - biotite [![Python version](https://img.shields.io/pypi/pyversions/biotite?label=biotite%3A%20python)](https://github.com/biotite-dev/biotite)
+    - schema [![Python version](https://img.shields.io/pypi/pyversions/schema?label=schema%3A%20python)](https://github.com/keleshev/schema)
+    - docopt-ng [![Python version](https://img.shields.io/pypi/pyversions/docopt-ng?label=docopt-ng%3A%20python)](https://github.com/jazzband/docopt-ng)
+    - adjustText [![Python version](https://img.shields.io/pypi/pyversions/adjusttext?label=adjusttext%3A%20python)](https://github.com/Phlya/adjustText)
+    - pathos [![Python version](https://img.shields.io/pypi/pyversions/adjusttext?label=pathos%3A%20python)](https://github.com/uqfoundation/pathos)
 
-and optionally ray[default] and scikit-learn-intelex. LLM/DCA-related tasks can be accelerated using a GPU for computations. As PyTorch is shipped with its own CUDA runtime, for running on GPU, only a recent NVIDIA driver and a CUDA-compatible GPU is needed (a compatibility list can be found at [NVIDIA website](https://developer.nvidia.com/cuda-gpus) and [Wikipedia](https://en.wikipedia.org/wiki/CUDA#GPUs_supported)) next to an installed CUDA toolkit version that fits the GPU driver version (see [download link](https://developer.nvidia.com/cuda-downloads) and [release notes](https://docs.nvidia.com/cuda/cuda-toolkit-release-notes/index.html), Table 2). 
+and optionally ray[default] and scikit-learn-intelex. PLM/DCA-related tasks can be accelerated using a GPU for computations. As PyTorch is shipped with its own CUDA runtime, for running on GPU, only a recent NVIDIA driver and a CUDA-compatible GPU is needed (a compatibility list can be found at [NVIDIA website](https://developer.nvidia.com/cuda-gpus) and [Wikipedia](https://en.wikipedia.org/wiki/CUDA#GPUs_supported)) next to an installed CUDA toolkit version that fits the GPU driver version (see [download link](https://developer.nvidia.com/cuda-downloads) and [release notes](https://docs.nvidia.com/cuda/cuda-toolkit-release-notes/index.html), Table 2). 
 Usually, running the command presented at https://pytorch.org/get-started/locally/ using the latest CUDA version is working for setting up the GPU, e.g.:
 ```
 pip install torch --index-url https://download.pytorch.org/whl/cu128
 ```
-If errors occur with third-party packages, you can check the required Python version dependencies (if available); also, as a rule of thumb, it is often helpful to use the second most recent Python version instead of the latest, since development for the latest version is often ongoing:
-
-[![Python version](https://img.shields.io/pypi/pyversions/numpy?label=numpy%3A%20python)](https://github.com/numpy/numpy)
-[![Python version](https://img.shields.io/pypi/pyversions/scipy?label=scipy%3A%20python)](https://github.com/scipy/scipy)
-[![Python version](https://img.shields.io/pypi/pyversions/pandas?label=pandas%3A%20python)](https://github.com/pandas-dev/pandas)
-[![Python version](https://img.shields.io/pypi/pyversions/torch?label=torch%3A%20python)](https://github.com/pytorch/pytorch)
-[![Python version](https://img.shields.io/pypi/pyversions/torch-geometric?label=torch-geometric%3A%20python)](https://github.com/pyg-team/pytorch_geometric)
-[![Python version](https://img.shields.io/pypi/pyversions/scikit-learn?label=scikit-learn%3A%20python)](https://github.com/scikit-learn/scikit-learn)
-[![Python version](https://img.shields.io/pypi/pyversions/peft?label=peft%3A%20python)](https://github.com/huggingface/peft)
-[![Python version](https://img.shields.io/pypi/pyversions/pynvml?label=pynvml%3A%20python)](https://pypi.org/project/pynvml)
-[![Python version](https://img.shields.io/pypi/pyversions/matplotlib?label=matplotlib%3A%20python)](https://github.com/matplotlib/matplotlib)
-[![Python version](https://img.shields.io/pypi/pyversions/tqdm?label=tqdm%3A%20python)](https://github.com/tqdm/tqdm)
-[![Python version](https://img.shields.io/pypi/pyversions/biopython?label=biopython%3A%20python)](https://github.com/biopython/biopython)
-[![Python version](https://img.shields.io/pypi/pyversions/biotite?label=biotite%3A%20python)](https://github.com/biotite-dev/biotite)
-[![Python version](https://img.shields.io/pypi/pyversions/schema?label=schema%3A%20python)](https://github.com/keleshev/schema)
-[![Python version](https://img.shields.io/pypi/pyversions/docopt?label=docopt%3A%20python)](https://github.com/docopt/docopt)
-[![Python version](https://img.shields.io/pypi/pyversions/adjusttext?label=adjusttext%3A%20python)](https://github.com/Phlya/adjustText)
+If errors occur with third-party packages, you can check the required Python version dependencies (if available); also, as a rule of thumb, it is often helpful to use the second most recent Python version instead of the latest, since development for the latest version is often ongoing.
 
 <a name="examples"></a>
 ## Running Examples
@@ -247,12 +235,34 @@ Using saved GREMLIN model for testing:
 pypef hybrid -l LEARNING_SET.fasl -t TEST_SET.fasl --params GREMLIN
 ```
 
-Adding a LLM model as blend, just add it to the command prompt; note however, that LLM finetuning requires a decent GPU (and video RAM) or quite some time when running on the CPU:
+Adding a PLM model as blend, just add it to the command prompt; note however, that PLM finetuning requires a decent GPU (and video RAM) or quite some time when running on the CPU:
 
 ```
-pypef hybrid -l LEARNING_SET.fasl -t TEST_SET.fasl --params GREMLIN --llm esm
-pypef hybrid -l LEARNING_SET.fasl -t TEST_SET.fasl --params GREMLIN --llm prosst --wt WT_SEQUENCE.fasta --pdb PDB_STRUCTURE.pdb
+pypef hybrid -l LEARNING_SET.fasl -t TEST_SET.fasl --params GREMLIN --plm esm
+pypef hybrid -l LEARNING_SET.fasl -t TEST_SET.fasl --params GREMLIN --plm prosst --wt WT_SEQUENCE.fasta --pdb PDB_STRUCTURE.pdb
 ```
+
+Multiple PLMs can be stacked next to the DCA model by combining them with a `+` (or a comma or whitespace), e.g. for a DCA+ESM+ProSST hybrid model:
+
+```
+pypef hybrid -l LEARNING_SET.fasl -t TEST_SET.fasl --params GREMLIN --plm esm+prosst --wt WT_SEQUENCE.fasta --pdb PDB_STRUCTURE.pdb
+```
+
+By default, the supervised PLM contribution is tuned via a lightweight adjustment of the ensemble weights. Two alternative supervised tuning strategies are available (see the [Hybrid Modeling](#hybrid-modeling-using-the-merge-method) section):
+
+- `--lora`: [LoRA](https://arxiv.org/abs/2106.09685)-based fine-tuning of the PLM itself (requires `--plm`).
+- `--gauss_opt`: as an alternative to LoRA fine-tuning, a Gaussian process (GP) is fitted on the PLM embeddings and zero-shot scores (requires `--plm`, `--wt`, and `--pdb`). The GP modeling follows the composite-kernel approach of [Kermut](https://github.com/petergroth/kermut) (Groth et al., NeurIPS 2024). With two PLMs, `--gauss_comb` additionally builds a single combined GP over both embedding sets.
+
+```
+# LoRA-based PLM fine-tuning:
+pypef hybrid -l LEARNING_SET.fasl -t TEST_SET.fasl --params GREMLIN --plm esm --lora
+# Gaussian-process embedding optimization:
+pypef hybrid -l LEARNING_SET.fasl -t TEST_SET.fasl --params GREMLIN --plm prosst --wt WT_SEQUENCE.fasta --pdb PDB_STRUCTURE.pdb --gauss_opt
+# Combined GP over two PLMs' embeddings:
+pypef hybrid -l LEARNING_SET.fasl -t TEST_SET.fasl --params GREMLIN --plm esm+prosst --wt WT_SEQUENCE.fasta --pdb PDB_STRUCTURE.pdb --gauss_opt --gauss_comb
+```
+
+The `--plm` flag replaces the now-deprecated `--llm` alias (still accepted for backward compatibility).
 
 Sample files for testing PyPEF routines are provided in the workflow directory, which are also used when running the notebook tutorial. PyPEF's package dependencies are linked [here](https://github.com/niklases/PyPEF/network/dependencies).
 Further, for designing your own API based on the PyPEF workflow, modules can be adapted from the [source code](pypef).
@@ -263,11 +273,11 @@ As standard input files, PyPEF requires the target protein wild-type sequence in
 ## Tutorial
 
 A basic example workflow procedure (tutorial) is explained in the [Jupyter notebook](scripts/CLI/Workflow_PyPEF.ipynb) (.ipynb) protocol.
-Before starting running the tutorial, it is a good idea to set up a new Python environment using Anaconda, https://www.anaconda.com/, e.g. using [Anaconda](https://www.anaconda.com/download#downloads) ([Anaconda3-2023.03-1-Linux-x86_64.sh installer download](https://repo.anaconda.com/archive/Anaconda3-2023.03-1-Linux-x86_64.sh)) or [Miniconda](https://docs.conda.io/en/latest/miniconda.html).
+Before starting running the tutorial, it is a good idea to set up a new Python environment using Anaconda, https://www.anaconda.com/, e.g. using [Anaconda](https://www.anaconda.com/download#downloads) ([Anaconda3-2026.07-1-Linux-x86_64.sh installer download](https://repo.anaconda.com/archive/Anaconda3-2026.07-1-Linux-x86_64.sh)) or [Miniconda](https://docs.conda.io/en/latest/miniconda.html).
 Change to the download directory and run the installation, e.g. in Linux:
 
 ```
-bash Anaconda3-2023.03-1-Linux-x86_64.sh
+bash Anaconda3-2026.07-1-Linux-x86_64.sh
 ```
 
 After accepting all steps, the conda setup should also be written to your `~/.bashrc`file, so that you can call anaconda typing `conda`.
@@ -276,7 +286,7 @@ Next, to download this repository click Code > Download ZIP and unzip the zipped
 It is recommended to create a new Python environment:
 
 ```
-conda create --name pypef python=3.10
+conda create --name pypef python=3.14
 ```
 
 To activate the environment you can define:
@@ -290,8 +300,6 @@ After activating the environment you can install required packages after changin
 ```
 python3 -m pip install -r requirements.txt
 ```
-
-Note that the package [Ray](https://github.com/ray-project/ray) which we use for parallelizing sequence encoding and model validation of AAindices on the test set, is in beta status for [Windows](https://docs.ray.io/en/latest/installation.html#windows-support).
 
 Now, after installing required packages, you should be able to directly run pypef in the command-line interface.
 
@@ -350,10 +358,12 @@ Following regression options from [Scikit-learn](https://scikit-learn.org/stable
 <a name="hybrid-modeling"></a>
 ### Hybrid Modeling Using the MERGE Method
 
-Optimization of the two model contributions to the final hybrid model using the [differential evolution](https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.differential_evolution.html) algorithm (see the [hybrid model preprint](https://www.biorxiv.org/content/10.1101/2022.06.07.495081v1) and the corresponding repository of the method termed [MERGE](https://github.com/Protein-Engineering-Framework/MERGE)); only based on DCA-derived features (therefore no definition of the flag `-e`, `--encoding` necessary for hybrid modeling):
+Optimization of the model contributions to the final hybrid model using the [differential evolution](https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.differential_evolution.html) algorithm (see the [hybrid model preprint](https://www.biorxiv.org/content/10.1101/2022.06.07.495081v1) and the corresponding repository of the method termed [MERGE](https://github.com/Protein-Engineering-Framework/MERGE)). At its core, the hybrid model blends an unsupervised statistical component with a supervised component, so no `-e`/`--encoding` flag is required for hybrid modeling:
 
 - DCA-based statistical prediction of the evolutionary energy, i.e., probability, of a variant relative to the wild type (see [EVmutation](https://marks.hms.harvard.edu/evmutation/); [EVmutation repository](https://github.com/debbiemarkslab/EVmutation)/[EVcouplings repository](https://github.com/debbiemarkslab/EVcouplings)).
-- ML-based supervised training with Ridge regression on training subsets of DCA-encoded sequences and the corresponding fitness values (similar to the pure ML approach using the DCA-based encoding technique in combination with Ridge regression)
+- ML-based supervised training with Ridge regression on training subsets of DCA-encoded sequences and the corresponding fitness values (similar to the pure ML approach using the DCA-based encoding technique in combination with Ridge regression).
+
+Beyond the DCA-only case, one or more protein language models (PLMs; currently [ESM](https://github.com/facebookresearch/esm) and [ProSST](https://github.com/ai4protein/ProSST)) can be added as additional components via `--plm` (multiple PLMs combined with `+`, e.g. `--plm esm+prosst`). Each PLM contributes an unsupervised zero-shot score and a supervised, few-shot-tuned prediction; the supervised PLM tuning can be performed by (i) a lightweight adjustment of the ensemble weights (default), (ii) [LoRA](https://arxiv.org/abs/2106.09685)-based fine-tuning of the PLM (`--lora`), or, as an alternative to LoRA fine-tuning, (iii) a Gaussian process (GP) fitted on the PLM embeddings and zero-shot scores (`--gauss_opt`, with `--gauss_comb` building a single combined GP across two PLMs). The GP modeling adapts the composite-kernel approach of [Kermut](https://github.com/petergroth/kermut) (Groth et al., *Kermut: Composite kernel regression for protein variant effects*, NeurIPS 2024, [OpenReview](https://openreview.net/forum?id=jM9atrvUii)). All unsupervised and supervised component outputs are then blended into the final ensemble prediction.
 
 <a name="grids"></a>
 ## Model Hyperparameter Grids for Training
@@ -504,22 +514,22 @@ using the plmc parameters.
 Other well-performing zero-shot prediction methods with available source code can be obtained from the ProteinGym [repository](https://github.com/OATML-Markslab/ProteinGym) and [website](https://proteingym.org/) that provide a more detailed overview of available methods and achieved performances (as well as many benchmark data sets).
 
 The performance of the GREMLIN model used is shown in the following for predicting single substitution effects (blue), including Hybrid model performances with N_Train = {100, 200, 1000}.
-Hybrid GREMLIN-LLM low-N-tuned models using [ESM1v](https://github.com/facebookresearch/esm) and [ProSST](https://github.com/ai4protein/ProSST) achieved increased performances compared to the pure DCA-tuned hybrid model for ProteinGym datasets tested using the scripts located at [scripts/ProteinGym_runs](scripts/ProteinGym_runs):
+Hybrid GREMLIN-PLM low-N-tuned models using [ESM](https://github.com/facebookresearch/esm) and [ProSST](https://github.com/ai4protein/ProSST) achieved increased performances compared to the pure DCA-tuned hybrid model for ProteinGym datasets tested using the scripts located at [scripts/ProteinGym_runs](scripts/ProteinGym_runs):
 
 <p align="center">
-    <img src=".github/imgs/mut_performance_violin.png" alt="drawing" width="750"/>
+    <img src="https://raw.githubusercontent.com/niklases/PyPEF/main/.github/imgs/low_n_mut_performance_v0.5.0_violin.png" alt="drawing" width="750"/>
 </p>
 <p align="center">
-    <img src=".github/imgs/mut_performance.png" alt="drawing" width="1000"/>
+    <img src="https://raw.githubusercontent.com/niklases/PyPEF/main/.github/imgs/low_n_mut_performance_v0.5.0.png" alt="drawing" width="1000"/>
 </p>
 
 For estimating model performances for different splitting techniques (random, modulo, continuous), a faster-to-compute subset (limited sequence length and number of variant-fitness pairs) of the ProteinGym data was evaluated (example dataset split technique-dependent data distribution and performances on the ProteinGym subset):
 
 <p align="center">
-    <img src=".github/imgs/A0A247D711_LISMN_Stadelmann_2021_pos_aa_distr.png" alt="drawing" width="750"/>
+    <img src="https://raw.githubusercontent.com/niklases/PyPEF/main/.github/imgs/A0A247D711_LISMN_Stadelmann_2021_pos_aa_distr.png" alt="drawing" width="750"/>
 </p>
 <p align="center">
-    <img src=".github/imgs/crossval_pgym_violin.png" alt="drawing" width="750"/>
+    <img src="https://raw.githubusercontent.com/niklases/PyPEF/main/.github/imgs/crossval_mut_performance_violin_v0.5.0.png" alt="drawing" width="750"/>
 </p>
 
 The official supervised ProteinGym benchmark runs can be performed using scripts provided at [scripts/ProteinGym_runs/official](scripts/ProteinGym_runs/official). However, these benchmark runs are time-consuming, as cross-validation must be performed for each dataset and across all the split methods being evaluated.
@@ -529,7 +539,7 @@ The official supervised ProteinGym benchmark runs can be performed using scripts
 For script-based encoding of sequences using PyPEF and the available AAindex-, OneHot- or DCA-based techniques, the classes and corresponding functions can be imported, i.e. `OneHotEncoding`, `AAIndexEncoding`, `GREMLIN` (DCA),  `PLMC` (DCA), and `DCALLMHybridModel`. In addition, implemented functions for CV-based tuning of regression models can be used to train and validate models, eventually deriving them to obtain performances on retained data for testing. An exemplary script and a Jupyter notebook for CV-based (low-*N*) tuning of models and using them for testing is provided at [scripts/Encoding_low_N/api_encoding_train_test.py](scripts/Encoding_low_N/api_encoding_train_test.py) and [scripts/Encoding_low_N/api_encoding_train_test.ipynb](scripts/Encoding_low_N/api_encoding_train_test.ipynb), respectively.
 
 <p align="center">
-    <img src=".github/imgs/low_N_avGFP_extrapolation.png" alt="drawing" width="500"/>
+    <img src="https://raw.githubusercontent.com/niklases/PyPEF/main/.github/imgs/low_N_avGFP_extrapolation.png" alt="drawing" width="500"/>
 </p>
 
 

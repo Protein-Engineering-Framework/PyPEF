@@ -15,7 +15,7 @@ from pypef.dca.gremlin_inference import save_gremlin_as_pickle, save_corr_csv, p
 from pypef.utils.low_n_mutation_extrapolation import performance_mutation_extrapolation, low_n
 
 
-def run_pypef_hybrid_modeling(arguments):
+def run_pypef_hybrid_modeling(arguments, progress_cb=None, abort_cb=None):
     threads = abs(arguments['--threads']) if arguments['--threads'] is not None else 1
     threads = threads + 1 if threads == 0 else threads
     if arguments['--params'] is not None:
@@ -52,7 +52,13 @@ def run_pypef_hybrid_modeling(arguments):
             pdb_file=arguments['--pdb'],
             wt_seq=get_wt_sequence(arguments['--wt']),
             substitution_sep=arguments['--mutation_sep'],
-            label=arguments['--label']
+            label=arguments['--label'],
+            lora_train=arguments['--lora'],
+            gauss_opt=arguments['--gauss_opt'],
+            gauss_comb=arguments['--gauss_comb'],
+            seed=arguments['--seed'],
+            progress_cb=progress_cb,
+            abort_cb=abort_cb
         )
 
     elif arguments['--params'] and arguments['--model'] or arguments['--ps']:

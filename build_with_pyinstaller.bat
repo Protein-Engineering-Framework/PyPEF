@@ -1,24 +1,18 @@
-REM Up to now pastes DLLs from local Python environment bin's to _internal...
-REM alternative?: set PATH=%PATH%;%USERPROFILE%\miniconda3\envs\pypef\Library\bin\;
-pip install -r requirements.txt
-pip install -U pyinstaller pyside6
-pip install -e .
-set PATH=%PATH%;%USERPROFILE%\miniconda3\Scripts
-pyinstaller^
-  --console^
-  --noconfirm^
-  --collect-data pypef^
-  --collect-all pypef^
-  --collect-data torch^
-  --collect-data biotite^
-  --collect-all biotite^
-  --collect-data torch_geometric^
-  --collect-all torch_geometric^
-  --hidden-import torch_geometric^
-  pypef\gui\qt_window.py
-REM  --add-binary=%USERPROFILE%\miniconda3\envs\pypef\Library\bin\onedal_thread.3.dll:.^
-REM  --add-binary=%USERPROFILE%\miniconda3\envs\pypef\Library\bin\tbbbind.dll:.^
-REM  --add-binary=%USERPROFILE%\miniconda3\envs\pypef\Library\bin\tbbbind_2_0.dll:.^
-REM  --add-binary=%USERPROFILE%\miniconda3\envs\pypef\Library\bin\tbbbind_2_5.dll:.^
-REM  --add-binary=%USERPROFILE%\miniconda3\envs\pypef\Library\bin\tbbmalloc.dll:.^
-REM  --add-binary=%USERPROFILE%\miniconda3\envs\pypef\Library\bin\tbbmalloc_proxy.dll:.^
+@echo off
+REM Build the PyPEF Qt GUI into a standalone folder with PyInstaller (Windows).
+REM
+REM The full dependency collection lives in the portable qt_window.spec, which
+REM is the single source of truth shared with the Linux build. This script only
+REM installs the dependencies and invokes that spec.
+setlocal
+cd /d "%~dp0"
+
+python -m pip install --upgrade pip pyinstaller
+python -m pip install -e .[gui]
+
+python -m PyInstaller --noconfirm qt_window.spec
+if errorlevel 1 exit /b 1
+
+echo.
+echo Build complete. Run the GUI with:
+echo   dist\qt_window\qt_window.exe

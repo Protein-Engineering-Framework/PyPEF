@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# sudo apt install unzip
+set -x
+
 VERSION="v1.3"
 FILES=(
   "DMS_substitutions.csv"
@@ -11,7 +14,8 @@ FILES=(
 
 for FILENAME in "${FILES[@]}"; do
   echo "Downloading $FILENAME..."
-  curl -O "https://marks.hms.harvard.edu/proteingym/ProteinGym_${VERSION}/${FILENAME}"
+  # curl -k means insecure curl!
+  curl -k -O "https://marks.hms.harvard.edu/proteingym/ProteinGym_${VERSION}/${FILENAME}"
 
   # Only unzip and delete if it's a zip file
   if [[ "$FILENAME" == *.zip ]]; then

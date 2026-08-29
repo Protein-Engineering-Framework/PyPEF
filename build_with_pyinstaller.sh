@@ -1,19 +1,19 @@
 #!/bin/bash
+# Build the PyPEF Qt GUI into a standalone folder with PyInstaller (Linux/macOS).
+#
+# The full dependency collection lives in the portable qt_window.spec, which is
+# the single source of truth shared with the Windows build. This script only
+# installs the dependencies and invokes that spec.
 set -e
-pip install pyinstaller
-pip install -e .[gui]
-pyinstaller \
-  --console \
-  --noconfirm \
-  --paths "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)" \
-  --collect-data pypef \
-  --collect-all pypef \
-  --collect-data torch \
-  --collect-data biotite \
-  --collect-all biotite \
-  --collect-data torch_geometric \
-  --collect-all torch_geometric \
-  --hidden-import torch_geometric \
-  --hidden-import docopt \
-  --exclude-module PyQt5 \
-  pypef/gui/qt_window.py
+
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$REPO_ROOT"
+
+python -m pip install --upgrade pip pyinstaller
+python -m pip install -e .[gui]
+
+python -m PyInstaller --noconfirm qt_window.spec
+
+echo
+echo "Build complete. Run the GUI with:"
+echo "  ./dist/qt_window/qt_window"

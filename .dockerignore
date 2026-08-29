@@ -1,0 +1,29 @@
+# Keep the Docker build context minimal: the Dockerfile only needs
+# requirements.txt, run.py and pypef/. Everything below is either large
+# (LFS-backed datasets, git history) or irrelevant to the runtime image.
+.git
+.github
+datasets
+docs
+scripts
+tests
+
+# Build / packaging artifacts
+dist
+build
+*.egg-info
+*.spec
+build_with_pyinstaller.*
+
+# Python caches and local envs
+**/__pycache__
+**/*.py[cod]
+.venv
+venv
+.pytest_cache
+.mypy_cache
+
+# Editor / OS cruft
+.vscode
+.idea
+.DS_Store

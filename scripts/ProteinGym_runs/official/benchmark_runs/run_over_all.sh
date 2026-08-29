@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -e
+
 # Exit if no arguments provided
 if [ "$#" -eq 0 ]; then
     echo "Error: split_method argument is required (e.g. split_method=fold_random_5)"
@@ -47,16 +49,28 @@ if [ "$is_valid" = false ]; then
     exit 1
 fi
 
-for llm in prosst esm1v; do
-    # Set max index based on split_method
+for llm in prosst+esm; do
+    # Set max index based on split_method and optionally try different hybrid_model_split_scheme's for internal data train -> val
     if [ "$split_method" = "fold_rand_multiples" ]; then
         max_idx=68
+        hybrid_model_split_scheme="block-random"  # "random", "block-random", "positional", "modulo", or "contiguous"
     else   # "fold_random_5", "fold_modulo_5", "fold_contiguous_5"
+        if [ "$split_method" = "fold_random_5" ]; then
+            hybrid_model_split_scheme="block-random"
+        elif [ "$split_method" = "fold_modulo_5" ]; then
+            hybrid_model_split_scheme="modulo"
+        elif [ "$split_method" = "fold_contiguous_5" ]; then
+            hybrid_model_split_scheme="contiguous"            
+        else
+            hybrid_model_split_scheme="block-random"
+        fi
         max_idx=216
     fi
     for ((i=0; i<=max_idx; i++)); do
-        echo -e "\n\nRunning DMS_idx=$i with llm=$llm and split_method=$split_method\n-----"
-        python pgym_cv_benchmark.py split_method=$split_method DMS_idx=$i llm=$llm
-        find ./model_saves/ -type f -name '*.pt' -delete  # Delete ProSST pt model checkpoints
+        echo -e "\n\nRunning DMS_idx=$i with llm=$llm and split_method=$split_method and hybrid_model_split_scheme=$hybrid_model_split_scheme"
+        python pgym_cv_benchmark.py split_method=$split_method DMS_idx=$i llm=$llm \
+            hybrid_model_split_scheme=$hybrid_model_split_scheme \
+            loss_method=listMLE n_ensemble_splits=1
+        find ./model_saves/ -type f -name '*.pt' | xargs rm -f || true  # Delete pt model checkpoints
     done
 done

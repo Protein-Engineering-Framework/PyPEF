@@ -18,7 +18,6 @@ matplotlib.use('Agg')  # no plt.show(), just save plot
 import matplotlib.pyplot as plt
 import numpy as np
 import pickle
-from tqdm import tqdm  # progress bars
 #from sklearnex import patch_sklearn
 #patch_sklearn(verbose=False)
 from sklearn.model_selection import LeaveOneOut
@@ -36,6 +35,7 @@ from sklearn.linear_model import Ridge, Lasso, ElasticNet
 from pypef.utils.variant_data import (
     amino_acids, get_sequences_from_file, get_basename
 )
+from pypef.utils.helpers import tqdm 
 from pypef.utils.plot import plot_y_true_vs_y_pred
 from pypef.utils.performance import get_performances
 from pypef.hybrid.hybrid_model import plmc_or_gremlin_encoding

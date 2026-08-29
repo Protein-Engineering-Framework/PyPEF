@@ -24,26 +24,56 @@ function ExitOnExitCode { if ($LastExitCode) {
 ### $ .\run_cli_tests_win.ps1                      # printing STDOUT and STDERR to terminal
 
 
-$path=Get-Location                                                                                                       #
-$path=Split-Path -Path $path -Parent                                                                                     #
-$path=Split-Path -Path $path -Parent                                                                                     #
+$path=Get-Location
+$path=Split-Path -Path $path -Parent
+$path=Split-Path -Path $path -Parent
 ### if using downloaded/locally stored pypef .py files:
 ##########################################################################################################################
-Write-Output Y | conda env remove -n pypef                                                                               #
+(& conda 'shell.powershell' 'hook') | Out-String | Invoke-Expression                                                     #
+$ErrorActionPreference = "SilentlyContinue"                                                                              #
+conda env remove -n pypef -y                                                                                             #
+$ErrorActionPreference = "Stop"                                                                                          #
 conda create -n pypef python=3.12 -y                                                                                     #
 conda activate pypef                                                                                                     #
 python -m pip install -r $path\requirements.txt                                                                          #
-#pip install --pre torch torchvision torchaudio --index-url https://download.pytorch.org/whl/nightly/cu128               # ONLY IF NIGHTLY IS NEEDED, E.G., NEW BLACKWELL GPU GENERATION 
-$env:PYTHONPATH=$path                                                                                                    #
-function pypef { python $path\pypef\main.py @args }                                                                      #
+python -m pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128 --force-reinstall  #
+function pypef {                                                                                                         #
+    $localEAP = $ErrorActionPreference                                                                                   #
+    $ErrorActionPreference = 'Continue'                                                                                  #
+    python $path\pypef\main.py @args                                                                                     #
+    $ErrorActionPreference = $localEAP                                                                                   #
+}                                                                                                                        #
 ##########################################################################################################################
 ### else just use pip-installed pypef version (uncomment):                                                               #
-#pypef = pypef                                                                                                           #
+#function pypef {                                                                                                        #
+#    $localEAP = $ErrorActionPreference                                                                                  #
+#    $ErrorActionPreference = 'Continue'                                                                                 #
+#    pypef.exe @args                                                                                                     #
+#    $ErrorActionPreference = $localEAP                                                                                  #
+#}                                                                                                                       #
 ##########################################################################################################################
 # threads are only used for some parallelization of AAindex and DCA-based sequence encoding                              # 
 # if pypef/settings.py defines USE_RAY = True                                                                            #
 $threads = 1                                                                                                             #
 ##########################################################################################################################
+
+Write-Host "~~~~~~~~~~~~~~~~~~ WHERE ~~~~~~~~~~~~~~~~~~"
+Write-Host (Get-Command pypef).Source -ForegroundColor Blue
+Write-Host "~~~~~~~~~~~~~~~~~~ WHERE ~~~~~~~~~~~~~~~~~~"
+Write-Host "~~~~~~~~~~~~~~~~~~ GPU CHECK ~~~~~~~~~~~~~~~~~~"
+# sys.exit(0) if CUDA available, sys.exit(1) if False
+python -c "import torch, sys; sys.exit(0 if torch.cuda.is_available() else 1)"
+$gpuAvailable = ($LASTEXITCODE -eq 0)
+Write-Host "GPU available?: $gpuAvailable"
+if (-not $gpuAvailable) {
+    Write-Host "GPU not available. Sleeping for 10 seconds if user wants to abort here..." -ForegroundColor DarkRed
+    Start-Sleep -Seconds 10
+}
+else {
+    Write-Host "GPU detected! Proceeding with execution..." -ForegroundColor Green
+}
+Write-Host "~~~~~~~~~~~~~~~~~~ GPU CHECK ~~~~~~~~~~~~~~~~~~"
+
 
 ### threads=1 shows progress bar where possible
 ### CV-based mlp and rf regression option take a long time and related testing commands are commented out/not included herein
@@ -62,7 +92,7 @@ pypef mklsts -i 37_ANEH_variants.csv -w Sequence_WT_ANEH.fasta
 ExitOnExitCode
 Write-Host
 
-pypef ml -e onehot -l LS.fasl -t TS.fasl --regressor pls
+pypef ml -e onehot -l LS.fasl -t TS.fasl --regressor pls --label
 ExitOnExitCode
 Write-Host
 pypef ml --show
@@ -396,6 +426,25 @@ pypef hybrid -m HYBRIDGREMLIN -t TS.fasl --params GREMLIN
 ExitOnExitCode
 Write-Host
 
+### Reproducibility check: with a fixed --seed, hybrid training (train/validation
+### split + differential-evolution beta optimization) must give identical results.
+### Without a seed (default) results vary run to run, so we do NOT assert a value there.
+$seedPerf1 = (pypef hybrid -l LS.fasl -t TS.fasl --params GREMLIN --seed 42 2>&1 | 
+    Select-String 'Hybrid performance: ([-0-9.]+)' | 
+    ForEach-Object { $_.Matches[0].Groups[1].Value } | 
+    Select-Object -Last 1)
+$seedPerf2 = (pypef hybrid -l LS.fasl -t TS.fasl --params GREMLIN --seed 42 2>&1 | 
+    Select-String 'Hybrid performance: ([-0-9.]+)' | 
+    ForEach-Object { $_.Matches[0].Groups[1].Value } | 
+    Select-Object -Last 1)
+Write-Host "Seeded hybrid reproducibility: run1=$seedPerf1 run2=$seedPerf2" -ForegroundColor Blue
+if ([string]::IsNullOrWhiteSpace($seedPerf1) -or ($seedPerf1 -ne $seedPerf2)) {
+    Write-Host "Reproducibility FAILED: seeded (--seed 42) hybrid runs differ ($seedPerf1 != $seedPerf2)" -ForegroundColor Red
+    exit 1
+}
+Write-Host "Reproducibility OK: seeded (--seed 42) hybrid runs are identical ($seedPerf1)." -ForegroundColor Green
+Write-Host
+
 pypef mkps -i 37_ANEH_variants.csv -w Sequence_WT_ANEH.fasta
 ExitOnExitCode
 Write-Host
@@ -430,19 +479,19 @@ ExitOnExitCode
 Write-Host
 
 # 0.4.0 features: hybrid DCA-LLM modeling
-pypef hybrid --ls LS.fasl --ts TS.fasl --params GREMLIN --llm esm
+pypef hybrid --ls LS.fasl --ts TS.fasl --params GREMLIN --plm esm
 ExitOnExitCode
 Write-Host
-pypef hybrid -m HYBRIDGREMLINESM1V --ts TS.fasl --params GREMLIN --llm esm
+pypef hybrid -m HYBRIDGREMLINESM --ts TS.fasl --params GREMLIN
 ExitOnExitCode
 Write-Host
 pypef mkps -i 37_ANEH_variants.csv --wt Sequence_WT_ANEH.fasta
 ExitOnExitCode
 Write-Host
-pypef hybrid -m HYBRIDGREMLINESM1V --ps 37_ANEH_variants_prediction_set.fasta --params GREMLIN --llm esm
+pypef hybrid -m HYBRIDGREMLINESM --ps 37_ANEH_variants_prediction_set.fasta --params GREMLIN
 ExitOnExitCode
 Write-Host
-pypef hybrid directevo -m HYBRIDGREMLINESM1V -w Sequence_WT_ANEH.fasta --negative --params GREMLIN
+pypef hybrid directevo -m HYBRIDGREMLINESM -w Sequence_WT_ANEH.fasta --negative --params GREMLIN
 ExitOnExitCode
 Write-Host
 
@@ -617,10 +666,10 @@ Write-Host
 pypef predict_ssm -w P42212_F64L.fasta --params GREMLIN
 ExitOnExitCode
 Write-Host 
-pypef predict_ssm -w P42212_F64L.fasta --llm esm
+pypef predict_ssm -w P42212_F64L.fasta --plm esm
 ExitOnExitCode
 Write-Host 
-pypef predict_ssm -w P42212_F64L.fasta --llm prosst --pdb GFP_AEQVI.pdb
+pypef predict_ssm -w P42212_F64L.fasta --plm prosst --pdb GFP_AEQVI.pdb
 ExitOnExitCode
 Write-Host 
 
@@ -669,6 +718,12 @@ Write-Host
 #pypef hybrid -m HYBRIDPLMC --params uref100_avgfp_jhmmer_119_plmc_42.6.params --pmult --drecomb --threads $threads  
 #ExitOnExitCode
 #Write-Host
+pypef hybrid --ps avGFP_prediction_set.fasta --plm esm --wt P42212_F64L.fasta
+ExitOnExitCode
+Write-Host
+pypef hybrid --ps avGFP_prediction_set.fasta --plm prosst --wt P42212_F64L.fasta --pdb GFP_AEQVI.pdb
+ExitOnExitCode
+Write-Host
 pypef hybrid -m HYBRIDGREMLIN --params GREMLIN --pmult --drecomb
 ExitOnExitCode
 Write-Host
@@ -686,43 +741,105 @@ pypef hybrid directevo -m HYBRIDPLMC -i avGFP.csv -w P42212_F64L.fasta --temp 0.
 ExitOnExitCode
 Write-Host
 
+pypef hybrid --ts TS.fasl --plm esm --wt P42212_F64L.fasta
+ExitOnExitCode
+Write-Host
+pypef hybrid --ts TS.fasl --plm prosst --wt P42212_F64L.fasta --pdb GFP_AEQVI.pdb
+ExitOnExitCode
+Write-Host
+
 # 0.4.0 features: hybrid DCA-LLM modeling
 pypef mklsts -i avGFP.csv -w P42212_F64L.fasta --ls_proportion 0.02
 ExitOnExitCode
 Write-Host
-pypef hybrid --ls LS.fasl --ts TS.fasl --params GREMLIN --llm esm
+pypef hybrid --ls LS.fasl --ts TS.fasl --params GREMLIN --plm esm
 ExitOnExitCode
 Write-Host
-pypef hybrid -m HYBRIDGREMLINESM1V --ts TS.fasl --params GREMLIN --llm esm
-ExitOnExitCode
-Write-Host
-
-pypef hybrid --ls LS.fasl --ts TS.fasl --params GREMLIN --llm prosst --wt P42212_F64L.fasta  --pdb GFP_AEQVI.pdb
-ExitOnExitCode
-Write-Host
-pypef hybrid -m HYBRIDGREMLINPROSST --ts TS.fasl --params GREMLIN --llm prosst --wt P42212_F64L.fasta  --pdb GFP_AEQVI.pdb
+pypef hybrid -m HYBRIDGREMLINESM --ts TS.fasl --params GREMLIN
 ExitOnExitCode
 Write-Host
 
-pypef hybrid directevo -m HYBRIDGREMLINESM1V -w P42212_F64L.fasta --params GREMLIN --llm esm
+pypef hybrid --ls LS.fasl --ts TS.fasl --params GREMLIN --plm prosst --wt P42212_F64L.fasta  --pdb GFP_AEQVI.pdb
 ExitOnExitCode
 Write-Host
-pypef hybrid directevo -m HYBRIDGREMLINPROSST -w P42212_F64L.fasta --params GREMLIN --llm prosst --pdb GFP_AEQVI.pdb
+pypef hybrid -m HYBRIDGREMLINPROSST --ts TS.fasl --params GREMLIN --wt P42212_F64L.fasta  --pdb GFP_AEQVI.pdb
+ExitOnExitCode
+Write-Host
+
+pypef hybrid directevo -m HYBRIDGREMLINESM -w P42212_F64L.fasta --params GREMLIN
+ExitOnExitCode
+Write-Host
+pypef hybrid directevo -m HYBRIDGREMLINPROSST -w P42212_F64L.fasta --params GREMLIN --pdb GFP_AEQVI.pdb
 ExitOnExitCode
 Write-Host
 
 # Takes long.. better delete 7 out of the 8 recomb txt files
-#pypef hybrid -m HYBRIDGREMLINESM1V -w P42212_F64L.fasta --params GREMLIN --llm esm --pmult --drecomb
+#pypef hybrid -m HYBRIDGREMLINESM -w P42212_F64L.fasta --params GREMLIN --pmult --drecomb
 #ExitOnExitCode
 #Write-Host
-#pypef hybrid -m HYBRIDGREMLINPROSST -w P42212_F64L.fasta --params GREMLIN --llm prosst --pdb GFP_AEQVI.pdb --pmult --drecomb
+#pypef hybrid -m HYBRIDGREMLINPROSST -w P42212_F64L.fasta --params GREMLIN --pdb GFP_AEQVI.pdb --pmult --drecomb
 #ExitOnExitCode
 #Write-Host
-pypef hybrid -m HYBRIDGREMLINESM1V -w P42212_F64L.fasta --params GREMLIN --llm esm -p avGFP_prediction_set.fasta
+pypef hybrid -m HYBRIDGREMLINESM -w P42212_F64L.fasta --params GREMLIN -p avGFP_prediction_set.fasta
 ExitOnExitCode
 Write-Host
-pypef hybrid -m HYBRIDGREMLINPROSST -w P42212_F64L.fasta --params GREMLIN --llm prosst --pdb GFP_AEQVI.pdb -p avGFP_prediction_set.fasta
+pypef hybrid -m HYBRIDGREMLINPROSST -w P42212_F64L.fasta --params GREMLIN --pdb GFP_AEQVI.pdb -p avGFP_prediction_set.fasta
 ExitOnExitCode
+Write-Host
+
+# 0.5.0 features: multi-PLM (DCA+ESM+ProSST), LoRA fine-tuning, and Gaussian-process (GP) optimization.
+# These commands run PLM fine-tuning/GP training and are computationally intensive; use a small
+# learning set to keep the runtime tractable.
+pypef mklsts -i avGFP.csv -w P42212_F64L.fasta --ls_proportion 0.02
+ExitOnExitCode
+Write-Host
+# Multiple PLMs can be combined via '+' (also ',' or whitespace): DCA + ESM + ProSST hybrid model
+pypef hybrid --ls LS.fasl --ts TS.fasl --params GREMLIN --plm esm+prosst --wt P42212_F64L.fasta --pdb GFP_AEQVI.pdb
+ExitOnExitCode
+Write-Host
+pypef hybrid -m HYBRIDGREMLINESMPROSST --ts TS.fasl --params GREMLIN --wt P42212_F64L.fasta --pdb GFP_AEQVI.pdb
+ExitOnExitCode
+Write-Host
+pypef hybrid -m HYBRIDGREMLINESMPROSST --ps avGFP_prediction_set.fasta --params GREMLIN --wt P42212_F64L.fasta --pdb GFP_AEQVI.pdb
+ExitOnExitCode
+Write-Host
+# LoRA-based supervised PLM fine-tuning (--lora)
+pypef hybrid --ls LS.fasl --ts TS.fasl --params GREMLIN --plm esm --lora
+ExitOnExitCode
+Write-Host
+pypef hybrid --ls LS.fasl --ts TS.fasl --params GREMLIN --plm prosst --wt P42212_F64L.fasta --pdb GFP_AEQVI.pdb --lora
+ExitOnExitCode
+Write-Host
+# Gaussian-process (GP) optimization as an alternative to LoRA tuning (--gauss_opt, requires --wt and --pdb)
+pypef hybrid --ls LS.fasl --ts TS.fasl --params GREMLIN --plm esm --wt P42212_F64L.fasta --pdb GFP_AEQVI.pdb --gauss_opt
+ExitOnExitCode
+Write-Host
+pypef hybrid --ls LS.fasl --ts TS.fasl --params GREMLIN --plm prosst --wt P42212_F64L.fasta --pdb GFP_AEQVI.pdb --gauss_opt
+ExitOnExitCode
+Write-Host
+# Combined multi-PLM GP over both PLM embeddings (--gauss_comb, requires --gauss_opt and two PLMs)
+pypef hybrid --ls LS.fasl --ts TS.fasl --params GREMLIN --plm esm+prosst --wt P42212_F64L.fasta --pdb GFP_AEQVI.pdb --gauss_opt --gauss_comb
+ExitOnExitCode
+Write-Host
+
+### Reproducibility check INCLUDING a PLM (and GP training): with a fixed --seed the
+### PLM-based hybrid (zero-shot PLM scores + Gaussian-process optimization + beta adjustment)
+### must be identical run to run. Without --seed these vary (torch/GP RNG), so we only
+### assert reproducibility with a seed, not a specific value (results are hardware/version dependent).
+$plmPerf1 = (pypef hybrid --ls LS.fasl --ts TS.fasl --params GREMLIN --plm esm --wt P42212_F64L.fasta --pdb GFP_AEQVI.pdb --gauss_opt --seed 42 2>&1 | 
+    Select-String 'Hybrid performance: ([-0-9.]+)' | 
+    ForEach-Object { $_.Matches[0].Groups[1].Value } | 
+    Select-Object -Last 1)
+$plmPerf2 = (pypef hybrid --ls LS.fasl --ts TS.fasl --params GREMLIN --plm esm --wt P42212_F64L.fasta --pdb GFP_AEQVI.pdb --gauss_opt --seed 42 2>&1 | 
+    Select-String 'Hybrid performance: ([-0-9.]+)' | 
+    ForEach-Object { $_.Matches[0].Groups[1].Value } | 
+    Select-Object -Last 1)
+Write-Host "Seeded PLM+GP hybrid reproducibility: run1=$plmPerf1 run2=$plmPerf2" -ForegroundColor Blue
+if ([string]::IsNullOrWhiteSpace($plmPerf1) -or ($plmPerf1 -ne $plmPerf2)) {
+    Write-Host "Reproducibility FAILED: seeded (--seed 42) PLM+GP hybrid runs differ or failed to parse ($plmPerf1 != $plmPerf2)" -ForegroundColor Red
+    exit 1
+}
+Write-Host "Reproducibility OK: seeded (--seed 42) PLM+GP hybrid runs are identical ($plmPerf1)." -ForegroundColor Green
 Write-Host
 
 pypef hybrid low_n -i avGFP_dca_encoded.csv

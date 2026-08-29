@@ -11,8 +11,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.stats import spearmanr
 import pickle
-from tqdm import tqdm
 
+from pypef.utils.helpers import tqdm
 from pypef.ml.regression import cv_regression_options
 from pypef.hybrid.hybrid_model import DCALLMHybridModel
 from pypef.utils.variant_data import process_df_encoding, get_basename
@@ -118,10 +118,10 @@ def low_n(
                 hybrid_model = DCALLMHybridModel(
                     x_train_dca=x_train,
                     y_train=y_train,
-                    x_wt=x_wt
+                    x_dca_wt=x_wt
                 )
                 spearmanr_nruns.append(
-                    spearmanr(y_test, hybrid_model.hybrid_prediction(x_test))[0]
+                    spearmanr(y_test, hybrid_model.hybrid_prediction(x_test)[0])[0]
                 )
 
             else:  # ML
@@ -252,7 +252,7 @@ def performance_mutation_extrapolation(
             hybrid_model = DCALLMHybridModel(
                 x_train_dca=x_train,
                 y_train=y_train,
-                x_wt=x_wt
+                x_dca_wt=x_wt
             )
         elif cv_regressor:
             logger.info('Fitting regressor on lvl 1 substitution data...')
@@ -280,7 +280,7 @@ def performance_mutation_extrapolation(
                                     'test_lvl': test_idx + 1,
                                     'n_y_test': len(y_test),
                                     'spearman_rho': spearmanr(
-                                        y_test, hybrid_model.hybrid_prediction(x_test))[0]
+                                        y_test, hybrid_model.hybrid_prediction(x_test)[0])[0]
                                 }
                         })
                     else:  # ML
@@ -310,7 +310,7 @@ def performance_mutation_extrapolation(
                             process_df_encoding(train_df_appended_conc)
                         if hybrid_modeling:  # updating hybrid model params with newly inputted concatenated train data
                             hybrid_model = DCALLMHybridModel(
-                                x_train_dca=x_train_conc, y_train=y_train_conc, x_wt=x_wt
+                                x_train_dca=x_train_conc, y_train=y_train_conc, x_dca_wt=x_wt
                             )
                             data.update({
                                 test_idx + 1:
@@ -322,7 +322,7 @@ def performance_mutation_extrapolation(
                                         'n_y_test': len(y_test),
                                         'spearman_rho': spearmanr(
                                             y_test, 
-                                            hybrid_model.hybrid_prediction(x_test)
+                                            hybrid_model.hybrid_prediction(x_test)[0]
                                         )[0]
                                     }
                             })

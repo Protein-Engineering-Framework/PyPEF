@@ -1,11 +1,13 @@
 # PyPEF - Pythonic Protein Engineering Framework
 # https://github.com/niklases/PyPEF
 
+import os
 import shutil
 import subprocess
 import torch
 import pynvml
 from pynvml import NVMLError
+from tqdm import tqdm as _tqdm
 
 from pypef.settings import USE_RAY
 
@@ -57,6 +59,12 @@ def get_vram(verbose: bool = True):
 
 def get_torch_version():
     return torch.__version__
+
+
+def tqdm(*args, **kwargs):
+    if os.environ.get("TQDM_DISABLE") == "1":
+        kwargs["disable"] = True
+    return _tqdm(*args, **kwargs)
 
 
 def get_gpu_info_nvidia_smi():

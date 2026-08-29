@@ -3,19 +3,48 @@
 
 # Qt GUI window using PySide6
 
+import os
 import sys
 from os import getcwd, cpu_count, chdir
 import logging
+import time
+
 
 from PySide6.QtCore import QObject, QThread, QSize, Qt, QRect, QTimer, Signal, Slot, QMetaObject
+from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import (
-    QApplication, QPushButton, QTextEdit, QVBoxLayout, QWidget, 
-    QGridLayout, QLabel, QPlainTextEdit, QSlider, QComboBox, QFileDialog
+    QApplication, QPushButton, QTextEdit, QVBoxLayout, QWidget,
+    QGridLayout, QLabel, QPlainTextEdit, QSlider, QComboBox,
+    QFileDialog, QProgressBar, QCheckBox
 )
 
 from pypef import __version__
 from pypef.main import __doc__, run_main, logger, formatter
 from pypef.utils.helpers import get_device, get_vram, get_torch_version, get_nvidia_gpu_info_pynvml
+
+
+def get_logo_path():
+    """Return the absolute path to the bundled PyPEF window-icon logo.
+
+    Works when running from source, from a pip install (the file is shipped as
+    package-data, see pyproject.toml), and from a frozen PyInstaller build
+    (sys._MEIPASS). Returns None if the asset cannot be located so the caller
+    can fall back to the default Qt icon without crashing.
+
+    Note: the icon shows on X11 / Windows / macOS. Wayland compositors ignore
+    Qt's setWindowIcon(); run with QT_QPA_PLATFORM=xcb to see it under Wayland.
+    """
+    candidates = []
+    # PyInstaller onefile/onedir: assets are unpacked under sys._MEIPASS
+    meipass = getattr(sys, '_MEIPASS', None)
+    if meipass:
+        candidates.append(os.path.join(meipass, 'pypef', 'gui', 'assets', 'pypef_logo.jpg'))
+    # Source / pip install: next to this module
+    candidates.append(os.path.join(os.path.dirname(__file__), 'assets', 'pypef_logo.jpg'))
+    for path in candidates:
+        if os.path.isfile(path):
+            return path
+    return None
 
 
 button_style = """
@@ -42,6 +71,23 @@ text_style = """
 QLabel {
 	color: white;
 }"""
+
+
+progress_style = """
+QProgressBar {
+    border: 1px solid #444;
+    border-radius: 6px;
+    background-color: #2b2b2b;
+    text-align: center;
+    height: 14px;
+}
+
+QProgressBar::chunk {
+    background-color: #3daee9;
+    border-radius: 6px;
+}
+"""
+
 
 
 class QTextEditLogger(logging.Handler, QObject):
@@ -87,7 +133,7 @@ class Worker(QObject):
     Code/logic taken from 
     https://stackoverflow.com/a/41605909/28792835.
     """
-    sig_step = Signal(int, str)
+    sig_step = Signal(dict)
     sig_done = Signal(int)
     sig_msg = Signal(str)
     sig_abort = Signal(int)
@@ -96,6 +142,7 @@ class Worker(QObject):
         super().__init__()
         self.__id = id_
         self.cmd =  cmd
+        self._abort = False
 
     @Slot()  
     def work(self):
@@ -118,14 +165,27 @@ class Worker(QObject):
         every trained epoch from the executed imported function. 
         """
         print(f"Executing command: {self.cmd}")
-        run_main(argv=self.cmd)
+
+        def progress_cb(epoch, batch, epoch_total, batch_total, loss):
+            progress = {'epoch': epoch, 'batch': batch, 'loss': loss,
+                        'epoch_total': epoch_total, 'batch_total': batch_total }
+            self.sig_step.emit(progress)
+        
+        def abort_cb():
+            return self._abort
+
+        run_main(argv=self.cmd, progress_cb=progress_cb, abort_cb=abort_cb)
         self.sig_done.emit(f"Done: {self.__id}")
 
     def abort(self):
+        self._abort = True
         self.sig_msg.emit(f'Worker #{self.__id} notified to abort')
 
 
 class InfoWorker(QObject):
+    """
+    Class for the Worker that gets GPU information.
+    """
     sig_tick = Signal(str)
     sig_abort = Signal()
 
@@ -172,8 +232,12 @@ class MainWidget(QWidget):
         self.c = 0
         self.n_cores = 1
         self.ls_proportion = 0.8
+        self.shift = 2
         self.setMinimumSize(QSize(1400, 800))
         self.setWindowTitle("PyPEF GUI")
+        logo_path = get_logo_path()
+        if logo_path is not None:
+            self.setWindowIcon(QIcon(logo_path))
         self.setStyleSheet("background-color: rgb(40, 44, 52);")
         self.win2 = SecondWindow()
 
@@ -181,35 +245,45 @@ class MainWidget(QWidget):
         self.__workers_done = None
         self.__threads = None
 
+        self.train_start = None
+
+        self._train_start_time = None
+        self._last_eta_update = 0
+
+
         # Texts #########################################################################
         layout = QGridLayout(self)  # MAIN LAYOUT: QGridLayout
         self.version_text = QLabel(f"PyPEF v. {__version__}", alignment=Qt.AlignRight)
-        self.llm_text = QLabel("LLM")
+        self.working_directory_text = QLabel(f"{getcwd()}")
+        self.working_directory_text.setWordWrap(True)
+        self.working_directory_text.setTextInteractionFlags(Qt.TextSelectableByMouse)
+        self.plm_text = QLabel("PLM")
         self.regression_model_text =  QLabel("Regression model")
         self.utils_text = QLabel("Utilities")
         self.mklsts_cv_options_text = QLabel("Cross-validation split options")
-        self.dca_text = QLabel("DCA & LLM (unsupervised)")
+        self.dca_text = QLabel("DCA & PLM (unsupervised)")
         self.hybrid_text = QLabel("Hybrid (supervised DCA)")
-        self.hybrid_dca_llm_text = QLabel("Hybrid (supervised DCA+LLM)")
+        self.hybrid_dca_llm_text = QLabel("Hybrid (supervised DCA+PLM)")
         self.supervised_text = QLabel("Purely supervised")
         self.slider_text = QLabel("Train set proportion: 0.8")
+        self.epoch_time_label = QLabel("", self)
+        self.batch_time_label = QLabel("", self)
 
         for txt in [
-            self.version_text, self.regression_model_text, 
-            self.utils_text, self.llm_text, self.dca_text, self.hybrid_text, 
+            self.version_text, self.working_directory_text, self.regression_model_text, 
+            self.utils_text, self.plm_text, self.dca_text, self.hybrid_text, 
             self.supervised_text, self.hybrid_text, self.hybrid_dca_llm_text,
             self.slider_text
         ]:
             txt.setStyleSheet(text_style)
 
+        text_out_style = ("font-family:Consolas;font-size:12px;font-weight:normal;color:white;"
+                          "background-color:rgb(54, 69, 79);border:2px solid rgb(52, 59, 72);")
         self.device_text_out = QTextEdit(readOnly=True)
-        self.device_text_out.setStyleSheet(
-            "font-family:Consolas;font-size:12px;font-weight:normal;color:white;"
-            "background-color:rgb(54, 69, 79);border:2px solid rgb(52, 59, 72);"
-        )
+        self.device_text_out.setStyleSheet(text_out_style)
         self.device_text_out.setFixedHeight(85)
         self.device_text_out_info_text = (
-            f"Device (for LLM/DCA): {get_device().upper()}\n"
+            f"Device (for PLM/DCA): {get_device().upper()}\n"
             f"{get_nvidia_gpu_info_pynvml()[0]}\n"
             f"PyTorch version: {get_torch_version()}\n"
             f"Driver version: {get_nvidia_gpu_info_pynvml()[1]}\n"
@@ -217,12 +291,8 @@ class MainWidget(QWidget):
         )
         self.device_text_out.setPlainText(self.device_text_out_info_text)
 
-
         self.textedit_out = QTextEdit(readOnly=True)
-        self.textedit_out.setStyleSheet(
-            "font-family:Consolas;font-size:12px;font-weight:normal;color:white;"
-            "background-color:rgb(54, 69, 79);border:2px solid rgb(52, 59, 72);"
-        )
+        self.textedit_out.setStyleSheet(text_out_style)
         self.logTextBox = QTextEditLogger(self)
         self.logTextBox.setFormatter(formatter)
         logger.addHandler(self.logTextBox)
@@ -241,6 +311,14 @@ class MainWidget(QWidget):
         self.slider.move(10, 130)
         self.slider.valueChanged.connect(self.selection_ls_proportion)
 
+        self.epoch_progress_bar = QProgressBar()
+        self.epoch_progress_bar.setTextVisible(False)
+        self.epoch_progress_bar.setStyleSheet(progress_style)
+
+        self.batch_progress_bar = QProgressBar()
+        self.batch_progress_bar.setTextVisible(False)
+        self.batch_progress_bar.setStyleSheet(progress_style)
+
         # ComboBoxes ####################################################################
         self.box_regression_model = QComboBox()
         self.regression_models = [
@@ -255,10 +333,38 @@ class MainWidget(QWidget):
         )
 
         self.box_llm = QComboBox()
-        self.box_llm.addItems(['None', 'ESM1v', 'ProSST'])
+        self.box_llm.addItems(['None', 'ESM', 'ProSST', 'ESM+ProSST'])
         self.box_llm.currentIndexChanged.connect(self.selection_llm_model)
         self.box_llm.setCurrentIndex(1)
         self.box_llm.setStyleSheet("color:white;background-color:rgb(54, 69, 79);")
+
+        # DCA+PLM (supervised) hybrid training options (map to the --lora / --gauss_opt /
+        # --gauss_comb CLI flags). Only relevant for (Train) and (Train-Test) DCA+PLM runs.
+        checkbox_style = "color:white;"
+        self.check_lora = QCheckBox("LoRA tuning")
+        self.check_lora.setToolTip(
+            "Use LoRA-based supervised fine-tuning of the PLM (training only)."
+        )
+        self.check_lora.setStyleSheet(checkbox_style)
+        self.check_gauss_opt = QCheckBox("GP optimization")
+        self.check_gauss_opt.setToolTip(
+            "Use a Gaussian process (GP) to optimize the PLM embeddings and zero-shot "
+            "scores as an alternative to LoRA tuning (training only; requires a WT FASTA "
+            "and a PDB structure file)."
+        )
+        self.check_gauss_opt.setStyleSheet(checkbox_style)
+        self.check_gauss_comb = QCheckBox("Combined GP")
+        self.check_gauss_comb.setToolTip(
+            "Additionally build a combined GP over the embeddings of both PLMs "
+            "(requires GP optimization and two PLMs, i.e. ESM+ProSST)."
+        )
+        self.check_gauss_comb.setStyleSheet(checkbox_style)
+        self.box_plm_options = QWidget()
+        _plm_options_layout = QVBoxLayout(self.box_plm_options)
+        _plm_options_layout.setContentsMargins(0, 0, 0, 0)
+        _plm_options_layout.setSpacing(0)
+        for _cb in (self.check_lora, self.check_gauss_opt, self.check_gauss_comb):
+            _plm_options_layout.addWidget(_cb)
 
         self.box_mklsts_cv = QComboBox()
         self.box_mklsts_cv.addItems([
@@ -270,6 +376,10 @@ class MainWidget(QWidget):
         
         # Buttons #######################################################################
         # Utilities
+        self.button_abort = QPushButton("Stop training")
+        self.button_abort.clicked.connect(self.abort_workers)
+        self.button_abort.setStyleSheet(button_style)
+
         self.button_work_dir = QPushButton("Set Working Directory")
         self.button_work_dir.setToolTip(
             "Set working directory for storing output files"
@@ -310,10 +420,10 @@ class MainWidget(QWidget):
         )
         self.button_gremlin_ssm.setStyleSheet(button_style)
 
-        self.button_llm_ssm = QPushButton("LLM SSM prediction")
+        self.button_llm_ssm = QPushButton("PLM SSM prediction")
         self.button_llm_ssm.setMinimumWidth(80)
         self.button_llm_ssm.setToolTip(
-            "Runs full site-saturation (single) mutagenesis using the selected LLM predcitor "
+            "Runs full site-saturation (single) mutagenesis using the selected PLM predcitor "
             "and saves resulting landscape mutation effect plot"
         )
         self.button_llm_ssm.clicked.connect(
@@ -350,21 +460,21 @@ class MainWidget(QWidget):
         self.button_dca_predict_dca.clicked.connect(self.pypef_dca_predict)
         self.button_dca_predict_dca.setStyleSheet(button_style)
 
-        # Zero-shot LLM
-        self.button_llm_test_zs = QPushButton("Test (LLM)")
+        # Zero-shot PLM
+        self.button_llm_test_zs = QPushButton("Test (PLM)")
         self.button_llm_test_zs.setMinimumWidth(80)
         self.button_llm_test_zs.setToolTip(
             "Test performance on any test dataset using "
-            "the LLM model for zero-shot prediction"
+            "the PLM model for zero-shot prediction"
         )
         self.button_llm_test_zs.clicked.connect(self.pypef_llm_test)
         self.button_llm_test_zs.setStyleSheet(button_style)
 
-        self.button_llm_predict_zs = QPushButton("Predict (LLM)")
+        self.button_llm_predict_zs = QPushButton("Predict (PLM)")
         self.button_llm_predict_zs.setMinimumWidth(80)
         self.button_llm_predict_zs.setToolTip(
             "Test performance on any test dataset using "
-            "the LLM model for zero-shot prediction"
+            "the PLM model for zero-shot prediction"
         )
         self.button_llm_predict_zs.clicked.connect(self.pypef_llm_predict)
         self.button_llm_predict_zs.setStyleSheet(button_style)
@@ -410,11 +520,11 @@ class MainWidget(QWidget):
         )
         self.button_hybrid_predict_dca.setStyleSheet(button_style)
 
-        # Hybrid DCA+LLM
-        self.button_hybrid_train_dca_llm = QPushButton("Train (DCA+LLM)")
+        # Hybrid DCA+PLM
+        self.button_hybrid_train_dca_llm = QPushButton("Train (DCA+PLM)")
         self.button_hybrid_train_dca_llm.setMinimumWidth(80)
         self.button_hybrid_train_dca_llm.setToolTip(
-            "Optimize the GREMLIN model and tune the LLM by "
+            "Optimize the GREMLIN model and tune the PLM by "
             "supervised training on variant-fitness labels"
         )
         self.button_hybrid_train_dca_llm.clicked.connect(
@@ -422,10 +532,10 @@ class MainWidget(QWidget):
         )
         self.button_hybrid_train_dca_llm.setStyleSheet(button_style)
 
-        self.button_hybrid_train_test_dca_llm = QPushButton("Train-Test (DCA+LLM)")
+        self.button_hybrid_train_test_dca_llm = QPushButton("Train-Test (DCA+PLM)")
         self.button_hybrid_train_test_dca_llm.setMinimumWidth(80)
         self.button_hybrid_train_test_dca_llm.setToolTip(
-            "Optimize the GREMLIN model and tune the LLM by supervised "
+            "Optimize the GREMLIN model and tune the PLM by supervised "
             "training on variant-fitness labels and testing the model "
             "on a test set"
         )
@@ -434,20 +544,20 @@ class MainWidget(QWidget):
         )
         self.button_hybrid_train_test_dca_llm.setStyleSheet(button_style)
 
-        self.button_hybrid_test_dca_llm = QPushButton("Test (DCA+LLM)")
+        self.button_hybrid_test_dca_llm = QPushButton("Test (DCA+PLM)")
         self.button_hybrid_test_dca_llm.setMinimumWidth(80)
         self.button_hybrid_test_dca_llm.setToolTip(
-            "Test the trained hybrid DCA+LLM model on a test set"
+            "Test the trained hybrid DCA+PLM model on a test set"
         )
         self.button_hybrid_test_dca_llm.clicked.connect(
             self.pypef_dca_llm_hybrid_test
         )
         self.button_hybrid_test_dca_llm.setStyleSheet(button_style)
 
-        self.button_hybrid_predict_dca_llm = QPushButton("Predict (DCA+LLM)")
+        self.button_hybrid_predict_dca_llm = QPushButton("Predict (DCA+PLM)")
         self.button_hybrid_predict_dca_llm.setMinimumWidth(80)
         self.button_hybrid_predict_dca_llm.setToolTip(
-            "Use the trained hybrid DCA+LLM model for prediction"
+            "Use the trained hybrid DCA+PLM model for prediction"
         )
         self.button_hybrid_predict_dca_llm.clicked.connect(
             self.pypef_dca_llm_hybrid_predict
@@ -589,52 +699,68 @@ class MainWidget(QWidget):
         layout.addWidget(self.version_text, 0, 5, 1, 1)
         layout.addWidget(self.slider_text, 1, 0, 1, 1)
         layout.addWidget(self.button_work_dir, 0, 2, 1, 1)
+        layout.addWidget(self.working_directory_text, 0, 3, 1, 1)
 
-        layout.addWidget(self.utils_text, 3, 0, 1, 1)
-        layout.addWidget(self.button_help, 4, 0, 1, 1)
-        layout.addWidget(self.button_mklsts, 5, 0, 1, 1)
-        layout.addWidget(self.button_mkps, 6, 0, 1, 1)
-        layout.addWidget(self.button_gremlin_ssm, 7, 0, 1, 1)
-        layout.addWidget(self.button_llm_ssm, 8, 0, 1, 1)
+        layout.addWidget(self.button_abort, 3, 5, 1, 1)
 
-        layout.addWidget(self.mklsts_cv_options_text, 1, 1, 1, 1)
-        layout.addWidget(self.box_mklsts_cv, 2, 1, 1, 1)
-        layout.addWidget(self.dca_text, 3, 1, 1, 1)
-        layout.addWidget(self.button_dca_inference_gremlin, 4, 1, 1, 1)
-        layout.addWidget(self.button_dca_test_dca, 5, 1, 1, 1)
-        layout.addWidget(self.button_llm_test_zs, 6, 1, 1, 1)
-        layout.addWidget(self.button_dca_predict_dca, 7, 1, 1, 1)
-        layout.addWidget(self.button_llm_predict_zs, 8, 1, 1, 1)
+        layout.addWidget(self.utils_text, self.shift + 3, 0, 1, 1)
+        layout.addWidget(self.button_help, self.shift + 4, 0, 1, 1)
+        layout.addWidget(self.button_mklsts, self.shift + 5, 0, 1, 1)
+        layout.addWidget(self.button_mkps, self.shift + 6, 0, 1, 1)
+        layout.addWidget(self.button_gremlin_ssm, self.shift + 7, 0, 1, 1)
+        layout.addWidget(self.button_llm_ssm, self.shift + 8, 0, 1, 1)
 
-        layout.addWidget(self.hybrid_text, 3, 2, 1, 1)
-        layout.addWidget(self.button_hybrid_train_dca, 4, 2, 1, 1)
-        layout.addWidget(self.button_hybrid_train_test_dca, 5, 2, 1, 1)
-        layout.addWidget(self.button_hybrid_test_dca, 6, 2, 1, 1)
-        layout.addWidget(self.button_hybrid_predict_dca, 7, 2, 1, 1)
 
-        layout.addWidget(self.llm_text, 1, 3, 1, 1)
-        layout.addWidget(self.box_llm, 2, 3, 1, 1)
-        layout.addWidget(self.hybrid_dca_llm_text, 3, 3, 1, 1)
-        layout.addWidget(self.button_hybrid_train_dca_llm, 4, 3, 1, 1)
-        layout.addWidget(self.button_hybrid_train_test_dca_llm, 5, 3, 1, 1)
-        layout.addWidget(self.button_hybrid_test_dca_llm, 6, 3, 1, 1)
-        layout.addWidget(self.button_hybrid_predict_dca_llm, 7, 3, 1, 1)
+        layout.addWidget(self.mklsts_cv_options_text, self.shift + 1, 1, 1, 1)
+        layout.addWidget(self.box_mklsts_cv, self.shift + 2, 1, 1, 1)
+        layout.addWidget(self.dca_text, self.shift + 3, 1, 1, 1)
+        layout.addWidget(self.button_dca_inference_gremlin, self.shift + 4, 1, 1, 1)
+        layout.addWidget(self.button_dca_test_dca, self.shift + 5, 1, 1, 1)
+        layout.addWidget(self.button_llm_test_zs, self.shift + 6, 1, 1, 1)
+        layout.addWidget(self.button_dca_predict_dca, self.shift + 7, 1, 1, 1)
+        layout.addWidget(self.button_llm_predict_zs, self.shift + 8, 1, 1, 1)
 
-        layout.addWidget(self.regression_model_text, 1, 4, 1, 1)
-        layout.addWidget(self.box_regression_model, 2, 4, 1, 1)
-        layout.addWidget(self.supervised_text, 3, 4, 1, 1)
-        layout.addWidget(self.button_supervised_train_dca, 4, 4, 1, 1)
-        layout.addWidget(self.button_supervised_train_test_dca, 5, 4, 1, 1)
-        layout.addWidget(self.button_supervised_test_dca, 6, 4, 1, 1)
-        layout.addWidget(self.button_supervised_predict_dca, 7, 4, 1, 1)
-        layout.addWidget(self.button_supervised_train_onehot, 4, 5, 1, 1)
-        layout.addWidget(self.button_supervised_train_test_onehot, 5, 5, 1, 1)
-        layout.addWidget(self.button_supervised_test_onehot, 6, 5, 1, 1)
-        layout.addWidget(self.button_supervised_predict_onehot, 7, 5, 1, 1)
+        layout.addWidget(self.hybrid_text, self.shift + 3, 2, 1, 1)
+        layout.addWidget(self.button_hybrid_train_dca, self.shift + 4, 2, 1, 1)
+        layout.addWidget(self.button_hybrid_train_test_dca, self.shift + 5, 2, 1, 1)
+        layout.addWidget(self.button_hybrid_test_dca, self.shift + 6, 2, 1, 1)
+        layout.addWidget(self.button_hybrid_predict_dca, self.shift + 7, 2, 1, 1)
 
-        layout.addWidget(self.textedit_out, 12, 0, 1, 2)
+        layout.addWidget(self.plm_text, self.shift + 1, 3, 1, 1)
+        layout.addWidget(self.box_llm, self.shift + 2, 3, 1, 1)
+        layout.addWidget(self.hybrid_dca_llm_text, self.shift + 3, 3, 1, 1)
+        layout.addWidget(self.button_hybrid_train_dca_llm, self.shift + 4, 3, 1, 1)
+        layout.addWidget(self.button_hybrid_train_test_dca_llm, self.shift + 5, 3, 1, 1)
+        layout.addWidget(self.button_hybrid_test_dca_llm, self.shift + 6, 3, 1, 1)
+        layout.addWidget(self.button_hybrid_predict_dca_llm, self.shift + 7, 3, 1, 1)
 
-        layout.addWidget(self.logTextBox.widget, 12, 2, 1, 4)
+        layout.addWidget(self.regression_model_text, self.shift + 1, 4, 1, 1)
+        layout.addWidget(self.box_regression_model, self.shift + 2, 4, 1, 1)
+        layout.addWidget(self.supervised_text, self.shift + 3, 4, 1, 1)
+        layout.addWidget(self.button_supervised_train_dca, self.shift + 4, 4, 1, 1)
+        layout.addWidget(self.button_supervised_train_test_dca, self.shift + 5, 4, 1, 1)
+        layout.addWidget(self.button_supervised_test_dca, self.shift + 6, 4, 1, 1)
+        layout.addWidget(self.button_supervised_predict_dca, self.shift + 7, 4, 1, 1)
+
+        layout.addWidget(self.button_supervised_train_onehot, self.shift + 4, 5, 1, 1)
+        layout.addWidget(self.button_supervised_train_test_onehot, self.shift + 5, 5, 1, 1)
+        layout.addWidget(self.button_supervised_test_onehot, self.shift + 6, 5, 1, 1)
+        layout.addWidget(self.button_supervised_predict_onehot, self.shift + 7, 5, 1, 1)
+        layout.addWidget(self.box_plm_options, self.shift + 9, 5, 1, 1)
+
+        layout.setRowMinimumHeight(self.shift + 9, 60)  # 60 pixels of space after row
+
+        layout.addWidget(self.epoch_progress_bar, self.shift + 10, 0, 1, 5)
+        layout.addWidget(self.epoch_time_label, self.shift + 10, 5, 1, 1)
+        layout.addWidget(self.batch_progress_bar, self.shift + 11, 0, 1, 5)
+        layout.addWidget(self.batch_time_label, self.shift + 11, 5, 1, 1)
+        # Keep control columns compact
+        for col in range(6):
+            layout.setColumnStretch(col, 1)
+
+        layout.addWidget(self.textedit_out, self.shift + 12, 0, 1, 2)
+
+        layout.addWidget(self.logTextBox.widget, self.shift + 12, 2, 1, 4)
 
         # Start info thread #############################################################
         self.start_info_thread()
@@ -650,8 +776,15 @@ class MainWidget(QWidget):
         # Store refs to avoid garbage collection
         self.__threads.append((thread, worker))
         worker.moveToThread(thread)
+
+        worker.sig_step.connect(self.on_train_progress_step)
+
         worker.sig_done.connect(self.on_worker_done)
+        worker.sig_done.connect(thread.quit)
+        worker.sig_done.connect(worker.deleteLater)
+        worker.sig_done.connect(thread.deleteLater)
         worker.sig_msg.connect(self.logTextBox.widget.appendPlainText)
+
         thread.started.connect(worker.work)
         thread.start()
     
@@ -676,6 +809,65 @@ class MainWidget(QWidget):
             else:
                 new_info += info_text
         self.device_text_out.setPlainText(new_info)
+    
+    @Slot(dict)
+    def on_train_progress_step(self, progress):
+        if self._train_start_time is None:
+            self._train_start_time = time.time()
+            self._last_epoch = 1
+            self._last_epoch_time = self._train_start_time
+            self.epoch_eta = "--:--"
+            self.elapsed = 0
+        
+        now = time.time()
+        self.elapsed = now - self._train_start_time
+
+        self.epoch_progress_bar.setValue(
+            int((progress['epoch'] / progress['epoch_total']) * 100)
+        )
+        
+        self.batch_progress_bar.setValue(
+            int((progress['batch'] / progress['batch_total']) * 100)
+        )
+
+        if now - self._last_eta_update < 0.3:
+            return
+
+        # Epoch ETA
+        if self._last_epoch != progress['epoch']:
+            self.epoch_eta = self.estimate_eta(
+                self.elapsed,
+                progress['epoch'],
+                progress['epoch_total']
+            )
+            self._last_epoch = progress['epoch']
+            self._last_epoch_time = time.time()
+
+        # Batch ETA
+        elapsed_since_last_epoch = now - self._last_epoch_time
+        self.batch_eta = self.estimate_eta(
+            elapsed_since_last_epoch,
+            progress['batch'],
+            progress['batch_total']
+        )
+
+        elapsed_str = self.format_time(self.elapsed)
+        # Batch update is every update
+        if not progress['epoch'] == progress['epoch_total']:
+            delta_elapsed_str = self.format_time(elapsed_since_last_epoch)
+
+        # Update format text (stable width!)
+        self.epoch_time_label.setText(
+            f"Epoch {progress['epoch']} / {progress['epoch_total']}  "
+            f"({int((progress['epoch'] / progress['epoch_total']) * 100)}%) "
+            f"| Elapsed: {elapsed_str} | ETA: {self.epoch_eta}"
+        )
+
+        self.batch_time_label.setText(
+            f"Batch {progress['batch']} / {progress['batch_total']}  "
+            f"({int((progress['batch'] / progress['batch_total']) * 100)}%) "
+            f"| Elapsed: {delta_elapsed_str} | ETA: {self.batch_eta}"
+        )
 
     @Slot(int)
     def on_worker_done(self):
@@ -692,12 +884,15 @@ class MainWidget(QWidget):
         # are running in a single QThread without getting callbacks from 
         # a computing loop or so. So no qthreaded job abortions possible
         # without using QThread::terminate(), which should not be used.
+        # TODO: Add functionality for new Signal-connected training/processing
+        # for aborting (implemented for training..)
         self.logTextBox.widget.appendPlainText(
             'Asking each worker to abort...'
         )
         for thread, worker in self.__threads:
-            thread.quit()
-            thread.wait()
+            #thread.quit()
+            #thread.wait()
+            worker.abort()
         # even though threads have exited, there may still be messages 
         # on the main thread's queue (messages that threads emitted 
         # before the abort):
@@ -714,8 +909,9 @@ class MainWidget(QWidget):
         k = f"Job: {str(self.c):<5}" + "=" * 60
         self.textedit_out.append(k)
         self.logTextBox.widget.appendPlainText(
-            f"Current working directory: {str(getcwd())}"
+            f"Current working directory: {getcwd()}"
         )
+        self.working_directory_text.setText(getcwd())
         self.logTextBox.widget.appendPlainText(
             "Job: " + str(self.c) + " " + "=" * 104
         )
@@ -724,9 +920,11 @@ class MainWidget(QWidget):
     def end_process(self):
         self.target_button.setEnabled(True)
         self.toggle_buttons(True)
+        self.epoch_progress_bar.setValue(0)
+        self.batch_progress_bar.setValue(0)
+        self._train_start_time = None
         self.textedit_out.append("=" * 60 + "\n")
         self.version_text.setText("Finished...")
-
 
     def closeEvent(self, event):
         """
@@ -740,7 +938,19 @@ class MainWidget(QWidget):
                 thread.quit()
                 thread.wait()
         event.accept()
+
+    def format_time(self, seconds: float) -> str:
+        seconds = max(0, int(seconds))
+        m, s = divmod(seconds, 60)
+        h, m = divmod(m, 60)
+        return f"{h:02d}:{m:02d}:{s:02d}" if h else f"{m:02d}:{s:02d}"
     
+    def estimate_eta(self, elapsed, current, total):
+        if current <= 0:
+            return "--:--"
+        rate = elapsed / current
+        remaining = rate * (total - current)
+        return self.format_time(remaining)
 
     # Box selections ####################################################################
     def selection_ncores(self, i):
@@ -755,7 +965,36 @@ class MainWidget(QWidget):
         ][i]
 
     def selection_llm_model(self, i):
-        self.llm = [None, 'esm', 'prosst'][i]
+        self.llm = [None, 'esm', 'prosst', 'esm+prosst'][i]
+
+    def _llm_hybrid_flags(self):
+        """
+        Build the trailing CLI flag string for supervised DCA+PLM hybrid
+        training from the LoRA/GP option check boxes (--lora / --gauss_opt /
+        --gauss_comb).
+        """
+        flags = ''
+        if self.check_lora.isChecked():
+            flags += ' --lora'
+        if self.check_gauss_opt.isChecked():
+            flags += ' --gauss_opt'
+        if self.check_gauss_comb.isChecked():
+            flags += ' --gauss_comb'
+        return flags
+
+    def _llm_needs_structure(self, training: bool):
+        """
+        Whether a WT FASTA and PDB structure file are required for the current
+        PLM selection: always for ProSST (single or combined), and additionally
+        for Gaussian-process optimization during training.
+        """
+        if not self.llm:
+            return False
+        if 'prosst' in self.llm:
+            return True
+        if training and self.check_gauss_opt.isChecked():
+            return True
+        return False
 
     def selection_mklsts_splits(self, i):
         self.mklsts_cv_method = [
@@ -777,6 +1016,7 @@ class MainWidget(QWidget):
         self.logTextBox.widget.appendPlainText(
             f"Changed current working directory to: {str(getcwd())}"
         )
+        self.working_directory_text.setText(getcwd())
 
     # Button functions ##################################################################
     # Utils
@@ -866,18 +1106,18 @@ class MainWidget(QWidget):
                         "ProSST zero shot model inference..."
                     )
                     self.cmd = (
-                        f'predict_ssm --llm {self.llm} '
+                        f'predict_ssm --plm {self.llm} '
                         f'--wt {wt_fasta_file} --pdb {pdb_file}'
                         )
                     self.start_main_thread()
                 else:
                     self.end_process()
             elif self.llm == 'esm':
-                self.cmd = f'predict_ssm --llm {self.llm} --wt {wt_fasta_file}'
+                self.cmd = f'predict_ssm --plm {self.llm} --wt {wt_fasta_file}'
                 self.start_main_thread()
             else:
                 self.logTextBox.widget.appendPlainText(
-                    "Provide a LLM option for modeling."
+                    "Provide a PLM option for modeling."
                 )
                 self.end_process()
         else:
@@ -933,11 +1173,11 @@ class MainWidget(QWidget):
             filter="FASL file (*.fasl)"
         )[0]
         if test_set_file:
+            wt_fasta_file = QFileDialog.getOpenFileName(
+                self.win2, "Select WT FASTA File",
+                filter="FASTA file (*.fasta *.fa)"
+            )[0]
             if self.llm == 'prosst':
-                wt_fasta_file = QFileDialog.getOpenFileName(
-                    self.win2, "Select WT FASTA File",
-                    filter="FASTA file (*.fasta *.fa)"
-                )[0]
                 pdb_file = QFileDialog.getOpenFileName(
                     self.win2, "Select PDB protein structure File",
                     filter="PDB file (*.pdb)"
@@ -947,18 +1187,19 @@ class MainWidget(QWidget):
                         "ProSST zero shot model inference..."
                     )
                     self.cmd = (
-                        f'hybrid --ts {test_set_file} --llm {self.llm} '
+                        f'hybrid --ts {test_set_file} --plm {self.llm} '
                         f'--wt {wt_fasta_file} --pdb {pdb_file}'
                         )
                     self.start_main_thread()
                 else:
                     self.end_process()
             elif self.llm == 'esm':
-                self.cmd = f'hybrid --ts {test_set_file} --llm {self.llm}'
+                self.cmd = f'hybrid --ts {test_set_file} --plm {self.llm}  --wt {wt_fasta_file}'
                 self.start_main_thread()
             else:
                 self.logTextBox.widget.appendPlainText(
-                    "Provide a LLM option for modeling."
+                    "Provide a PLM option for modeling. Combined PLM option "
+                    "not implemented for zero-shot scoring."
                 )
                 self.end_process()
         else:
@@ -995,11 +1236,11 @@ class MainWidget(QWidget):
             filter="FASTA file (*.fasta *.fa)"
         )[0]
         if prediction_file:
+            wt_fasta_file = QFileDialog.getOpenFileName(
+                self.win2, "Select WT FASTA File",
+                filter="FASTA file (*.fasta *.fa)"
+            )[0]
             if self.llm == 'prosst':
-                wt_fasta_file = QFileDialog.getOpenFileName(
-                    self.win2, "Select WT FASTA File",
-                    filter="FASTA file (*.fasta *.fa)"
-                )[0]
                 pdb_file = QFileDialog.getOpenFileName(
                     self.win2, "Select PDB protein structure File",
                     filter="PDB file (*.pdb)"
@@ -1009,18 +1250,19 @@ class MainWidget(QWidget):
                         "ProSST zero shot model inference..."
                     )
                     self.cmd = (
-                        f'hybrid --ps {prediction_file} --llm {self.llm} '
+                        f'hybrid --ps {prediction_file} --plm {self.llm} '
                         f'--wt {wt_fasta_file} --pdb {pdb_file}'
                         )
                     self.start_main_thread()
                 else:
                     self.end_process()
             elif self.llm == 'esm':
-                self.cmd = f'hybrid --ps {prediction_file} --llm {self.llm}'
+                self.cmd = f'hybrid --ps {prediction_file} --plm {self.llm} --wt {wt_fasta_file}'
                 self.start_main_thread()
             else:
                 self.logTextBox.widget.appendPlainText(
-                    "Provide a LLM option for modeling."
+                    "Provide a PLM option for modeling. Combined PLM option "
+                    "not implemented for zero-shot scoring."
                 )
                 self.end_process()
         else:
@@ -1127,7 +1369,11 @@ class MainWidget(QWidget):
 
     def pypef_dca_llm_hybrid_train(self):
         self.target_button = self.button_hybrid_train_dca_llm
-        self.start_process()  
+        self.start_process()
+        if not self.llm:
+            self.logTextBox.widget.appendPlainText("Provide a PLM option for modeling.")
+            self.end_process()
+            return
         training_file = QFileDialog.getOpenFileName(
             self.win2, "Select Training Set File in \"FASL\" format",
             filter="FASL file (*.fasl)"
@@ -1136,7 +1382,8 @@ class MainWidget(QWidget):
             self.win2, "Select DCA parameter Pickle file",
             filter="Pickle file (*.params GREMLIN PLMC)"
         )[0]
-        if self.llm == 'prosst':
+        flags = self._llm_hybrid_flags()
+        if self._llm_needs_structure(training=True):
             wt_fasta_file = QFileDialog.getOpenFileName(
                 self.win2, "Select WT FASTA File",
                 filter="FASTA file (*.fasta *.fa)"
@@ -1147,35 +1394,36 @@ class MainWidget(QWidget):
             )[0]
             if training_file and params_pkl_file and wt_fasta_file and pdb_file:
                 self.version_text.setText(
-                    "Hybrid (DCA+LLM-supervised) model training..."
+                    "Hybrid (DCA+PLM-supervised) model training..."
                 )
                 self.cmd = (
                     f'hybrid --ls {training_file} --ts {training_file} '
-                    f'--params {params_pkl_file} --llm {self.llm} '
-                    f'--wt {wt_fasta_file} --pdb {pdb_file}'
-                )
-                self.start_main_thread()
-            else:
-                self.end_process()
-        elif self.llm == 'esm':
-            if training_file and params_pkl_file:
-                self.version_text.setText(
-                    "Hybrid (DCA+LLM-supervised) model training..."
-                )
-                self.cmd = (
-                    f'hybrid --ls {training_file} --ts {training_file} '
-                    f'--params {params_pkl_file} --llm {self.llm}'
+                    f'--params {params_pkl_file} --plm {self.llm} '
+                    f'--wt {wt_fasta_file} --pdb {pdb_file}{flags}'
                 )
                 self.start_main_thread()
             else:
                 self.end_process()
         else:
-            self.logTextBox.widget.appendPlainText("Provide a LLM option for modeling.")
-            self.end_process()
+            if training_file and params_pkl_file:
+                self.version_text.setText(
+                    "Hybrid (DCA+PLM-supervised) model training..."
+                )
+                self.cmd = (
+                    f'hybrid --ls {training_file} --ts {training_file} '
+                    f'--params {params_pkl_file} --plm {self.llm}{flags}'
+                )
+                self.start_main_thread()
+            else:
+                self.end_process()
 
     def pypef_dca_llm_hybrid_train_test(self):
         self.target_button = self.button_hybrid_train_test_dca_llm
-        self.start_process()  
+        self.start_process()
+        if not self.llm:
+            self.logTextBox.widget.appendPlainText("Provide a PLM option for modeling.")
+            self.end_process()
+            return
         training_file = QFileDialog.getOpenFileName(
             self.win2, "Select Training Set File in \"FASL\" format",
             filter="FASL file (*.fasl)"
@@ -1188,7 +1436,8 @@ class MainWidget(QWidget):
             self.win2, "Select DCA parameter Pickle file",
             filter="Pickle file (*.params GREMLIN PLMC)"
         )[0]
-        if self.llm == 'prosst':
+        flags = self._llm_hybrid_flags()
+        if self._llm_needs_structure(training=True):
             wt_fasta_file = QFileDialog.getOpenFileName(
                 self.win2, "Select WT FASTA File",
                 filter="FASTA file (*.fasta *.fa)"
@@ -1198,39 +1447,40 @@ class MainWidget(QWidget):
                 filter="PDB file (*.pdb)"
             )[0]
             if (
-                training_file and test_file and params_pkl_file 
+                training_file and test_file and params_pkl_file
                 and wt_fasta_file and pdb_file
             ):
                 self.version_text.setText(
-                    "Hybrid (DCA+LLM-supervised) model training..."
+                    "Hybrid (DCA+PLM-supervised) model training..."
                 )
                 self.cmd = (
                     f'hybrid --ls {training_file} --ts {test_file} '
-                    f'--params {params_pkl_file} --llm {self.llm} '
-                    f'--wt {wt_fasta_file} --pdb {pdb_file}'
-                )
-                self.start_main_thread()
-            else:
-                self.end_process()
-        elif self.llm == 'esm':
-            if training_file and test_file and params_pkl_file:
-                self.version_text.setText(
-                    "Hybrid (DCA+LLM-supervised) model training..."
-                )
-                self.cmd = (
-                    f'hybrid --ls {training_file} --ts {test_file} '
-                    f'--params {params_pkl_file} --llm {self.llm}'
+                    f'--params {params_pkl_file} --plm {self.llm} '
+                    f'--wt {wt_fasta_file} --pdb {pdb_file}{flags}'
                 )
                 self.start_main_thread()
             else:
                 self.end_process()
         else:
-            self.logTextBox.widget.appendPlainText("Provide a LLM option for modeling.")
-            self.end_process()
+            if training_file and test_file and params_pkl_file:
+                self.version_text.setText(
+                    "Hybrid (DCA+PLM-supervised) model training..."
+                )
+                self.cmd = (
+                    f'hybrid --ls {training_file} --ts {test_file} '
+                    f'--params {params_pkl_file} --plm {self.llm}{flags}'
+                )
+                self.start_main_thread()
+            else:
+                self.end_process()
 
     def pypef_dca_llm_hybrid_test(self):
         self.target_button = self.button_hybrid_test_dca_llm
-        self.start_process()  
+        self.start_process()
+        if not self.llm:
+            self.logTextBox.widget.appendPlainText("Provide a PLM option for modeling.")
+            self.end_process()
+            return
         test_file = QFileDialog.getOpenFileName(
             self.win2, "Select Test Set File in \"FASL\" format",
             filter="FASL file (*.fasl)"
@@ -1243,7 +1493,7 @@ class MainWidget(QWidget):
             self.win2, "Select DCA parameter Pickle file",
             filter="Pickle file (*.params GREMLIN PLMC)"
         )[0]
-        if self.llm == 'prosst':
+        if self._llm_needs_structure(training=False):
             wt_fasta_file = QFileDialog.getOpenFileName(
                 self.win2, "Select WT FASTA File",
                 filter="FASTA file (*.fasta *.fa)"
@@ -1253,37 +1503,38 @@ class MainWidget(QWidget):
                 filter="PDB file (*.pdb)"
             )[0]
             if (
-                test_file and params_pkl_file and wt_fasta_file 
+                test_file and params_pkl_file and wt_fasta_file
                 and pdb_file and model_file
             ):
                 self.version_text.setText(
-                    "Hybrid (DCA+LLM-supervised) model testing..."
+                    "Hybrid (DCA+PLM-supervised) model testing..."
                 )
                 self.cmd = (
                     f'hybrid -m {model_file} --ts {test_file} '
-                    f'--params {params_pkl_file} --llm {self.llm} '
+                    f'--params {params_pkl_file} --plm {self.llm} '
                     f'--wt {wt_fasta_file} --pdb {pdb_file}')
                 self.start_main_thread()
             else:
                 self.end_process()
-        elif self.llm == 'esm':
+        else:
             if test_file and params_pkl_file and model_file:
                 self.version_text.setText(
-                    "Hybrid (DCA+LLM-supervised) model testing..."
+                    "Hybrid (DCA+PLM-supervised) model testing..."
                 )
                 self.cmd = (
                     f'hybrid -m {model_file} --ts {test_file} '
-                    f'--params {params_pkl_file} --llm {self.llm}')
+                    f'--params {params_pkl_file} --plm {self.llm}')
                 self.start_main_thread()
             else:
                 self.end_process()
-        else:
-            self.logTextBox.widget.appendPlainText("Provide a LLM option for modeling.")
-            self.end_process()
 
     def pypef_dca_llm_hybrid_predict(self):
         self.target_button = self.button_hybrid_predict_dca_llm
-        self.start_process()  
+        self.start_process()
+        if not self.llm:
+            self.logTextBox.widget.appendPlainText("Provide a PLM option for modeling.")
+            self.end_process()
+            return
         prediction_file = QFileDialog.getOpenFileName(
             self.win2, "Select Prediction Set File in FASTA format",
             filter="FASTA file (*.fasta *.fa)"
@@ -1296,7 +1547,7 @@ class MainWidget(QWidget):
             self.win2, "Select DCA parameter Pickle file",
             filter="Pickle file (*.params GREMLIN PLMC)"
         )[0]
-        if self.llm == 'prosst':
+        if self._llm_needs_structure(training=False):
             wt_fasta_file = QFileDialog.getOpenFileName(
                 self.win2, "Select WT FASTA File",
                 filter="FASTA file (*.fasta *.fa)"
@@ -1306,35 +1557,32 @@ class MainWidget(QWidget):
                 filter="PDB file (*.pdb)"
             )[0]
             if (
-                prediction_file and params_pkl_file and wt_fasta_file 
+                prediction_file and params_pkl_file and wt_fasta_file
                 and pdb_file and model_file
             ):
                 self.version_text.setText(
-                    "Hybrid (DCA+LLM-supervised) model training..."
+                    "Hybrid (DCA+PLM-supervised) model prediction..."
                 )
                 self.cmd = (
                     f'hybrid -m {model_file} --ps {prediction_file} '
-                    f'--params {params_pkl_file} --llm {self.llm} '
+                    f'--params {params_pkl_file} --plm {self.llm} '
                     f'--wt {wt_fasta_file} --pdb {pdb_file}'
                 )
                 self.start_main_thread()
             else:
                 self.end_process()
-        elif self.llm == 'esm':
+        else:
             if prediction_file and params_pkl_file and model_file:
                 self.version_text.setText(
-                    "Hybrid (DCA+LLM-supervised) model training..."
+                    "Hybrid (DCA+PLM-supervised) model prediction..."
                 )
                 self.cmd = (
                     f'hybrid -m {model_file} --ps {prediction_file} '
-                    f'--params {params_pkl_file} --llm {self.llm}'
+                    f'--params {params_pkl_file} --plm {self.llm}'
                 )
                 self.start_main_thread()
             else:
                 self.end_process()
-        else:
-            self.logTextBox.widget.appendPlainText("Provide a LLM option for modeling.")
-            self.end_process()
 
     def pypef_dca_supervised_train(self):
         self.target_button = self.button_supervised_train_dca
@@ -1527,6 +1775,18 @@ class MainWidget(QWidget):
 
 def run_app():
     app = QApplication([])
+    app.setApplicationName("PyPEF")
+    app.setApplicationDisplayName("PyPEF GUI")
+    # On Wayland the taskbar/dock icon is NOT taken from setWindowIcon(); the
+    # compositor resolves it by matching this desktop-file name (the window
+    # app_id) against an installed pypef.desktop with an Icon= entry. Harmless
+    # on X11/Windows/macOS, where setWindowIcon() below does the job directly.
+    app.setDesktopFileName("pypef")
+    logo_path = get_logo_path()
+    if logo_path is not None:
+        # App-level icon drives the taskbar / dock / Alt-Tab icon on
+        # X11 / Windows / macOS (ignored by Wayland compositors).
+        app.setWindowIcon(QIcon(logo_path))
     widget = MainWidget()
     widget.show()
     sys.exit(app.exec())
