@@ -424,6 +424,7 @@ def plot_csv_data(csv, plot_name):
     plt.ylim(0.0, 1.0)
     plt.ylabel(r'Spearman $\rho$')
     adjust_text(train_test_size_texts, expand=(1.2, 2))
+    plt.tight_layout()
     plt.savefig(os.path.join(os.path.dirname(__file__), f'{plot_name}.png'), dpi=300)
 
     # Violin Plot Section
