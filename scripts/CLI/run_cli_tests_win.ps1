@@ -3,10 +3,12 @@
 ### REQUIRES MINICONDA OR ANACONDA BEING INSTALLED
 Write-Host "For successful running, following files are required:`n`nin test_dataset_aneh/
 `tSequence_WT_ANEH.fasta`n`t37_ANEH_variants.csv`n`tANEH_jhmmer.a2m
-`tANEH_72.6.params (generated using PLMC or dowloaded from https://github.com/niklases/PyPEF/blob/main/datasets/ANEH/ANEH_72.6.params)
+`tANEH_72.6.params (generated using PLMC or dowloaded from 
+https://github.com/niklases/PyPEF/blob/main/datasets/ANEH/ANEH_72.6.params)
 `nin test_dataset_avgfp/`n`tP42212_F64L.fasta`n`tavGFP.csv
 `turef100_avgfp_jhmmer_119.a2m
-`turef100_avgfp_jhmmer_119_plmc_42.6.params (generated using PLMC or dowloaded from https://github.com/niklases/PyPEF/blob/main/datasets/AVGFP/uref100_avgfp_jhmmer_119_plmc_42.6.params)`n`n"
+`turef100_avgfp_jhmmer_119_plmc_42.6.params (generated using PLMC or dowloaded from 
+https://github.com/niklases/PyPEF/blob/main/datasets/AVGFP/uref100_avgfp_jhmmer_119_plmc_42.6.params)`n`n"
 
 Set-PSDebug -Trace 1
 $ErrorActionPreference = "Stop"
@@ -23,38 +25,47 @@ function ExitOnExitCode { if ($LastExitCode) {
 ### RUN ME IN POWERSHELL WITH
 ### $ .\run_cli_tests_win.ps1                      # printing STDOUT and STDERR to terminal
 
+$TEST_PYPI_REMOTE_INSTALL = $true   # Change to $true, if you want to test the pip(remote)-installed version
 
 $path=Get-Location
 $path=Split-Path -Path $path -Parent
 $path=Split-Path -Path $path -Parent
 ### if using downloaded/locally stored pypef .py files:
 ##########################################################################################################################
-(& conda 'shell.powershell' 'hook') | Out-String | Invoke-Expression                                                     #
-$ErrorActionPreference = "SilentlyContinue"                                                                              #
-conda env remove -n pypef -y                                                                                             #
-$ErrorActionPreference = "Stop"                                                                                          #
-conda create -n pypef python=3.12 -y                                                                                     #
-conda activate pypef                                                                                                     #
-python -m pip install -r $path\requirements.txt                                                                          #
-python -m pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128 --force-reinstall  #
-function pypef {                                                                                                         #
-    $localEAP = $ErrorActionPreference                                                                                   #
-    $ErrorActionPreference = 'Continue'                                                                                  #
-    python $path\pypef\main.py @args                                                                                     #
-    $ErrorActionPreference = $localEAP                                                                                   #
-}                                                                                                                        #
+(& conda 'shell.powershell' 'hook') | Out-String | Invoke-Expression
+$ErrorActionPreference = "SilentlyContinue"
+conda env remove -n pypef -y
+$ErrorActionPreference = "Stop"
+conda create -n pypef python=3.14 -y
+conda activate pypef
+if (!$TEST_PYPI_REMOTE_INSTALL) {
+    $env:PYTHONPATH=$path
+    python -m pip install --no-cache-dir -r "$path\requirements.txt"
+    python -m pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cu128 --force-reinstall
+    
+    function pypef {
+        $localEAP = $ErrorActionPreference
+        $ErrorActionPreference = 'Continue'
+        # Pfad mit Anführungszeichen geschützt
+        python "$path\pypef\main.py" @args
+        $ErrorActionPreference = $localEAP
+    }
+} else {
+    # else just use pip-installed pypef version
+    python -m pip install --no-cache-dir -U pypef
+    python -m pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cu128 --force-reinstall
+    
+    function pypef {
+        $localEAP = $ErrorActionPreference
+        $ErrorActionPreference = 'Continue'
+        pypef.exe @args
+        $ErrorActionPreference = $localEAP
+    }
+}
 ##########################################################################################################################
-### else just use pip-installed pypef version (uncomment):                                                               #
-#function pypef {                                                                                                        #
-#    $localEAP = $ErrorActionPreference                                                                                  #
-#    $ErrorActionPreference = 'Continue'                                                                                 #
-#    pypef.exe @args                                                                                                     #
-#    $ErrorActionPreference = $localEAP                                                                                  #
-#}                                                                                                                       #
-##########################################################################################################################
-# threads are only used for some parallelization of AAindex and DCA-based sequence encoding                              # 
-# if pypef/settings.py defines USE_RAY = True                                                                            #
-$threads = 1                                                                                                             #
+# threads are only used for some parallelization of AAindex and DCA-based sequence encoding
+# if pypef/settings.py defines USE_RAY = True
+$threads = 1
 ##########################################################################################################################
 
 Write-Host "~~~~~~~~~~~~~~~~~~ WHERE ~~~~~~~~~~~~~~~~~~"

@@ -3,10 +3,13 @@
 ### Bash script for testing some PyPEF CLI commands 
 ### based on the two datasets provided (ANEH and avGFP)
 ### REQUIRES MINICONDA OR ANACONDA BEING INSTALLED
-printf 'For successful running, following files are required:\n\nin test_dataset_aneh/\n\tSequence_WT_ANEH.fasta\n\t37_ANEH_variants.csv
-\tANEH_jhmmer.a2m\n\tANEH_72.6.params (generated using PLMC or dowloaded from https://github.com/niklases/PyPEF/blob/main/datasets/ANEH/ANEH_72.6.params)\n
+printf 'For successful running, following files are required:\n\nin test_dataset_aneh/\n\t
+Sequence_WT_ANEH.fasta\n\t37_ANEH_variants.csv
+\tANEH_jhmmer.a2m\n\tANEH_72.6.params (generated using PLMC or dowloaded from 
+https://github.com/niklases/PyPEF/blob/main/datasets/ANEH/ANEH_72.6.params)\n
 in test_dataset_avgfp/\n\tP42212_F64L.fasta\n\tavGFP.csv\n\turef100_avgfp_jhmmer_119.a2m
-\turef100_avgfp_jhmmer_119_plmc_42.6.params (generated using PLMC or dowloaded from https://github.com/niklases/PyPEF/blob/main/datasets/AVGFP/uref100_avgfp_jhmmer_119_plmc_42.6.params)\n\n'
+\turef100_avgfp_jhmmer_119_plmc_42.6.params (generated using PLMC or dowloaded from 
+https://github.com/niklases/PyPEF/blob/main/datasets/AVGFP/uref100_avgfp_jhmmer_119_plmc_42.6.params)\n\n'
 
 set -x  # echo on
 set -e  # exit on (PyPEF) errors
@@ -16,27 +19,30 @@ export PS4='+(Line ${LINENO}): '  # echo script line numbers
 ### $ ./run_cli_tests_linux.sh                      # printing STDOUT and STDERR to terminal
 ### $ ./run_cli_tests_linux.sh &> test_cli_run.log  # writing STDOUT and STDERR to log file
 
+TEST_PYPI_REMOTE_INSTALL=false   # Change to true, if you want to test the pip(remote)-installed version
 
 cd '../'
 path=$( echo ${PWD%/*} )
 cd 'CLI'  
 ### if using downloaded/locally stored pypef .py files:
 ##########################################################################################################################
-yes | conda env remove -n pypef || true                                                                                  #
-conda create -n pypef python=3.12 -y                                                                                     #
-eval "$(conda shell.bash hook)"                                                                                          #
-conda activate pypef                                                                                                     #
-python -m pip install -r "$path/requirements.txt"                                                                        #
-#pip install --pre torch torchvision torchaudio --index-url https://download.pytorch.org/whl/nightly/cu128               # ONLY IF NIGHTLY IS NEEDED, E.G., NEW BLACKWELL GPU GENERATION 
-export PYTHONPATH=${PYTHONPATH}:$path                                                                                    #
-pypef="python3 $path/pypef/main.py"                                                                                      #
+yes | conda env remove -n pypef || true
+conda create -n pypef python=3.14 -y
+eval "$(conda shell.bash hook)"
+conda activate pypef
+if $TEST_PYPI_REMOTE_INSTALL; then
+    python -m pip install --no-cache-dir -U pypef
+    pypef=pypef
+else
+    python -m pip install --no-cache-dir -r "$path/requirements.txt"
+    #pip install --pre torch torchvision torchaudio --index-url https://download.pytorch.org/whl/nightly/cu128  # ONLY IF NIGHTLY IS NEEDED, E.G., NEW BLACKWELL GPU GENERATION 
+    export PYTHONPATH=${PYTHONPATH}:$path
+    pypef="python3 $path/pypef/main.py"
+fi
 ##########################################################################################################################
-### else just use pip-installed pypef version (uncomment):                                                               #
-#pypef=pypef                                                                                                             #
-##########################################################################################################################
-# threads are only used for some parallelization of AAindex and DCA-based sequence encoding                              # 
-# if pypef/settings.py defines USE_RAY = True                                                                            #
-threads=1                                                                                                                #
+# threads are only used for some parallelization of AAindex and DCA-based sequence encoding
+# if pypef/settings.py defines USE_RAY = True
+threads=1
 ##########################################################################################################################
 
 # ANSI Color Codes
